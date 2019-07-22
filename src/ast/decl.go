@@ -1,7 +1,5 @@
 package ast
 
-type A int
-
 type IDeclNode interface {
 	IStmtNode
 	GetName() string

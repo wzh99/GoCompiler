@@ -615,12 +615,18 @@ receiverType
 expression
     : unaryExpr
 //    | expression BINARY_OP expression
-    | expression ('||' | '&&' | '==' | '!=' | '<' | '<=' | '>' | '>=' | '+' | '-' | '|' | '^' | '*' | '/' | '%' | '<<' | '>>' | '&' | '&^') expression
+    | expression op=( '*' | '/' | '%' | '<<' | '>>' | '&' ) expression
+    | expression op=( '+' | '-' | '|' | '^' ) expression
+    | expression op=( '==' | '!=' | '<' | '<=' | '>' | '>=' ) expression
+    | expression op='&&' expression
+    | expression op='||' expression
+    //| expression op=('||' | '&&' | '==' | '!=' | '<' | '<=' | '>' | '>=' | '+' | '-'
+    //    | '|' | '^' | '*' | '/' | '%' | '<<' | '>>' | '&' ) expression
     ;
 
 unaryExpr
     : primaryExpr
-    | ('+'|'-'|'!'|'^'|'*'|'&'|'<-') unaryExpr
+    | op=('+'|'-'|'!'|'^'|'*'|'&'|'<-') unaryExpr
     ;
 
 //Conversion = Type "(" Expression [ "," ] ")" .
@@ -672,15 +678,29 @@ KEYWORD
 
 
 // Operators
+LOR: '||';
+LAND: '&&';
+EQ: '==';
+NE: '!=';
+LT: '<';
+LEQ: '<=';
+GT: '>';
+GEQ: '>=';
+AOR: '|';
+DIV: '/';
+MOD: '%';
+LSH: '<<';
+RSH: '>>';
+NOT: '!';
 
 //binary_op  = "||" | "&&" | rel_op | add_op | mul_op .
 BINARY_OP
-    : '||' | '&&' | REL_OP | ADD_OP | MUL_OP
+    : LOR | LAND | REL_OP | ADD_OP | MUL_OP
     ;
 
 //rel_op     = "==" | "!=" | "<" | "<=" | ">" | ">=" .
 fragment REL_OP
-    : '=='
+    : '='
     | '!='
     | '<'
     | '<='
@@ -704,7 +724,6 @@ fragment MUL_OP
     | '<<'
     | '>>'
     | '&'
-    | '&^'
     ;
 
 //unary_op   = "+" | "-" | "!" | "^" | "*" | "&" | "<-" .
