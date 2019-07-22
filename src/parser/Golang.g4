@@ -198,7 +198,7 @@ assignment
 
 //assign_op = [ add_op | mul_op ] "=" .
 assign_op
-    : ('+' | '-' | '|' | '^' | '*' | '/' | '%' | '<<' | '>>' | '&' | '&^')? '='
+    : op=('+' | '-' | '|' | '^' | '*' | '/' | '%' | '<<' | '>>' | '&' )? '='
     ;
 
 
@@ -620,8 +620,6 @@ expression
     | expression op=( '==' | '!=' | '<' | '<=' | '>' | '>=' ) expression
     | expression op='&&' expression
     | expression op='||' expression
-    //| expression op=('||' | '&&' | '==' | '!=' | '<' | '<=' | '>' | '>=' | '+' | '-'
-    //    | '|' | '^' | '*' | '/' | '%' | '<<' | '>>' | '&' ) expression
     ;
 
 unaryExpr

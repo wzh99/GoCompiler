@@ -16,7 +16,7 @@ var _ = reflect.Copy
 var _ = strconv.Itoa
 
 var parserATN = []uint16{
-	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 77, 909,
+	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 76, 909,
 	4, 2, 9, 2, 4, 3, 9, 3, 4, 4, 9, 4, 4, 5, 9, 5, 4, 6, 9, 6, 4, 7, 9, 7,
 	4, 8, 9, 8, 4, 9, 9, 9, 4, 10, 9, 10, 4, 11, 9, 11, 4, 12, 9, 12, 4, 13,
 	9, 13, 4, 14, 9, 14, 4, 15, 9, 15, 4, 16, 9, 16, 4, 17, 9, 17, 4, 18, 9,
@@ -119,10 +119,10 @@ var parserATN = []uint16{
 	92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120,
 	122, 124, 126, 128, 130, 132, 134, 136, 138, 140, 142, 144, 146, 148, 150,
 	152, 154, 156, 158, 160, 162, 164, 166, 168, 170, 172, 174, 176, 178, 180,
-	182, 184, 186, 188, 190, 192, 194, 196, 198, 200, 2, 10, 4, 2, 7, 7, 50,
-	50, 3, 2, 17, 18, 4, 2, 19, 24, 60, 64, 4, 2, 67, 70, 73, 73, 4, 2, 22,
-	23, 61, 64, 4, 2, 19, 21, 60, 60, 3, 2, 54, 59, 5, 2, 16, 16, 19, 23, 65,
-	65, 2, 949, 2, 202, 3, 2, 2, 2, 4, 217, 3, 2, 2, 2, 6, 220, 3, 2, 2, 2,
+	182, 184, 186, 188, 190, 192, 194, 196, 198, 200, 2, 10, 4, 2, 7, 7, 49,
+	49, 3, 2, 17, 18, 4, 2, 19, 23, 59, 63, 4, 2, 66, 69, 72, 72, 4, 2, 22,
+	23, 60, 63, 4, 2, 19, 21, 59, 59, 3, 2, 53, 58, 5, 2, 16, 16, 19, 23, 64,
+	64, 2, 949, 2, 202, 3, 2, 2, 2, 4, 217, 3, 2, 2, 2, 6, 220, 3, 2, 2, 2,
 	8, 233, 3, 2, 2, 2, 10, 237, 3, 2, 2, 2, 12, 242, 3, 2, 2, 2, 14, 247,
 	3, 2, 2, 2, 16, 249, 3, 2, 2, 2, 18, 261, 3, 2, 2, 2, 20, 269, 3, 2, 2,
 	2, 22, 277, 3, 2, 2, 2, 24, 285, 3, 2, 2, 2, 26, 297, 3, 2, 2, 2, 28, 300,
@@ -157,14 +157,14 @@ var parserATN = []uint16{
 	208, 206, 3, 2, 2, 2, 209, 211, 5, 12, 7, 2, 210, 209, 3, 2, 2, 2, 211,
 	214, 3, 2, 2, 2, 212, 210, 3, 2, 2, 2, 212, 213, 3, 2, 2, 2, 213, 215,
 	3, 2, 2, 2, 214, 212, 3, 2, 2, 2, 215, 216, 7, 2, 2, 3, 216, 3, 3, 2, 2,
-	2, 217, 218, 7, 3, 2, 2, 218, 219, 7, 50, 2, 2, 219, 5, 3, 2, 2, 2, 220,
+	2, 217, 218, 7, 3, 2, 2, 218, 219, 7, 49, 2, 2, 219, 5, 3, 2, 2, 2, 220,
 	230, 7, 4, 2, 2, 221, 231, 5, 8, 5, 2, 222, 226, 7, 5, 2, 2, 223, 225,
 	5, 8, 5, 2, 224, 223, 3, 2, 2, 2, 225, 228, 3, 2, 2, 2, 226, 224, 3, 2,
 	2, 2, 226, 227, 3, 2, 2, 2, 227, 229, 3, 2, 2, 2, 228, 226, 3, 2, 2, 2,
 	229, 231, 7, 6, 2, 2, 230, 221, 3, 2, 2, 2, 230, 222, 3, 2, 2, 2, 231,
 	7, 3, 2, 2, 2, 232, 234, 9, 2, 2, 2, 233, 232, 3, 2, 2, 2, 233, 234, 3,
 	2, 2, 2, 234, 235, 3, 2, 2, 2, 235, 236, 5, 10, 6, 2, 236, 9, 3, 2, 2,
-	2, 237, 238, 7, 73, 2, 2, 238, 11, 3, 2, 2, 2, 239, 243, 5, 14, 8, 2, 240,
+	2, 237, 238, 7, 72, 2, 2, 238, 11, 3, 2, 2, 2, 239, 243, 5, 14, 8, 2, 240,
 	243, 5, 28, 15, 2, 241, 243, 5, 32, 17, 2, 242, 239, 3, 2, 2, 2, 242, 240,
 	3, 2, 2, 2, 242, 241, 3, 2, 2, 2, 243, 13, 3, 2, 2, 2, 244, 248, 5, 16,
 	9, 2, 245, 248, 5, 24, 13, 2, 246, 248, 5, 36, 19, 2, 247, 244, 3, 2, 2,
@@ -176,8 +176,8 @@ var parserATN = []uint16{
 	17, 3, 2, 2, 2, 261, 267, 5, 20, 11, 2, 262, 264, 5, 112, 57, 2, 263, 262,
 	3, 2, 2, 2, 263, 264, 3, 2, 2, 2, 264, 265, 3, 2, 2, 2, 265, 266, 7, 9,
 	2, 2, 266, 268, 5, 22, 12, 2, 267, 263, 3, 2, 2, 2, 267, 268, 3, 2, 2,
-	2, 268, 19, 3, 2, 2, 2, 269, 274, 7, 50, 2, 2, 270, 271, 7, 10, 2, 2, 271,
-	273, 7, 50, 2, 2, 272, 270, 3, 2, 2, 2, 273, 276, 3, 2, 2, 2, 274, 272,
+	2, 268, 19, 3, 2, 2, 2, 269, 274, 7, 49, 2, 2, 270, 271, 7, 10, 2, 2, 271,
+	273, 7, 49, 2, 2, 272, 270, 3, 2, 2, 2, 273, 276, 3, 2, 2, 2, 274, 272,
 	3, 2, 2, 2, 274, 275, 3, 2, 2, 2, 275, 21, 3, 2, 2, 2, 276, 274, 3, 2,
 	2, 2, 277, 282, 5, 196, 99, 2, 278, 279, 7, 10, 2, 2, 279, 281, 5, 196,
 	99, 2, 280, 278, 3, 2, 2, 2, 281, 284, 3, 2, 2, 2, 282, 280, 3, 2, 2, 2,
@@ -186,12 +186,12 @@ var parserATN = []uint16{
 	26, 14, 2, 289, 288, 3, 2, 2, 2, 290, 293, 3, 2, 2, 2, 291, 289, 3, 2,
 	2, 2, 291, 292, 3, 2, 2, 2, 292, 294, 3, 2, 2, 2, 293, 291, 3, 2, 2, 2,
 	294, 296, 7, 6, 2, 2, 295, 286, 3, 2, 2, 2, 295, 287, 3, 2, 2, 2, 296,
-	25, 3, 2, 2, 2, 297, 298, 7, 50, 2, 2, 298, 299, 5, 112, 57, 2, 299, 27,
-	3, 2, 2, 2, 300, 301, 7, 12, 2, 2, 301, 304, 7, 50, 2, 2, 302, 305, 5,
+	25, 3, 2, 2, 2, 297, 298, 7, 49, 2, 2, 298, 299, 5, 112, 57, 2, 299, 27,
+	3, 2, 2, 2, 300, 301, 7, 12, 2, 2, 301, 304, 7, 49, 2, 2, 302, 305, 5,
 	30, 16, 2, 303, 305, 5, 138, 70, 2, 304, 302, 3, 2, 2, 2, 304, 303, 3,
 	2, 2, 2, 305, 29, 3, 2, 2, 2, 306, 307, 5, 138, 70, 2, 307, 308, 5, 40,
 	21, 2, 308, 31, 3, 2, 2, 2, 309, 310, 7, 12, 2, 2, 310, 311, 5, 34, 18,
-	2, 311, 314, 7, 50, 2, 2, 312, 315, 5, 30, 16, 2, 313, 315, 5, 138, 70,
+	2, 311, 314, 7, 49, 2, 2, 312, 315, 5, 30, 16, 2, 313, 315, 5, 138, 70,
 	2, 314, 312, 3, 2, 2, 2, 314, 313, 3, 2, 2, 2, 315, 33, 3, 2, 2, 2, 316,
 	317, 5, 142, 72, 2, 317, 35, 3, 2, 2, 2, 318, 328, 7, 13, 2, 2, 319, 329,
 	5, 38, 20, 2, 320, 324, 7, 5, 2, 2, 321, 323, 5, 38, 20, 2, 322, 321, 3,
@@ -225,99 +225,99 @@ var parserATN = []uint16{
 	5, 22, 12, 2, 385, 386, 5, 56, 29, 2, 386, 387, 5, 22, 12, 2, 387, 55,
 	3, 2, 2, 2, 388, 390, 9, 4, 2, 2, 389, 388, 3, 2, 2, 2, 389, 390, 3, 2,
 	2, 2, 390, 391, 3, 2, 2, 2, 391, 392, 7, 9, 2, 2, 392, 57, 3, 2, 2, 2,
-	393, 394, 5, 20, 11, 2, 394, 395, 7, 25, 2, 2, 395, 396, 5, 22, 12, 2,
-	396, 59, 3, 2, 2, 2, 397, 398, 7, 26, 2, 2, 398, 61, 3, 2, 2, 2, 399, 400,
-	7, 50, 2, 2, 400, 401, 7, 27, 2, 2, 401, 402, 5, 44, 23, 2, 402, 63, 3,
-	2, 2, 2, 403, 405, 7, 28, 2, 2, 404, 406, 5, 22, 12, 2, 405, 404, 3, 2,
-	2, 2, 405, 406, 3, 2, 2, 2, 406, 65, 3, 2, 2, 2, 407, 409, 7, 29, 2, 2,
-	408, 410, 7, 50, 2, 2, 409, 408, 3, 2, 2, 2, 409, 410, 3, 2, 2, 2, 410,
-	67, 3, 2, 2, 2, 411, 413, 7, 30, 2, 2, 412, 414, 7, 50, 2, 2, 413, 412,
-	3, 2, 2, 2, 413, 414, 3, 2, 2, 2, 414, 69, 3, 2, 2, 2, 415, 416, 7, 31,
-	2, 2, 416, 417, 7, 50, 2, 2, 417, 71, 3, 2, 2, 2, 418, 419, 7, 32, 2, 2,
-	419, 73, 3, 2, 2, 2, 420, 421, 7, 33, 2, 2, 421, 422, 5, 196, 99, 2, 422,
-	75, 3, 2, 2, 2, 423, 427, 7, 34, 2, 2, 424, 425, 5, 46, 24, 2, 425, 426,
-	7, 26, 2, 2, 426, 428, 3, 2, 2, 2, 427, 424, 3, 2, 2, 2, 427, 428, 3, 2,
+	393, 394, 5, 20, 11, 2, 394, 395, 7, 24, 2, 2, 395, 396, 5, 22, 12, 2,
+	396, 59, 3, 2, 2, 2, 397, 398, 7, 25, 2, 2, 398, 61, 3, 2, 2, 2, 399, 400,
+	7, 49, 2, 2, 400, 401, 7, 26, 2, 2, 401, 402, 5, 44, 23, 2, 402, 63, 3,
+	2, 2, 2, 403, 405, 7, 27, 2, 2, 404, 406, 5, 22, 12, 2, 405, 404, 3, 2,
+	2, 2, 405, 406, 3, 2, 2, 2, 406, 65, 3, 2, 2, 2, 407, 409, 7, 28, 2, 2,
+	408, 410, 7, 49, 2, 2, 409, 408, 3, 2, 2, 2, 409, 410, 3, 2, 2, 2, 410,
+	67, 3, 2, 2, 2, 411, 413, 7, 29, 2, 2, 412, 414, 7, 49, 2, 2, 413, 412,
+	3, 2, 2, 2, 413, 414, 3, 2, 2, 2, 414, 69, 3, 2, 2, 2, 415, 416, 7, 30,
+	2, 2, 416, 417, 7, 49, 2, 2, 417, 71, 3, 2, 2, 2, 418, 419, 7, 31, 2, 2,
+	419, 73, 3, 2, 2, 2, 420, 421, 7, 32, 2, 2, 421, 422, 5, 196, 99, 2, 422,
+	75, 3, 2, 2, 2, 423, 427, 7, 33, 2, 2, 424, 425, 5, 46, 24, 2, 425, 426,
+	7, 25, 2, 2, 426, 428, 3, 2, 2, 2, 427, 424, 3, 2, 2, 2, 427, 428, 3, 2,
 	2, 2, 428, 429, 3, 2, 2, 2, 429, 430, 5, 196, 99, 2, 430, 436, 5, 40, 21,
-	2, 431, 434, 7, 35, 2, 2, 432, 435, 5, 76, 39, 2, 433, 435, 5, 40, 21,
+	2, 431, 434, 7, 34, 2, 2, 432, 435, 5, 76, 39, 2, 433, 435, 5, 40, 21,
 	2, 434, 432, 3, 2, 2, 2, 434, 433, 3, 2, 2, 2, 435, 437, 3, 2, 2, 2, 436,
 	431, 3, 2, 2, 2, 436, 437, 3, 2, 2, 2, 437, 77, 3, 2, 2, 2, 438, 441, 5,
 	80, 41, 2, 439, 441, 5, 86, 44, 2, 440, 438, 3, 2, 2, 2, 440, 439, 3, 2,
-	2, 2, 441, 79, 3, 2, 2, 2, 442, 446, 7, 36, 2, 2, 443, 444, 5, 46, 24,
-	2, 444, 445, 7, 26, 2, 2, 445, 447, 3, 2, 2, 2, 446, 443, 3, 2, 2, 2, 446,
+	2, 2, 441, 79, 3, 2, 2, 2, 442, 446, 7, 35, 2, 2, 443, 444, 5, 46, 24,
+	2, 444, 445, 7, 25, 2, 2, 445, 447, 3, 2, 2, 2, 446, 443, 3, 2, 2, 2, 446,
 	447, 3, 2, 2, 2, 447, 449, 3, 2, 2, 2, 448, 450, 5, 196, 99, 2, 449, 448,
 	3, 2, 2, 2, 449, 450, 3, 2, 2, 2, 450, 451, 3, 2, 2, 2, 451, 455, 7, 14,
 	2, 2, 452, 454, 5, 82, 42, 2, 453, 452, 3, 2, 2, 2, 454, 457, 3, 2, 2,
 	2, 455, 453, 3, 2, 2, 2, 455, 456, 3, 2, 2, 2, 456, 458, 3, 2, 2, 2, 457,
 	455, 3, 2, 2, 2, 458, 459, 7, 15, 2, 2, 459, 81, 3, 2, 2, 2, 460, 461,
-	5, 84, 43, 2, 461, 462, 7, 27, 2, 2, 462, 463, 5, 42, 22, 2, 463, 83, 3,
-	2, 2, 2, 464, 465, 7, 37, 2, 2, 465, 468, 5, 22, 12, 2, 466, 468, 7, 38,
+	5, 84, 43, 2, 461, 462, 7, 26, 2, 2, 462, 463, 5, 42, 22, 2, 463, 83, 3,
+	2, 2, 2, 464, 465, 7, 36, 2, 2, 465, 468, 5, 22, 12, 2, 466, 468, 7, 37,
 	2, 2, 467, 464, 3, 2, 2, 2, 467, 466, 3, 2, 2, 2, 468, 85, 3, 2, 2, 2,
-	469, 473, 7, 36, 2, 2, 470, 471, 5, 46, 24, 2, 471, 472, 7, 26, 2, 2, 472,
+	469, 473, 7, 35, 2, 2, 470, 471, 5, 46, 24, 2, 471, 472, 7, 25, 2, 2, 472,
 	474, 3, 2, 2, 2, 473, 470, 3, 2, 2, 2, 473, 474, 3, 2, 2, 2, 474, 475,
 	3, 2, 2, 2, 475, 476, 5, 88, 45, 2, 476, 480, 7, 14, 2, 2, 477, 479, 5,
 	90, 46, 2, 478, 477, 3, 2, 2, 2, 479, 482, 3, 2, 2, 2, 480, 478, 3, 2,
 	2, 2, 480, 481, 3, 2, 2, 2, 481, 483, 3, 2, 2, 2, 482, 480, 3, 2, 2, 2,
-	483, 484, 7, 15, 2, 2, 484, 87, 3, 2, 2, 2, 485, 486, 7, 50, 2, 2, 486,
-	488, 7, 25, 2, 2, 487, 485, 3, 2, 2, 2, 487, 488, 3, 2, 2, 2, 488, 489,
+	483, 484, 7, 15, 2, 2, 484, 87, 3, 2, 2, 2, 485, 486, 7, 49, 2, 2, 486,
+	488, 7, 24, 2, 2, 487, 485, 3, 2, 2, 2, 487, 488, 3, 2, 2, 2, 488, 489,
 	3, 2, 2, 2, 489, 490, 5, 180, 91, 2, 490, 491, 7, 7, 2, 2, 491, 492, 7,
 	5, 2, 2, 492, 493, 7, 11, 2, 2, 493, 494, 7, 6, 2, 2, 494, 89, 3, 2, 2,
-	2, 495, 496, 5, 92, 47, 2, 496, 497, 7, 27, 2, 2, 497, 498, 5, 42, 22,
-	2, 498, 91, 3, 2, 2, 2, 499, 500, 7, 37, 2, 2, 500, 503, 5, 94, 48, 2,
-	501, 503, 7, 38, 2, 2, 502, 499, 3, 2, 2, 2, 502, 501, 3, 2, 2, 2, 503,
+	2, 495, 496, 5, 92, 47, 2, 496, 497, 7, 26, 2, 2, 497, 498, 5, 42, 22,
+	2, 498, 91, 3, 2, 2, 2, 499, 500, 7, 36, 2, 2, 500, 503, 5, 94, 48, 2,
+	501, 503, 7, 37, 2, 2, 502, 499, 3, 2, 2, 2, 502, 501, 3, 2, 2, 2, 503,
 	93, 3, 2, 2, 2, 504, 509, 5, 112, 57, 2, 505, 506, 7, 10, 2, 2, 506, 508,
 	5, 112, 57, 2, 507, 505, 3, 2, 2, 2, 508, 511, 3, 2, 2, 2, 509, 507, 3,
 	2, 2, 2, 509, 510, 3, 2, 2, 2, 510, 95, 3, 2, 2, 2, 511, 509, 3, 2, 2,
-	2, 512, 513, 7, 39, 2, 2, 513, 517, 7, 14, 2, 2, 514, 516, 5, 98, 50, 2,
+	2, 512, 513, 7, 38, 2, 2, 513, 517, 7, 14, 2, 2, 514, 516, 5, 98, 50, 2,
 	515, 514, 3, 2, 2, 2, 516, 519, 3, 2, 2, 2, 517, 515, 3, 2, 2, 2, 517,
 	518, 3, 2, 2, 2, 518, 520, 3, 2, 2, 2, 519, 517, 3, 2, 2, 2, 520, 521,
 	7, 15, 2, 2, 521, 97, 3, 2, 2, 2, 522, 523, 5, 100, 51, 2, 523, 524, 7,
-	27, 2, 2, 524, 525, 5, 42, 22, 2, 525, 99, 3, 2, 2, 2, 526, 529, 7, 37,
+	26, 2, 2, 524, 525, 5, 42, 22, 2, 525, 99, 3, 2, 2, 2, 526, 529, 7, 36,
 	2, 2, 527, 530, 5, 50, 26, 2, 528, 530, 5, 102, 52, 2, 529, 527, 3, 2,
-	2, 2, 529, 528, 3, 2, 2, 2, 530, 533, 3, 2, 2, 2, 531, 533, 7, 38, 2, 2,
+	2, 2, 529, 528, 3, 2, 2, 2, 530, 533, 3, 2, 2, 2, 531, 533, 7, 37, 2, 2,
 	532, 526, 3, 2, 2, 2, 532, 531, 3, 2, 2, 2, 533, 101, 3, 2, 2, 2, 534,
 	535, 5, 22, 12, 2, 535, 536, 7, 9, 2, 2, 536, 541, 3, 2, 2, 2, 537, 538,
-	5, 20, 11, 2, 538, 539, 7, 25, 2, 2, 539, 541, 3, 2, 2, 2, 540, 534, 3,
+	5, 20, 11, 2, 538, 539, 7, 24, 2, 2, 539, 541, 3, 2, 2, 2, 540, 534, 3,
 	2, 2, 2, 540, 537, 3, 2, 2, 2, 540, 541, 3, 2, 2, 2, 541, 542, 3, 2, 2,
-	2, 542, 543, 5, 196, 99, 2, 543, 103, 3, 2, 2, 2, 544, 548, 7, 40, 2, 2,
+	2, 542, 543, 5, 196, 99, 2, 543, 103, 3, 2, 2, 2, 544, 548, 7, 39, 2, 2,
 	545, 549, 5, 196, 99, 2, 546, 549, 5, 106, 54, 2, 547, 549, 5, 108, 55,
 	2, 548, 545, 3, 2, 2, 2, 548, 546, 3, 2, 2, 2, 548, 547, 3, 2, 2, 2, 548,
 	549, 3, 2, 2, 2, 549, 550, 3, 2, 2, 2, 550, 551, 5, 40, 21, 2, 551, 105,
 	3, 2, 2, 2, 552, 554, 5, 46, 24, 2, 553, 552, 3, 2, 2, 2, 553, 554, 3,
-	2, 2, 2, 554, 555, 3, 2, 2, 2, 555, 557, 7, 26, 2, 2, 556, 558, 5, 196,
+	2, 2, 2, 554, 555, 3, 2, 2, 2, 555, 557, 7, 25, 2, 2, 556, 558, 5, 196,
 	99, 2, 557, 556, 3, 2, 2, 2, 557, 558, 3, 2, 2, 2, 558, 559, 3, 2, 2, 2,
-	559, 561, 7, 26, 2, 2, 560, 562, 5, 46, 24, 2, 561, 560, 3, 2, 2, 2, 561,
+	559, 561, 7, 25, 2, 2, 560, 562, 5, 46, 24, 2, 561, 560, 3, 2, 2, 2, 561,
 	562, 3, 2, 2, 2, 562, 107, 3, 2, 2, 2, 563, 564, 5, 22, 12, 2, 564, 565,
 	7, 9, 2, 2, 565, 570, 3, 2, 2, 2, 566, 567, 5, 20, 11, 2, 567, 568, 7,
-	25, 2, 2, 568, 570, 3, 2, 2, 2, 569, 563, 3, 2, 2, 2, 569, 566, 3, 2, 2,
-	2, 569, 570, 3, 2, 2, 2, 570, 571, 3, 2, 2, 2, 571, 572, 7, 41, 2, 2, 572,
-	573, 5, 196, 99, 2, 573, 109, 3, 2, 2, 2, 574, 575, 7, 42, 2, 2, 575, 576,
+	24, 2, 2, 568, 570, 3, 2, 2, 2, 569, 563, 3, 2, 2, 2, 569, 566, 3, 2, 2,
+	2, 569, 570, 3, 2, 2, 2, 570, 571, 3, 2, 2, 2, 571, 572, 7, 40, 2, 2, 572,
+	573, 5, 196, 99, 2, 573, 109, 3, 2, 2, 2, 574, 575, 7, 41, 2, 2, 575, 576,
 	5, 196, 99, 2, 576, 111, 3, 2, 2, 2, 577, 584, 5, 114, 58, 2, 578, 584,
 	5, 116, 59, 2, 579, 580, 7, 5, 2, 2, 580, 581, 5, 112, 57, 2, 581, 582,
 	7, 6, 2, 2, 582, 584, 3, 2, 2, 2, 583, 577, 3, 2, 2, 2, 583, 578, 3, 2,
-	2, 2, 583, 579, 3, 2, 2, 2, 584, 113, 3, 2, 2, 2, 585, 588, 7, 50, 2, 2,
+	2, 2, 583, 579, 3, 2, 2, 2, 584, 113, 3, 2, 2, 2, 585, 588, 7, 49, 2, 2,
 	586, 588, 5, 156, 79, 2, 587, 585, 3, 2, 2, 2, 587, 586, 3, 2, 2, 2, 588,
 	115, 3, 2, 2, 2, 589, 598, 5, 118, 60, 2, 590, 598, 5, 172, 87, 2, 591,
 	598, 5, 124, 63, 2, 592, 598, 5, 136, 69, 2, 593, 598, 5, 126, 64, 2, 594,
 	598, 5, 128, 65, 2, 595, 598, 5, 130, 66, 2, 596, 598, 5, 132, 67, 2, 597,
 	589, 3, 2, 2, 2, 597, 590, 3, 2, 2, 2, 597, 591, 3, 2, 2, 2, 597, 592,
 	3, 2, 2, 2, 597, 593, 3, 2, 2, 2, 597, 594, 3, 2, 2, 2, 597, 595, 3, 2,
-	2, 2, 597, 596, 3, 2, 2, 2, 598, 117, 3, 2, 2, 2, 599, 600, 7, 43, 2, 2,
-	600, 601, 5, 120, 61, 2, 601, 602, 7, 44, 2, 2, 602, 603, 5, 122, 62, 2,
+	2, 2, 597, 596, 3, 2, 2, 2, 598, 117, 3, 2, 2, 2, 599, 600, 7, 42, 2, 2,
+	600, 601, 5, 120, 61, 2, 601, 602, 7, 43, 2, 2, 602, 603, 5, 122, 62, 2,
 	603, 119, 3, 2, 2, 2, 604, 605, 5, 196, 99, 2, 605, 121, 3, 2, 2, 2, 606,
 	607, 5, 112, 57, 2, 607, 123, 3, 2, 2, 2, 608, 609, 7, 22, 2, 2, 609, 610,
-	5, 112, 57, 2, 610, 125, 3, 2, 2, 2, 611, 612, 7, 45, 2, 2, 612, 616, 7,
+	5, 112, 57, 2, 610, 125, 3, 2, 2, 2, 611, 612, 7, 44, 2, 2, 612, 616, 7,
 	14, 2, 2, 613, 615, 5, 134, 68, 2, 614, 613, 3, 2, 2, 2, 615, 618, 3, 2,
 	2, 2, 616, 614, 3, 2, 2, 2, 616, 617, 3, 2, 2, 2, 617, 619, 3, 2, 2, 2,
 	618, 616, 3, 2, 2, 2, 619, 620, 7, 15, 2, 2, 620, 127, 3, 2, 2, 2, 621,
-	622, 7, 43, 2, 2, 622, 623, 7, 44, 2, 2, 623, 624, 5, 122, 62, 2, 624,
-	129, 3, 2, 2, 2, 625, 626, 7, 46, 2, 2, 626, 627, 7, 43, 2, 2, 627, 628,
-	5, 112, 57, 2, 628, 629, 7, 44, 2, 2, 629, 630, 5, 122, 62, 2, 630, 131,
-	3, 2, 2, 2, 631, 637, 7, 47, 2, 2, 632, 633, 7, 47, 2, 2, 633, 637, 7,
-	16, 2, 2, 634, 635, 7, 16, 2, 2, 635, 637, 7, 47, 2, 2, 636, 631, 3, 2,
+	622, 7, 42, 2, 2, 622, 623, 7, 43, 2, 2, 623, 624, 5, 122, 62, 2, 624,
+	129, 3, 2, 2, 2, 625, 626, 7, 45, 2, 2, 626, 627, 7, 42, 2, 2, 627, 628,
+	5, 112, 57, 2, 628, 629, 7, 43, 2, 2, 629, 630, 5, 122, 62, 2, 630, 131,
+	3, 2, 2, 2, 631, 637, 7, 46, 2, 2, 632, 633, 7, 46, 2, 2, 633, 637, 7,
+	16, 2, 2, 634, 635, 7, 16, 2, 2, 635, 637, 7, 46, 2, 2, 636, 631, 3, 2,
 	2, 2, 636, 632, 3, 2, 2, 2, 636, 634, 3, 2, 2, 2, 637, 638, 3, 2, 2, 2,
-	638, 639, 5, 122, 62, 2, 639, 133, 3, 2, 2, 2, 640, 641, 7, 50, 2, 2, 641,
+	638, 639, 5, 122, 62, 2, 639, 133, 3, 2, 2, 2, 640, 641, 7, 49, 2, 2, 641,
 	642, 5, 142, 72, 2, 642, 643, 5, 140, 71, 2, 643, 648, 3, 2, 2, 2, 644,
-	648, 5, 114, 58, 2, 645, 646, 7, 50, 2, 2, 646, 648, 5, 142, 72, 2, 647,
+	648, 5, 114, 58, 2, 645, 646, 7, 49, 2, 2, 646, 648, 5, 142, 72, 2, 647,
 	640, 3, 2, 2, 2, 647, 644, 3, 2, 2, 2, 647, 645, 3, 2, 2, 2, 648, 135,
 	3, 2, 2, 2, 649, 650, 7, 12, 2, 2, 650, 651, 5, 138, 70, 2, 651, 137, 3,
 	2, 2, 2, 652, 653, 5, 142, 72, 2, 653, 654, 5, 140, 71, 2, 654, 657, 3,
@@ -331,7 +331,7 @@ var parserATN = []uint16{
 	2, 673, 675, 5, 146, 74, 2, 674, 672, 3, 2, 2, 2, 675, 678, 3, 2, 2, 2,
 	676, 674, 3, 2, 2, 2, 676, 677, 3, 2, 2, 2, 677, 145, 3, 2, 2, 2, 678,
 	676, 3, 2, 2, 2, 679, 681, 5, 20, 11, 2, 680, 679, 3, 2, 2, 2, 680, 681,
-	3, 2, 2, 2, 681, 683, 3, 2, 2, 2, 682, 684, 7, 48, 2, 2, 683, 682, 3, 2,
+	3, 2, 2, 2, 681, 683, 3, 2, 2, 2, 682, 684, 7, 47, 2, 2, 683, 682, 3, 2,
 	2, 2, 683, 684, 3, 2, 2, 2, 684, 685, 3, 2, 2, 2, 685, 686, 5, 112, 57,
 	2, 686, 147, 3, 2, 2, 2, 687, 695, 5, 150, 76, 2, 688, 695, 5, 154, 78,
 	2, 689, 695, 5, 192, 97, 2, 690, 691, 7, 5, 2, 2, 691, 692, 5, 196, 99,
@@ -340,12 +340,12 @@ var parserATN = []uint16{
 	3, 2, 2, 2, 696, 700, 5, 152, 77, 2, 697, 700, 5, 158, 80, 2, 698, 700,
 	5, 178, 90, 2, 699, 696, 3, 2, 2, 2, 699, 697, 3, 2, 2, 2, 699, 698, 3,
 	2, 2, 2, 700, 151, 3, 2, 2, 2, 701, 702, 9, 5, 2, 2, 702, 153, 3, 2, 2,
-	2, 703, 706, 7, 50, 2, 2, 704, 706, 5, 156, 79, 2, 705, 703, 3, 2, 2, 2,
-	705, 704, 3, 2, 2, 2, 706, 155, 3, 2, 2, 2, 707, 708, 7, 50, 2, 2, 708,
-	709, 7, 7, 2, 2, 709, 710, 7, 50, 2, 2, 710, 157, 3, 2, 2, 2, 711, 712,
+	2, 703, 706, 7, 49, 2, 2, 704, 706, 5, 156, 79, 2, 705, 703, 3, 2, 2, 2,
+	705, 704, 3, 2, 2, 2, 706, 155, 3, 2, 2, 2, 707, 708, 7, 49, 2, 2, 708,
+	709, 7, 7, 2, 2, 709, 710, 7, 49, 2, 2, 710, 157, 3, 2, 2, 2, 711, 712,
 	5, 160, 81, 2, 712, 713, 5, 162, 82, 2, 713, 159, 3, 2, 2, 2, 714, 724,
-	5, 172, 87, 2, 715, 724, 5, 118, 60, 2, 716, 717, 7, 43, 2, 2, 717, 718,
-	7, 48, 2, 2, 718, 719, 7, 44, 2, 2, 719, 724, 5, 122, 62, 2, 720, 724,
+	5, 172, 87, 2, 715, 724, 5, 118, 60, 2, 716, 717, 7, 42, 2, 2, 717, 718,
+	7, 47, 2, 2, 718, 719, 7, 43, 2, 2, 719, 724, 5, 122, 62, 2, 720, 724,
 	5, 128, 65, 2, 721, 724, 5, 130, 66, 2, 722, 724, 5, 114, 58, 2, 723, 714,
 	3, 2, 2, 2, 723, 715, 3, 2, 2, 2, 723, 716, 3, 2, 2, 2, 723, 720, 3, 2,
 	2, 2, 723, 721, 3, 2, 2, 2, 723, 722, 3, 2, 2, 2, 724, 161, 3, 2, 2, 2,
@@ -355,19 +355,19 @@ var parserATN = []uint16{
 	7, 15, 2, 2, 733, 163, 3, 2, 2, 2, 734, 739, 5, 166, 84, 2, 735, 736, 7,
 	10, 2, 2, 736, 738, 5, 166, 84, 2, 737, 735, 3, 2, 2, 2, 738, 741, 3, 2,
 	2, 2, 739, 737, 3, 2, 2, 2, 739, 740, 3, 2, 2, 2, 740, 165, 3, 2, 2, 2,
-	741, 739, 3, 2, 2, 2, 742, 743, 5, 168, 85, 2, 743, 744, 7, 27, 2, 2, 744,
+	741, 739, 3, 2, 2, 2, 742, 743, 5, 168, 85, 2, 743, 744, 7, 26, 2, 2, 744,
 	746, 3, 2, 2, 2, 745, 742, 3, 2, 2, 2, 745, 746, 3, 2, 2, 2, 746, 747,
 	3, 2, 2, 2, 747, 748, 5, 170, 86, 2, 748, 167, 3, 2, 2, 2, 749, 753, 7,
-	50, 2, 2, 750, 753, 5, 196, 99, 2, 751, 753, 5, 162, 82, 2, 752, 749, 3,
+	49, 2, 2, 750, 753, 5, 196, 99, 2, 751, 753, 5, 162, 82, 2, 752, 749, 3,
 	2, 2, 2, 752, 750, 3, 2, 2, 2, 752, 751, 3, 2, 2, 2, 753, 169, 3, 2, 2,
 	2, 754, 757, 5, 196, 99, 2, 755, 757, 5, 162, 82, 2, 756, 754, 3, 2, 2,
-	2, 756, 755, 3, 2, 2, 2, 757, 171, 3, 2, 2, 2, 758, 759, 7, 49, 2, 2, 759,
+	2, 756, 755, 3, 2, 2, 2, 757, 171, 3, 2, 2, 2, 758, 759, 7, 48, 2, 2, 759,
 	763, 7, 14, 2, 2, 760, 762, 5, 174, 88, 2, 761, 760, 3, 2, 2, 2, 762, 765,
 	3, 2, 2, 2, 763, 761, 3, 2, 2, 2, 763, 764, 3, 2, 2, 2, 764, 766, 3, 2,
 	2, 2, 765, 763, 3, 2, 2, 2, 766, 767, 7, 15, 2, 2, 767, 173, 3, 2, 2, 2,
 	768, 769, 5, 20, 11, 2, 769, 770, 5, 112, 57, 2, 770, 773, 3, 2, 2, 2,
 	771, 773, 5, 176, 89, 2, 772, 768, 3, 2, 2, 2, 772, 771, 3, 2, 2, 2, 773,
-	775, 3, 2, 2, 2, 774, 776, 7, 73, 2, 2, 775, 774, 3, 2, 2, 2, 775, 776,
+	775, 3, 2, 2, 2, 774, 776, 7, 72, 2, 2, 775, 774, 3, 2, 2, 2, 775, 776,
 	3, 2, 2, 2, 776, 175, 3, 2, 2, 2, 777, 779, 7, 22, 2, 2, 778, 777, 3, 2,
 	2, 2, 778, 779, 3, 2, 2, 2, 779, 780, 3, 2, 2, 2, 780, 781, 5, 114, 58,
 	2, 781, 177, 3, 2, 2, 2, 782, 783, 7, 12, 2, 2, 783, 784, 5, 30, 16, 2,
@@ -379,27 +379,27 @@ var parserATN = []uint16{
 	2, 2, 799, 801, 5, 190, 96, 2, 800, 790, 3, 2, 2, 2, 800, 792, 3, 2, 2,
 	2, 800, 794, 3, 2, 2, 2, 800, 796, 3, 2, 2, 2, 800, 798, 3, 2, 2, 2, 801,
 	804, 3, 2, 2, 2, 802, 800, 3, 2, 2, 2, 802, 803, 3, 2, 2, 2, 803, 181,
-	3, 2, 2, 2, 804, 802, 3, 2, 2, 2, 805, 806, 7, 7, 2, 2, 806, 807, 7, 50,
-	2, 2, 807, 183, 3, 2, 2, 2, 808, 809, 7, 43, 2, 2, 809, 810, 5, 196, 99,
-	2, 810, 811, 7, 44, 2, 2, 811, 185, 3, 2, 2, 2, 812, 828, 7, 43, 2, 2,
+	3, 2, 2, 2, 804, 802, 3, 2, 2, 2, 805, 806, 7, 7, 2, 2, 806, 807, 7, 49,
+	2, 2, 807, 183, 3, 2, 2, 2, 808, 809, 7, 42, 2, 2, 809, 810, 5, 196, 99,
+	2, 810, 811, 7, 43, 2, 2, 811, 185, 3, 2, 2, 2, 812, 828, 7, 42, 2, 2,
 	813, 815, 5, 196, 99, 2, 814, 813, 3, 2, 2, 2, 814, 815, 3, 2, 2, 2, 815,
-	816, 3, 2, 2, 2, 816, 818, 7, 27, 2, 2, 817, 819, 5, 196, 99, 2, 818, 817,
+	816, 3, 2, 2, 2, 816, 818, 7, 26, 2, 2, 817, 819, 5, 196, 99, 2, 818, 817,
 	3, 2, 2, 2, 818, 819, 3, 2, 2, 2, 819, 829, 3, 2, 2, 2, 820, 822, 5, 196,
 	99, 2, 821, 820, 3, 2, 2, 2, 821, 822, 3, 2, 2, 2, 822, 823, 3, 2, 2, 2,
-	823, 824, 7, 27, 2, 2, 824, 825, 5, 196, 99, 2, 825, 826, 7, 27, 2, 2,
+	823, 824, 7, 26, 2, 2, 824, 825, 5, 196, 99, 2, 825, 826, 7, 26, 2, 2,
 	826, 827, 5, 196, 99, 2, 827, 829, 3, 2, 2, 2, 828, 814, 3, 2, 2, 2, 828,
-	821, 3, 2, 2, 2, 829, 830, 3, 2, 2, 2, 830, 831, 7, 44, 2, 2, 831, 187,
+	821, 3, 2, 2, 2, 829, 830, 3, 2, 2, 2, 830, 831, 7, 43, 2, 2, 831, 187,
 	3, 2, 2, 2, 832, 833, 7, 7, 2, 2, 833, 834, 7, 5, 2, 2, 834, 835, 5, 112,
 	57, 2, 835, 836, 7, 6, 2, 2, 836, 189, 3, 2, 2, 2, 837, 852, 7, 5, 2, 2,
 	838, 845, 5, 22, 12, 2, 839, 842, 5, 112, 57, 2, 840, 841, 7, 10, 2, 2,
 	841, 843, 5, 22, 12, 2, 842, 840, 3, 2, 2, 2, 842, 843, 3, 2, 2, 2, 843,
 	845, 3, 2, 2, 2, 844, 838, 3, 2, 2, 2, 844, 839, 3, 2, 2, 2, 845, 847,
-	3, 2, 2, 2, 846, 848, 7, 48, 2, 2, 847, 846, 3, 2, 2, 2, 847, 848, 3, 2,
+	3, 2, 2, 2, 846, 848, 7, 47, 2, 2, 847, 846, 3, 2, 2, 2, 847, 848, 3, 2,
 	2, 2, 848, 850, 3, 2, 2, 2, 849, 851, 7, 10, 2, 2, 850, 849, 3, 2, 2, 2,
 	850, 851, 3, 2, 2, 2, 851, 853, 3, 2, 2, 2, 852, 844, 3, 2, 2, 2, 852,
 	853, 3, 2, 2, 2, 853, 854, 3, 2, 2, 2, 854, 855, 7, 6, 2, 2, 855, 191,
 	3, 2, 2, 2, 856, 857, 5, 194, 98, 2, 857, 858, 7, 7, 2, 2, 858, 859, 7,
-	50, 2, 2, 859, 193, 3, 2, 2, 2, 860, 871, 5, 114, 58, 2, 861, 862, 7, 5,
+	49, 2, 2, 859, 193, 3, 2, 2, 2, 860, 871, 5, 114, 58, 2, 861, 862, 7, 5,
 	2, 2, 862, 863, 7, 22, 2, 2, 863, 864, 5, 114, 58, 2, 864, 865, 7, 6, 2,
 	2, 865, 871, 3, 2, 2, 2, 866, 867, 7, 5, 2, 2, 867, 868, 5, 194, 98, 2,
 	868, 869, 7, 6, 2, 2, 869, 871, 3, 2, 2, 2, 870, 860, 3, 2, 2, 2, 870,
@@ -408,8 +408,8 @@ var parserATN = []uint16{
 	12, 7, 2, 2, 876, 877, 9, 6, 2, 2, 877, 891, 5, 196, 99, 8, 878, 879, 12,
 	6, 2, 2, 879, 880, 9, 7, 2, 2, 880, 891, 5, 196, 99, 7, 881, 882, 12, 5,
 	2, 2, 882, 883, 9, 8, 2, 2, 883, 891, 5, 196, 99, 6, 884, 885, 12, 4, 2,
-	2, 885, 886, 7, 53, 2, 2, 886, 891, 5, 196, 99, 5, 887, 888, 12, 3, 2,
-	2, 888, 889, 7, 52, 2, 2, 889, 891, 5, 196, 99, 4, 890, 875, 3, 2, 2, 2,
+	2, 885, 886, 7, 52, 2, 2, 886, 891, 5, 196, 99, 5, 887, 888, 12, 3, 2,
+	2, 888, 889, 7, 51, 2, 2, 889, 891, 5, 196, 99, 4, 890, 875, 3, 2, 2, 2,
 	890, 878, 3, 2, 2, 2, 890, 881, 3, 2, 2, 2, 890, 884, 3, 2, 2, 2, 890,
 	887, 3, 2, 2, 2, 891, 894, 3, 2, 2, 2, 892, 890, 3, 2, 2, 2, 892, 893,
 	3, 2, 2, 2, 893, 197, 3, 2, 2, 2, 894, 892, 3, 2, 2, 2, 895, 899, 5, 180,
@@ -431,7 +431,7 @@ var deserializedATN = deserializer.DeserializeFromUInt16(parserATN)
 var literalNames = []string{
 	"", "'package'", "'import'", "'('", "')'", "'.'", "'const'", "'='", "','",
 	"'type'", "'func'", "'var'", "'{'", "'}'", "'<-'", "'++'", "'--'", "'+'",
-	"'-'", "'^'", "'*'", "'&'", "'&^'", "':='", "';'", "':'", "'return'", "'break'",
+	"'-'", "'^'", "'*'", "'&'", "':='", "';'", "':'", "'return'", "'break'",
 	"'continue'", "'goto'", "'fallthrough'", "'defer'", "'if'", "'else'", "'switch'",
 	"'case'", "'default'", "'select'", "'for'", "'range'", "'go'", "'['", "']'",
 	"'interface'", "'map'", "'chan'", "'...'", "'struct'", "", "", "'||'",
@@ -441,11 +441,11 @@ var literalNames = []string{
 var symbolicNames = []string{
 	"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 	"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-	"", "", "", "", "", "", "", "", "", "", "", "", "IDENTIFIER", "KEYWORD",
-	"LOR", "LAND", "EQ", "NE", "LT", "LEQ", "GT", "GEQ", "AOR", "DIV", "MOD",
-	"LSH", "RSH", "NOT", "BINARY_OP", "INT_LIT", "FLOAT_LIT", "IMAGINARY_LIT",
-	"RUNE_LIT", "LITTLE_U_VALUE", "BIG_U_VALUE", "STRING_LIT", "WS", "COMMENT",
-	"TERMINATOR", "LINE_COMMENT",
+	"", "", "", "", "", "", "", "", "", "", "", "IDENTIFIER", "KEYWORD", "LOR",
+	"LAND", "EQ", "NE", "LT", "LEQ", "GT", "GEQ", "AOR", "DIV", "MOD", "LSH",
+	"RSH", "NOT", "BINARY_OP", "INT_LIT", "FLOAT_LIT", "IMAGINARY_LIT", "RUNE_LIT",
+	"LITTLE_U_VALUE", "BIG_U_VALUE", "STRING_LIT", "WS", "COMMENT", "TERMINATOR",
+	"LINE_COMMENT",
 }
 
 var ruleNames = []string{
@@ -544,35 +544,34 @@ const (
 	GolangParserT__43          = 44
 	GolangParserT__44          = 45
 	GolangParserT__45          = 46
-	GolangParserT__46          = 47
-	GolangParserIDENTIFIER     = 48
-	GolangParserKEYWORD        = 49
-	GolangParserLOR            = 50
-	GolangParserLAND           = 51
-	GolangParserEQ             = 52
-	GolangParserNE             = 53
-	GolangParserLT             = 54
-	GolangParserLEQ            = 55
-	GolangParserGT             = 56
-	GolangParserGEQ            = 57
-	GolangParserAOR            = 58
-	GolangParserDIV            = 59
-	GolangParserMOD            = 60
-	GolangParserLSH            = 61
-	GolangParserRSH            = 62
-	GolangParserNOT            = 63
-	GolangParserBINARY_OP      = 64
-	GolangParserINT_LIT        = 65
-	GolangParserFLOAT_LIT      = 66
-	GolangParserIMAGINARY_LIT  = 67
-	GolangParserRUNE_LIT       = 68
-	GolangParserLITTLE_U_VALUE = 69
-	GolangParserBIG_U_VALUE    = 70
-	GolangParserSTRING_LIT     = 71
-	GolangParserWS             = 72
-	GolangParserCOMMENT        = 73
-	GolangParserTERMINATOR     = 74
-	GolangParserLINE_COMMENT   = 75
+	GolangParserIDENTIFIER     = 47
+	GolangParserKEYWORD        = 48
+	GolangParserLOR            = 49
+	GolangParserLAND           = 50
+	GolangParserEQ             = 51
+	GolangParserNE             = 52
+	GolangParserLT             = 53
+	GolangParserLEQ            = 54
+	GolangParserGT             = 55
+	GolangParserGEQ            = 56
+	GolangParserAOR            = 57
+	GolangParserDIV            = 58
+	GolangParserMOD            = 59
+	GolangParserLSH            = 60
+	GolangParserRSH            = 61
+	GolangParserNOT            = 62
+	GolangParserBINARY_OP      = 63
+	GolangParserINT_LIT        = 64
+	GolangParserFLOAT_LIT      = 65
+	GolangParserIMAGINARY_LIT  = 66
+	GolangParserRUNE_LIT       = 67
+	GolangParserLITTLE_U_VALUE = 68
+	GolangParserBIG_U_VALUE    = 69
+	GolangParserSTRING_LIT     = 70
+	GolangParserWS             = 71
+	GolangParserCOMMENT        = 72
+	GolangParserTERMINATOR     = 73
+	GolangParserLINE_COMMENT   = 74
 )
 
 // GolangParser rules.
@@ -788,7 +787,7 @@ func (s *SourceFileContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *SourceFileContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitSourceFile(s)
+		return t.VisitSourceFile(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -910,7 +909,7 @@ func (s *PackageClauseContext) ToStringTree(ruleNames []string, recog antlr.Reco
 func (s *PackageClauseContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitPackageClause(s)
+		return t.VisitPackageClause(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1022,7 +1021,7 @@ func (s *ImportDeclContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *ImportDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitImportDecl(s)
+		return t.VisitImportDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1159,7 +1158,7 @@ func (s *ImportSpecContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *ImportSpecContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitImportSpec(s)
+		return t.VisitImportSpec(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1267,7 +1266,7 @@ func (s *ImportPathContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *ImportPathContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitImportPath(s)
+		return t.VisitImportPath(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1382,7 +1381,7 @@ func (s *TopLevelDeclContext) ToStringTree(ruleNames []string, recog antlr.Recog
 func (s *TopLevelDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTopLevelDecl(s)
+		return t.VisitTopLevelDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1517,7 +1516,7 @@ func (s *DeclarationContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *DeclarationContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitDeclaration(s)
+		return t.VisitDeclaration(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1648,7 +1647,7 @@ func (s *ConstDeclContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *ConstDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitConstDecl(s)
+		return t.VisitConstDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1801,7 +1800,7 @@ func (s *ConstSpecContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *ConstSpecContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitConstSpec(s)
+		return t.VisitConstSpec(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1842,7 +1841,7 @@ func (p *GolangParser) ConstSpec() (localctx IConstSpecContext) {
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 
-		if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__19))) != 0) || (((_la-41)&-(0x1f+1)) == 0 && ((1<<uint((_la-41)))&((1<<(GolangParserT__40-41))|(1<<(GolangParserT__42-41))|(1<<(GolangParserT__43-41))|(1<<(GolangParserT__44-41))|(1<<(GolangParserT__46-41))|(1<<(GolangParserIDENTIFIER-41)))) != 0) {
+		if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__19))) != 0) || (((_la-40)&-(0x1f+1)) == 0 && ((1<<uint((_la-40)))&((1<<(GolangParserT__39-40))|(1<<(GolangParserT__41-40))|(1<<(GolangParserT__42-40))|(1<<(GolangParserT__43-40))|(1<<(GolangParserT__45-40))|(1<<(GolangParserIDENTIFIER-40)))) != 0) {
 			{
 				p.SetState(260)
 				p.Tp()
@@ -1920,7 +1919,7 @@ func (s *IdentifierListContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *IdentifierListContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitIdentifierList(s)
+		return t.VisitIdentifierList(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2047,7 +2046,7 @@ func (s *ExpressionListContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *ExpressionListContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitExpressionList(s)
+		return t.VisitExpressionList(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2177,7 +2176,7 @@ func (s *TypeDeclContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *TypeDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTypeDecl(s)
+		return t.VisitTypeDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2314,7 +2313,7 @@ func (s *TypeSpecContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *TypeSpecContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTypeSpec(s)
+		return t.VisitTypeSpec(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2427,7 +2426,7 @@ func (s *FunctionDeclContext) ToStringTree(ruleNames []string, recog antlr.Recog
 func (s *FunctionDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitFunctionDecl(s)
+		return t.VisitFunctionDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2552,7 +2551,7 @@ func (s *FunctionContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *FunctionContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitFunction(s)
+		return t.VisitFunction(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2675,7 +2674,7 @@ func (s *MethodDeclContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *MethodDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitMethodDecl(s)
+		return t.VisitMethodDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2794,7 +2793,7 @@ func (s *ReceiverContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *ReceiverContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitReceiver(s)
+		return t.VisitReceiver(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2902,7 +2901,7 @@ func (s *VarDeclContext) ToStringTree(ruleNames []string, recog antlr.Recognizer
 func (s *VarDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitVarDecl(s)
+		return t.VisitVarDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -3055,7 +3054,7 @@ func (s *VarSpecContext) ToStringTree(ruleNames []string, recog antlr.Recognizer
 func (s *VarSpecContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitVarSpec(s)
+		return t.VisitVarSpec(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -3092,7 +3091,7 @@ func (p *GolangParser) VarSpec() (localctx IVarSpecContext) {
 	p.GetErrorHandler().Sync(p)
 
 	switch p.GetTokenStream().LA(1) {
-	case GolangParserT__2, GolangParserT__9, GolangParserT__13, GolangParserT__19, GolangParserT__40, GolangParserT__42, GolangParserT__43, GolangParserT__44, GolangParserT__46, GolangParserIDENTIFIER:
+	case GolangParserT__2, GolangParserT__9, GolangParserT__13, GolangParserT__19, GolangParserT__39, GolangParserT__41, GolangParserT__42, GolangParserT__43, GolangParserT__45, GolangParserIDENTIFIER:
 		{
 			p.SetState(329)
 			p.Tp()
@@ -3189,7 +3188,7 @@ func (s *BlockContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) 
 func (s *BlockContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitBlock(s)
+		return t.VisitBlock(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -3305,7 +3304,7 @@ func (s *StatementListContext) ToStringTree(ruleNames []string, recog antlr.Reco
 func (s *StatementListContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitStatementList(s)
+		return t.VisitStatementList(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -3338,7 +3337,7 @@ func (p *GolangParser) StatementList() (localctx IStatementListContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	for (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__5)|(1<<GolangParserT__8)|(1<<GolangParserT__9)|(1<<GolangParserT__10)|(1<<GolangParserT__11)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20)|(1<<GolangParserT__23)|(1<<GolangParserT__25)|(1<<GolangParserT__26)|(1<<GolangParserT__27)|(1<<GolangParserT__28)|(1<<GolangParserT__29)|(1<<GolangParserT__30))) != 0) || (((_la-32)&-(0x1f+1)) == 0 && ((1<<uint((_la-32)))&((1<<(GolangParserT__31-32))|(1<<(GolangParserT__33-32))|(1<<(GolangParserT__36-32))|(1<<(GolangParserT__37-32))|(1<<(GolangParserT__39-32))|(1<<(GolangParserT__40-32))|(1<<(GolangParserT__42-32))|(1<<(GolangParserT__43-32))|(1<<(GolangParserT__44-32))|(1<<(GolangParserT__46-32))|(1<<(GolangParserIDENTIFIER-32))|(1<<(GolangParserNOT-32)))) != 0) || (((_la-65)&-(0x1f+1)) == 0 && ((1<<uint((_la-65)))&((1<<(GolangParserINT_LIT-65))|(1<<(GolangParserFLOAT_LIT-65))|(1<<(GolangParserIMAGINARY_LIT-65))|(1<<(GolangParserRUNE_LIT-65))|(1<<(GolangParserSTRING_LIT-65)))) != 0) {
+	for (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__5)|(1<<GolangParserT__8)|(1<<GolangParserT__9)|(1<<GolangParserT__10)|(1<<GolangParserT__11)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20)|(1<<GolangParserT__22)|(1<<GolangParserT__24)|(1<<GolangParserT__25)|(1<<GolangParserT__26)|(1<<GolangParserT__27)|(1<<GolangParserT__28)|(1<<GolangParserT__29)|(1<<GolangParserT__30))) != 0) || (((_la-33)&-(0x1f+1)) == 0 && ((1<<uint((_la-33)))&((1<<(GolangParserT__32-33))|(1<<(GolangParserT__35-33))|(1<<(GolangParserT__36-33))|(1<<(GolangParserT__38-33))|(1<<(GolangParserT__39-33))|(1<<(GolangParserT__41-33))|(1<<(GolangParserT__42-33))|(1<<(GolangParserT__43-33))|(1<<(GolangParserT__45-33))|(1<<(GolangParserIDENTIFIER-33))|(1<<(GolangParserNOT-33))|(1<<(GolangParserINT_LIT-33)))) != 0) || (((_la-65)&-(0x1f+1)) == 0 && ((1<<uint((_la-65)))&((1<<(GolangParserFLOAT_LIT-65))|(1<<(GolangParserIMAGINARY_LIT-65))|(1<<(GolangParserRUNE_LIT-65))|(1<<(GolangParserSTRING_LIT-65)))) != 0) {
 		{
 			p.SetState(342)
 			p.Statement()
@@ -3551,7 +3550,7 @@ func (s *StatementContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *StatementContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitStatement(s)
+		return t.VisitStatement(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -3800,7 +3799,7 @@ func (s *SimpleStmtContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *SimpleStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitSimpleStmt(s)
+		return t.VisitSimpleStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -3936,7 +3935,7 @@ func (s *ExpressionStmtContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *ExpressionStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitExpressionStmt(s)
+		return t.VisitExpressionStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -4044,7 +4043,7 @@ func (s *SendStmtContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *SendStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitSendStmt(s)
+		return t.VisitSendStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -4147,7 +4146,7 @@ func (s *IncDecStmtContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *IncDecStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitIncDecStmt(s)
+		return t.VisitIncDecStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -4277,7 +4276,7 @@ func (s *AssignmentContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *AssignmentContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitAssignment(s)
+		return t.VisitAssignment(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -4328,6 +4327,12 @@ type IAssign_opContext interface {
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
+	// GetOp returns the op token.
+	GetOp() antlr.Token
+
+	// SetOp sets the op token.
+	SetOp(antlr.Token)
+
 	// IsAssign_opContext differentiates from other interfaces.
 	IsAssign_opContext()
 }
@@ -4335,6 +4340,7 @@ type IAssign_opContext interface {
 type Assign_opContext struct {
 	*antlr.BaseParserRuleContext
 	parser antlr.Parser
+	op     antlr.Token
 }
 
 func NewEmptyAssign_opContext() *Assign_opContext {
@@ -4358,6 +4364,10 @@ func NewAssign_opContext(parser antlr.Parser, parent antlr.ParserRuleContext, in
 }
 
 func (s *Assign_opContext) GetParser() antlr.Parser { return s.parser }
+
+func (s *Assign_opContext) GetOp() antlr.Token { return s.op }
+
+func (s *Assign_opContext) SetOp(v antlr.Token) { s.op = v }
 
 func (s *Assign_opContext) AOR() antlr.TerminalNode {
 	return s.GetToken(GolangParserAOR, 0)
@@ -4390,7 +4400,7 @@ func (s *Assign_opContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *Assign_opContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitAssign_op(s)
+		return t.VisitAssign_op(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -4423,13 +4433,20 @@ func (p *GolangParser) Assign_op() (localctx IAssign_opContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20)|(1<<GolangParserT__21))) != 0) || (((_la-58)&-(0x1f+1)) == 0 && ((1<<uint((_la-58)))&((1<<(GolangParserAOR-58))|(1<<(GolangParserDIV-58))|(1<<(GolangParserMOD-58))|(1<<(GolangParserLSH-58))|(1<<(GolangParserRSH-58)))) != 0) {
+	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-57)&-(0x1f+1)) == 0 && ((1<<uint((_la-57)))&((1<<(GolangParserAOR-57))|(1<<(GolangParserDIV-57))|(1<<(GolangParserMOD-57))|(1<<(GolangParserLSH-57))|(1<<(GolangParserRSH-57)))) != 0) {
 		{
 			p.SetState(386)
+
+			var _lt = p.GetTokenStream().LT(1)
+
+			localctx.(*Assign_opContext).op = _lt
+
 			_la = p.GetTokenStream().LA(1)
 
-			if !((((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20)|(1<<GolangParserT__21))) != 0) || (((_la-58)&-(0x1f+1)) == 0 && ((1<<uint((_la-58)))&((1<<(GolangParserAOR-58))|(1<<(GolangParserDIV-58))|(1<<(GolangParserMOD-58))|(1<<(GolangParserLSH-58))|(1<<(GolangParserRSH-58)))) != 0)) {
-				p.GetErrorHandler().RecoverInline(p)
+			if !((((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-57)&-(0x1f+1)) == 0 && ((1<<uint((_la-57)))&((1<<(GolangParserAOR-57))|(1<<(GolangParserDIV-57))|(1<<(GolangParserMOD-57))|(1<<(GolangParserLSH-57))|(1<<(GolangParserRSH-57)))) != 0)) {
+				var _ri = p.GetErrorHandler().RecoverInline(p)
+
+				localctx.(*Assign_opContext).op = _ri
 			} else {
 				p.GetErrorHandler().ReportMatch(p)
 				p.Consume()
@@ -4514,7 +4531,7 @@ func (s *ShortVarDeclContext) ToStringTree(ruleNames []string, recog antlr.Recog
 func (s *ShortVarDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitShortVarDecl(s)
+		return t.VisitShortVarDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -4548,7 +4565,7 @@ func (p *GolangParser) ShortVarDecl() (localctx IShortVarDeclContext) {
 	}
 	{
 		p.SetState(392)
-		p.Match(GolangParserT__22)
+		p.Match(GolangParserT__21)
 	}
 	{
 		p.SetState(393)
@@ -4606,7 +4623,7 @@ func (s *EmptyStmtContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *EmptyStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitEmptyStmt(s)
+		return t.VisitEmptyStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -4636,7 +4653,7 @@ func (p *GolangParser) EmptyStmt() (localctx IEmptyStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(395)
-		p.Match(GolangParserT__23)
+		p.Match(GolangParserT__22)
 	}
 
 	return localctx
@@ -4705,7 +4722,7 @@ func (s *LabeledStmtContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *LabeledStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitLabeledStmt(s)
+		return t.VisitLabeledStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -4739,7 +4756,7 @@ func (p *GolangParser) LabeledStmt() (localctx ILabeledStmtContext) {
 	}
 	{
 		p.SetState(398)
-		p.Match(GolangParserT__24)
+		p.Match(GolangParserT__23)
 	}
 	{
 		p.SetState(399)
@@ -4808,7 +4825,7 @@ func (s *ReturnStmtContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *ReturnStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitReturnStmt(s)
+		return t.VisitReturnStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -4838,7 +4855,7 @@ func (p *GolangParser) ReturnStmt() (localctx IReturnStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(401)
-		p.Match(GolangParserT__25)
+		p.Match(GolangParserT__24)
 	}
 	p.SetState(403)
 	p.GetErrorHandler().Sync(p)
@@ -4907,7 +4924,7 @@ func (s *BreakStmtContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *BreakStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitBreakStmt(s)
+		return t.VisitBreakStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -4937,7 +4954,7 @@ func (p *GolangParser) BreakStmt() (localctx IBreakStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(405)
-		p.Match(GolangParserT__26)
+		p.Match(GolangParserT__25)
 	}
 	p.SetState(407)
 	p.GetErrorHandler().Sync(p)
@@ -5006,7 +5023,7 @@ func (s *ContinueStmtContext) ToStringTree(ruleNames []string, recog antlr.Recog
 func (s *ContinueStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitContinueStmt(s)
+		return t.VisitContinueStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -5036,7 +5053,7 @@ func (p *GolangParser) ContinueStmt() (localctx IContinueStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(409)
-		p.Match(GolangParserT__27)
+		p.Match(GolangParserT__26)
 	}
 	p.SetState(411)
 	p.GetErrorHandler().Sync(p)
@@ -5105,7 +5122,7 @@ func (s *GotoStmtContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *GotoStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitGotoStmt(s)
+		return t.VisitGotoStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -5135,7 +5152,7 @@ func (p *GolangParser) GotoStmt() (localctx IGotoStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(413)
-		p.Match(GolangParserT__28)
+		p.Match(GolangParserT__27)
 	}
 	{
 		p.SetState(414)
@@ -5193,7 +5210,7 @@ func (s *FallthroughStmtContext) ToStringTree(ruleNames []string, recog antlr.Re
 func (s *FallthroughStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitFallthroughStmt(s)
+		return t.VisitFallthroughStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -5223,7 +5240,7 @@ func (p *GolangParser) FallthroughStmt() (localctx IFallthroughStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(416)
-		p.Match(GolangParserT__29)
+		p.Match(GolangParserT__28)
 	}
 
 	return localctx
@@ -5288,7 +5305,7 @@ func (s *DeferStmtContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *DeferStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitDeferStmt(s)
+		return t.VisitDeferStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -5318,7 +5335,7 @@ func (p *GolangParser) DeferStmt() (localctx IDeferStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(418)
-		p.Match(GolangParserT__30)
+		p.Match(GolangParserT__29)
 	}
 	{
 		p.SetState(419)
@@ -5430,7 +5447,7 @@ func (s *IfStmtContext) ToStringTree(ruleNames []string, recog antlr.Recognizer)
 func (s *IfStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitIfStmt(s)
+		return t.VisitIfStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -5461,7 +5478,7 @@ func (p *GolangParser) IfStmt() (localctx IIfStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(421)
-		p.Match(GolangParserT__31)
+		p.Match(GolangParserT__30)
 	}
 	p.SetState(425)
 	p.GetErrorHandler().Sync(p)
@@ -5473,7 +5490,7 @@ func (p *GolangParser) IfStmt() (localctx IIfStmtContext) {
 		}
 		{
 			p.SetState(423)
-			p.Match(GolangParserT__23)
+			p.Match(GolangParserT__22)
 		}
 
 	}
@@ -5489,16 +5506,16 @@ func (p *GolangParser) IfStmt() (localctx IIfStmtContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	if _la == GolangParserT__32 {
+	if _la == GolangParserT__31 {
 		{
 			p.SetState(429)
-			p.Match(GolangParserT__32)
+			p.Match(GolangParserT__31)
 		}
 		p.SetState(432)
 		p.GetErrorHandler().Sync(p)
 
 		switch p.GetTokenStream().LA(1) {
-		case GolangParserT__31:
+		case GolangParserT__30:
 			{
 				p.SetState(430)
 				p.IfStmt()
@@ -5588,7 +5605,7 @@ func (s *SwitchStmtContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *SwitchStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitSwitchStmt(s)
+		return t.VisitSwitchStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -5729,7 +5746,7 @@ func (s *ExprSwitchStmtContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *ExprSwitchStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitExprSwitchStmt(s)
+		return t.VisitExprSwitchStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -5760,7 +5777,7 @@ func (p *GolangParser) ExprSwitchStmt() (localctx IExprSwitchStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(440)
-		p.Match(GolangParserT__33)
+		p.Match(GolangParserT__32)
 	}
 	p.SetState(444)
 	p.GetErrorHandler().Sync(p)
@@ -5772,7 +5789,7 @@ func (p *GolangParser) ExprSwitchStmt() (localctx IExprSwitchStmtContext) {
 		}
 		{
 			p.SetState(442)
-			p.Match(GolangParserT__23)
+			p.Match(GolangParserT__22)
 		}
 
 	}
@@ -5780,7 +5797,7 @@ func (p *GolangParser) ExprSwitchStmt() (localctx IExprSwitchStmtContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-41)&-(0x1f+1)) == 0 && ((1<<uint((_la-41)))&((1<<(GolangParserT__40-41))|(1<<(GolangParserT__42-41))|(1<<(GolangParserT__43-41))|(1<<(GolangParserT__44-41))|(1<<(GolangParserT__46-41))|(1<<(GolangParserIDENTIFIER-41))|(1<<(GolangParserNOT-41))|(1<<(GolangParserINT_LIT-41))|(1<<(GolangParserFLOAT_LIT-41))|(1<<(GolangParserIMAGINARY_LIT-41))|(1<<(GolangParserRUNE_LIT-41))|(1<<(GolangParserSTRING_LIT-41)))) != 0) {
+	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-40)&-(0x1f+1)) == 0 && ((1<<uint((_la-40)))&((1<<(GolangParserT__39-40))|(1<<(GolangParserT__41-40))|(1<<(GolangParserT__42-40))|(1<<(GolangParserT__43-40))|(1<<(GolangParserT__45-40))|(1<<(GolangParserIDENTIFIER-40))|(1<<(GolangParserNOT-40))|(1<<(GolangParserINT_LIT-40))|(1<<(GolangParserFLOAT_LIT-40))|(1<<(GolangParserIMAGINARY_LIT-40))|(1<<(GolangParserRUNE_LIT-40))|(1<<(GolangParserSTRING_LIT-40)))) != 0) {
 		{
 			p.SetState(446)
 			p.expression(0)
@@ -5795,7 +5812,7 @@ func (p *GolangParser) ExprSwitchStmt() (localctx IExprSwitchStmtContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	for _la == GolangParserT__34 || _la == GolangParserT__35 {
+	for _la == GolangParserT__33 || _la == GolangParserT__34 {
 		{
 			p.SetState(450)
 			p.ExprCaseClause()
@@ -5882,7 +5899,7 @@ func (s *ExprCaseClauseContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *ExprCaseClauseContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitExprCaseClause(s)
+		return t.VisitExprCaseClause(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -5916,7 +5933,7 @@ func (p *GolangParser) ExprCaseClause() (localctx IExprCaseClauseContext) {
 	}
 	{
 		p.SetState(459)
-		p.Match(GolangParserT__24)
+		p.Match(GolangParserT__23)
 	}
 	{
 		p.SetState(460)
@@ -5985,7 +6002,7 @@ func (s *ExprSwitchCaseContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *ExprSwitchCaseContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitExprSwitchCase(s)
+		return t.VisitExprSwitchCase(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -6016,22 +6033,22 @@ func (p *GolangParser) ExprSwitchCase() (localctx IExprSwitchCaseContext) {
 	p.GetErrorHandler().Sync(p)
 
 	switch p.GetTokenStream().LA(1) {
-	case GolangParserT__34:
+	case GolangParserT__33:
 		p.EnterOuterAlt(localctx, 1)
 		{
 			p.SetState(462)
-			p.Match(GolangParserT__34)
+			p.Match(GolangParserT__33)
 		}
 		{
 			p.SetState(463)
 			p.ExpressionList()
 		}
 
-	case GolangParserT__35:
+	case GolangParserT__34:
 		p.EnterOuterAlt(localctx, 2)
 		{
 			p.SetState(464)
-			p.Match(GolangParserT__35)
+			p.Match(GolangParserT__34)
 		}
 
 	default:
@@ -6133,7 +6150,7 @@ func (s *TypeSwitchStmtContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *TypeSwitchStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTypeSwitchStmt(s)
+		return t.VisitTypeSwitchStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -6164,7 +6181,7 @@ func (p *GolangParser) TypeSwitchStmt() (localctx ITypeSwitchStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(467)
-		p.Match(GolangParserT__33)
+		p.Match(GolangParserT__32)
 	}
 	p.SetState(471)
 	p.GetErrorHandler().Sync(p)
@@ -6176,7 +6193,7 @@ func (p *GolangParser) TypeSwitchStmt() (localctx ITypeSwitchStmtContext) {
 		}
 		{
 			p.SetState(469)
-			p.Match(GolangParserT__23)
+			p.Match(GolangParserT__22)
 		}
 
 	}
@@ -6192,7 +6209,7 @@ func (p *GolangParser) TypeSwitchStmt() (localctx ITypeSwitchStmtContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	for _la == GolangParserT__34 || _la == GolangParserT__35 {
+	for _la == GolangParserT__33 || _la == GolangParserT__34 {
 		{
 			p.SetState(475)
 			p.TypeCaseClause()
@@ -6273,7 +6290,7 @@ func (s *TypeSwitchGuardContext) ToStringTree(ruleNames []string, recog antlr.Re
 func (s *TypeSwitchGuardContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTypeSwitchGuard(s)
+		return t.VisitTypeSwitchGuard(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -6311,7 +6328,7 @@ func (p *GolangParser) TypeSwitchGuard() (localctx ITypeSwitchGuardContext) {
 		}
 		{
 			p.SetState(484)
-			p.Match(GolangParserT__22)
+			p.Match(GolangParserT__21)
 		}
 
 	}
@@ -6408,7 +6425,7 @@ func (s *TypeCaseClauseContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *TypeCaseClauseContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTypeCaseClause(s)
+		return t.VisitTypeCaseClause(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -6442,7 +6459,7 @@ func (p *GolangParser) TypeCaseClause() (localctx ITypeCaseClauseContext) {
 	}
 	{
 		p.SetState(494)
-		p.Match(GolangParserT__24)
+		p.Match(GolangParserT__23)
 	}
 	{
 		p.SetState(495)
@@ -6511,7 +6528,7 @@ func (s *TypeSwitchCaseContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *TypeSwitchCaseContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTypeSwitchCase(s)
+		return t.VisitTypeSwitchCase(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -6542,22 +6559,22 @@ func (p *GolangParser) TypeSwitchCase() (localctx ITypeSwitchCaseContext) {
 	p.GetErrorHandler().Sync(p)
 
 	switch p.GetTokenStream().LA(1) {
-	case GolangParserT__34:
+	case GolangParserT__33:
 		p.EnterOuterAlt(localctx, 1)
 		{
 			p.SetState(497)
-			p.Match(GolangParserT__34)
+			p.Match(GolangParserT__33)
 		}
 		{
 			p.SetState(498)
 			p.TypeList()
 		}
 
-	case GolangParserT__35:
+	case GolangParserT__34:
 		p.EnterOuterAlt(localctx, 2)
 		{
 			p.SetState(499)
-			p.Match(GolangParserT__35)
+			p.Match(GolangParserT__34)
 		}
 
 	default:
@@ -6639,7 +6656,7 @@ func (s *TypeListContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *TypeListContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTypeList(s)
+		return t.VisitTypeList(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -6766,7 +6783,7 @@ func (s *SelectStmtContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *SelectStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitSelectStmt(s)
+		return t.VisitSelectStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -6797,7 +6814,7 @@ func (p *GolangParser) SelectStmt() (localctx ISelectStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(510)
-		p.Match(GolangParserT__36)
+		p.Match(GolangParserT__35)
 	}
 	{
 		p.SetState(511)
@@ -6807,7 +6824,7 @@ func (p *GolangParser) SelectStmt() (localctx ISelectStmtContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	for _la == GolangParserT__34 || _la == GolangParserT__35 {
+	for _la == GolangParserT__33 || _la == GolangParserT__34 {
 		{
 			p.SetState(512)
 			p.CommClause()
@@ -6894,7 +6911,7 @@ func (s *CommClauseContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *CommClauseContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitCommClause(s)
+		return t.VisitCommClause(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -6928,7 +6945,7 @@ func (p *GolangParser) CommClause() (localctx ICommClauseContext) {
 	}
 	{
 		p.SetState(521)
-		p.Match(GolangParserT__24)
+		p.Match(GolangParserT__23)
 	}
 	{
 		p.SetState(522)
@@ -7007,7 +7024,7 @@ func (s *CommCaseContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *CommCaseContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitCommCase(s)
+		return t.VisitCommCase(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -7038,11 +7055,11 @@ func (p *GolangParser) CommCase() (localctx ICommCaseContext) {
 	p.GetErrorHandler().Sync(p)
 
 	switch p.GetTokenStream().LA(1) {
-	case GolangParserT__34:
+	case GolangParserT__33:
 		p.EnterOuterAlt(localctx, 1)
 		{
 			p.SetState(524)
-			p.Match(GolangParserT__34)
+			p.Match(GolangParserT__33)
 		}
 		p.SetState(527)
 		p.GetErrorHandler().Sync(p)
@@ -7061,11 +7078,11 @@ func (p *GolangParser) CommCase() (localctx ICommCaseContext) {
 
 		}
 
-	case GolangParserT__35:
+	case GolangParserT__34:
 		p.EnterOuterAlt(localctx, 2)
 		{
 			p.SetState(529)
-			p.Match(GolangParserT__35)
+			p.Match(GolangParserT__34)
 		}
 
 	default:
@@ -7154,7 +7171,7 @@ func (s *RecvStmtContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *RecvStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitRecvStmt(s)
+		return t.VisitRecvStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -7202,7 +7219,7 @@ func (p *GolangParser) RecvStmt() (localctx IRecvStmtContext) {
 		}
 		{
 			p.SetState(536)
-			p.Match(GolangParserT__22)
+			p.Match(GolangParserT__21)
 		}
 
 	}
@@ -7303,7 +7320,7 @@ func (s *ForStmtContext) ToStringTree(ruleNames []string, recog antlr.Recognizer
 func (s *ForStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitForStmt(s)
+		return t.VisitForStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -7333,7 +7350,7 @@ func (p *GolangParser) ForStmt() (localctx IForStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(542)
-		p.Match(GolangParserT__37)
+		p.Match(GolangParserT__36)
 	}
 	p.SetState(546)
 	p.GetErrorHandler().Sync(p)
@@ -7447,7 +7464,7 @@ func (s *ForClauseContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *ForClauseContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitForClause(s)
+		return t.VisitForClause(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -7488,13 +7505,13 @@ func (p *GolangParser) ForClause() (localctx IForClauseContext) {
 	}
 	{
 		p.SetState(553)
-		p.Match(GolangParserT__23)
+		p.Match(GolangParserT__22)
 	}
 	p.SetState(555)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-41)&-(0x1f+1)) == 0 && ((1<<uint((_la-41)))&((1<<(GolangParserT__40-41))|(1<<(GolangParserT__42-41))|(1<<(GolangParserT__43-41))|(1<<(GolangParserT__44-41))|(1<<(GolangParserT__46-41))|(1<<(GolangParserIDENTIFIER-41))|(1<<(GolangParserNOT-41))|(1<<(GolangParserINT_LIT-41))|(1<<(GolangParserFLOAT_LIT-41))|(1<<(GolangParserIMAGINARY_LIT-41))|(1<<(GolangParserRUNE_LIT-41))|(1<<(GolangParserSTRING_LIT-41)))) != 0) {
+	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-40)&-(0x1f+1)) == 0 && ((1<<uint((_la-40)))&((1<<(GolangParserT__39-40))|(1<<(GolangParserT__41-40))|(1<<(GolangParserT__42-40))|(1<<(GolangParserT__43-40))|(1<<(GolangParserT__45-40))|(1<<(GolangParserIDENTIFIER-40))|(1<<(GolangParserNOT-40))|(1<<(GolangParserINT_LIT-40))|(1<<(GolangParserFLOAT_LIT-40))|(1<<(GolangParserIMAGINARY_LIT-40))|(1<<(GolangParserRUNE_LIT-40))|(1<<(GolangParserSTRING_LIT-40)))) != 0) {
 		{
 			p.SetState(554)
 			p.expression(0)
@@ -7503,13 +7520,13 @@ func (p *GolangParser) ForClause() (localctx IForClauseContext) {
 	}
 	{
 		p.SetState(557)
-		p.Match(GolangParserT__23)
+		p.Match(GolangParserT__22)
 	}
 	p.SetState(559)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20)|(1<<GolangParserT__23))) != 0) || (((_la-41)&-(0x1f+1)) == 0 && ((1<<uint((_la-41)))&((1<<(GolangParserT__40-41))|(1<<(GolangParserT__42-41))|(1<<(GolangParserT__43-41))|(1<<(GolangParserT__44-41))|(1<<(GolangParserT__46-41))|(1<<(GolangParserIDENTIFIER-41))|(1<<(GolangParserNOT-41))|(1<<(GolangParserINT_LIT-41))|(1<<(GolangParserFLOAT_LIT-41))|(1<<(GolangParserIMAGINARY_LIT-41))|(1<<(GolangParserRUNE_LIT-41))|(1<<(GolangParserSTRING_LIT-41)))) != 0) {
+	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20)|(1<<GolangParserT__22))) != 0) || (((_la-40)&-(0x1f+1)) == 0 && ((1<<uint((_la-40)))&((1<<(GolangParserT__39-40))|(1<<(GolangParserT__41-40))|(1<<(GolangParserT__42-40))|(1<<(GolangParserT__43-40))|(1<<(GolangParserT__45-40))|(1<<(GolangParserIDENTIFIER-40))|(1<<(GolangParserNOT-40))|(1<<(GolangParserINT_LIT-40))|(1<<(GolangParserFLOAT_LIT-40))|(1<<(GolangParserIMAGINARY_LIT-40))|(1<<(GolangParserRUNE_LIT-40))|(1<<(GolangParserSTRING_LIT-40)))) != 0) {
 		{
 			p.SetState(558)
 			p.SimpleStmt()
@@ -7599,7 +7616,7 @@ func (s *RangeClauseContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *RangeClauseContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitRangeClause(s)
+		return t.VisitRangeClause(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -7647,13 +7664,13 @@ func (p *GolangParser) RangeClause() (localctx IRangeClauseContext) {
 		}
 		{
 			p.SetState(565)
-			p.Match(GolangParserT__22)
+			p.Match(GolangParserT__21)
 		}
 
 	}
 	{
 		p.SetState(569)
-		p.Match(GolangParserT__38)
+		p.Match(GolangParserT__37)
 	}
 	{
 		p.SetState(570)
@@ -7722,7 +7739,7 @@ func (s *GoStmtContext) ToStringTree(ruleNames []string, recog antlr.Recognizer)
 func (s *GoStmtContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitGoStmt(s)
+		return t.VisitGoStmt(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -7752,7 +7769,7 @@ func (p *GolangParser) GoStmt() (localctx IGoStmtContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(572)
-		p.Match(GolangParserT__39)
+		p.Match(GolangParserT__38)
 	}
 	{
 		p.SetState(573)
@@ -7841,7 +7858,7 @@ func (s *TpContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) str
 func (s *TpContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTp(s)
+		return t.VisitTp(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -7879,7 +7896,7 @@ func (p *GolangParser) Tp() (localctx ITpContext) {
 			p.TypeName()
 		}
 
-	case GolangParserT__9, GolangParserT__13, GolangParserT__19, GolangParserT__40, GolangParserT__42, GolangParserT__43, GolangParserT__44, GolangParserT__46:
+	case GolangParserT__9, GolangParserT__13, GolangParserT__19, GolangParserT__39, GolangParserT__41, GolangParserT__42, GolangParserT__43, GolangParserT__45:
 		p.EnterOuterAlt(localctx, 2)
 		{
 			p.SetState(576)
@@ -7971,7 +7988,7 @@ func (s *TypeNameContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *TypeNameContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTypeName(s)
+		return t.VisitTypeName(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -8149,7 +8166,7 @@ func (s *TypeLitContext) ToStringTree(ruleNames []string, recog antlr.Recognizer
 func (s *TypeLitContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTypeLit(s)
+		return t.VisitTypeLit(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -8309,7 +8326,7 @@ func (s *ArrayTypeContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *ArrayTypeContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitArrayType(s)
+		return t.VisitArrayType(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -8339,7 +8356,7 @@ func (p *GolangParser) ArrayType() (localctx IArrayTypeContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(597)
-		p.Match(GolangParserT__40)
+		p.Match(GolangParserT__39)
 	}
 	{
 		p.SetState(598)
@@ -8347,7 +8364,7 @@ func (p *GolangParser) ArrayType() (localctx IArrayTypeContext) {
 	}
 	{
 		p.SetState(599)
-		p.Match(GolangParserT__41)
+		p.Match(GolangParserT__40)
 	}
 	{
 		p.SetState(600)
@@ -8416,7 +8433,7 @@ func (s *ArrayLengthContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *ArrayLengthContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitArrayLength(s)
+		return t.VisitArrayLength(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -8511,7 +8528,7 @@ func (s *ElementTypeContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *ElementTypeContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitElementType(s)
+		return t.VisitElementType(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -8606,7 +8623,7 @@ func (s *PointerTypeContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *PointerTypeContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitPointerType(s)
+		return t.VisitPointerType(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -8718,7 +8735,7 @@ func (s *InterfaceTypeContext) ToStringTree(ruleNames []string, recog antlr.Reco
 func (s *InterfaceTypeContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitInterfaceType(s)
+		return t.VisitInterfaceType(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -8749,7 +8766,7 @@ func (p *GolangParser) InterfaceType() (localctx IInterfaceTypeContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(609)
-		p.Match(GolangParserT__42)
+		p.Match(GolangParserT__41)
 	}
 	{
 		p.SetState(610)
@@ -8836,7 +8853,7 @@ func (s *SliceTypeContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *SliceTypeContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitSliceType(s)
+		return t.VisitSliceType(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -8866,11 +8883,11 @@ func (p *GolangParser) SliceType() (localctx ISliceTypeContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(619)
-		p.Match(GolangParserT__40)
+		p.Match(GolangParserT__39)
 	}
 	{
 		p.SetState(620)
-		p.Match(GolangParserT__41)
+		p.Match(GolangParserT__40)
 	}
 	{
 		p.SetState(621)
@@ -8949,7 +8966,7 @@ func (s *MapTypeContext) ToStringTree(ruleNames []string, recog antlr.Recognizer
 func (s *MapTypeContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitMapType(s)
+		return t.VisitMapType(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -8979,11 +8996,11 @@ func (p *GolangParser) MapType() (localctx IMapTypeContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(623)
-		p.Match(GolangParserT__43)
+		p.Match(GolangParserT__42)
 	}
 	{
 		p.SetState(624)
-		p.Match(GolangParserT__40)
+		p.Match(GolangParserT__39)
 	}
 	{
 		p.SetState(625)
@@ -8991,7 +9008,7 @@ func (p *GolangParser) MapType() (localctx IMapTypeContext) {
 	}
 	{
 		p.SetState(626)
-		p.Match(GolangParserT__41)
+		p.Match(GolangParserT__40)
 	}
 	{
 		p.SetState(627)
@@ -9060,7 +9077,7 @@ func (s *ChannelTypeContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *ChannelTypeContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitChannelType(s)
+		return t.VisitChannelType(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -9094,13 +9111,13 @@ func (p *GolangParser) ChannelType() (localctx IChannelTypeContext) {
 	case 1:
 		{
 			p.SetState(629)
-			p.Match(GolangParserT__44)
+			p.Match(GolangParserT__43)
 		}
 
 	case 2:
 		{
 			p.SetState(630)
-			p.Match(GolangParserT__44)
+			p.Match(GolangParserT__43)
 		}
 		{
 			p.SetState(631)
@@ -9114,7 +9131,7 @@ func (p *GolangParser) ChannelType() (localctx IChannelTypeContext) {
 		}
 		{
 			p.SetState(633)
-			p.Match(GolangParserT__44)
+			p.Match(GolangParserT__43)
 		}
 
 	}
@@ -9209,7 +9226,7 @@ func (s *MethodSpecContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *MethodSpecContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitMethodSpec(s)
+		return t.VisitMethodSpec(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -9336,7 +9353,7 @@ func (s *FunctionTypeContext) ToStringTree(ruleNames []string, recog antlr.Recog
 func (s *FunctionTypeContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitFunctionType(s)
+		return t.VisitFunctionType(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -9445,7 +9462,7 @@ func (s *SignatureContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *SignatureContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitSignature(s)
+		return t.VisitSignature(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -9567,7 +9584,7 @@ func (s *ResultContext) ToStringTree(ruleNames []string, recog antlr.Recognizer)
 func (s *ResultContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitResult(s)
+		return t.VisitResult(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -9675,7 +9692,7 @@ func (s *ParametersContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *ParametersContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitParameters(s)
+		return t.VisitParameters(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -9712,7 +9729,7 @@ func (p *GolangParser) Parameters() (localctx IParametersContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__19))) != 0) || (((_la-41)&-(0x1f+1)) == 0 && ((1<<uint((_la-41)))&((1<<(GolangParserT__40-41))|(1<<(GolangParserT__42-41))|(1<<(GolangParserT__43-41))|(1<<(GolangParserT__44-41))|(1<<(GolangParserT__45-41))|(1<<(GolangParserT__46-41))|(1<<(GolangParserIDENTIFIER-41)))) != 0) {
+	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__19))) != 0) || (((_la-40)&-(0x1f+1)) == 0 && ((1<<uint((_la-40)))&((1<<(GolangParserT__39-40))|(1<<(GolangParserT__41-40))|(1<<(GolangParserT__42-40))|(1<<(GolangParserT__43-40))|(1<<(GolangParserT__44-40))|(1<<(GolangParserT__45-40))|(1<<(GolangParserIDENTIFIER-40)))) != 0) {
 		{
 			p.SetState(661)
 			p.ParameterList()
@@ -9810,7 +9827,7 @@ func (s *ParameterListContext) ToStringTree(ruleNames []string, recog antlr.Reco
 func (s *ParameterListContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitParameterList(s)
+		return t.VisitParameterList(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -9937,7 +9954,7 @@ func (s *ParameterDeclContext) ToStringTree(ruleNames []string, recog antlr.Reco
 func (s *ParameterDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitParameterDecl(s)
+		return t.VisitParameterDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -9980,10 +9997,10 @@ func (p *GolangParser) ParameterDecl() (localctx IParameterDeclContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	if _la == GolangParserT__45 {
+	if _la == GolangParserT__44 {
 		{
 			p.SetState(680)
-			p.Match(GolangParserT__45)
+			p.Match(GolangParserT__44)
 		}
 
 	}
@@ -10084,7 +10101,7 @@ func (s *OperandContext) ToStringTree(ruleNames []string, recog antlr.Recognizer
 func (s *OperandContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitOperand(s)
+		return t.VisitOperand(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -10234,7 +10251,7 @@ func (s *LiteralContext) ToStringTree(ruleNames []string, recog antlr.Recognizer
 func (s *LiteralContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitLiteral(s)
+		return t.VisitLiteral(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -10272,7 +10289,7 @@ func (p *GolangParser) Literal() (localctx ILiteralContext) {
 			p.BasicLit()
 		}
 
-	case GolangParserT__40, GolangParserT__43, GolangParserT__46, GolangParserIDENTIFIER:
+	case GolangParserT__39, GolangParserT__42, GolangParserT__45, GolangParserIDENTIFIER:
 		p.EnterOuterAlt(localctx, 2)
 		{
 			p.SetState(695)
@@ -10362,7 +10379,7 @@ func (s *BasicLitContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *BasicLitContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitBasicLit(s)
+		return t.VisitBasicLit(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -10395,7 +10412,7 @@ func (p *GolangParser) BasicLit() (localctx IBasicLitContext) {
 		p.SetState(699)
 		_la = p.GetTokenStream().LA(1)
 
-		if !(((_la-65)&-(0x1f+1)) == 0 && ((1<<uint((_la-65)))&((1<<(GolangParserINT_LIT-65))|(1<<(GolangParserFLOAT_LIT-65))|(1<<(GolangParserIMAGINARY_LIT-65))|(1<<(GolangParserRUNE_LIT-65))|(1<<(GolangParserSTRING_LIT-65)))) != 0) {
+		if !(((_la-64)&-(0x1f+1)) == 0 && ((1<<uint((_la-64)))&((1<<(GolangParserINT_LIT-64))|(1<<(GolangParserFLOAT_LIT-64))|(1<<(GolangParserIMAGINARY_LIT-64))|(1<<(GolangParserRUNE_LIT-64))|(1<<(GolangParserSTRING_LIT-64)))) != 0) {
 			p.GetErrorHandler().RecoverInline(p)
 		} else {
 			p.GetErrorHandler().ReportMatch(p)
@@ -10469,7 +10486,7 @@ func (s *OperandNameContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *OperandNameContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitOperandName(s)
+		return t.VisitOperandName(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -10575,7 +10592,7 @@ func (s *QualifiedIdentContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *QualifiedIdentContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitQualifiedIdent(s)
+		return t.VisitQualifiedIdent(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -10688,7 +10705,7 @@ func (s *CompositeLitContext) ToStringTree(ruleNames []string, recog antlr.Recog
 func (s *CompositeLitContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitCompositeLit(s)
+		return t.VisitCompositeLit(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -10837,7 +10854,7 @@ func (s *LiteralTypeContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *LiteralTypeContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitLiteralType(s)
+		return t.VisitLiteralType(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -10885,15 +10902,15 @@ func (p *GolangParser) LiteralType() (localctx ILiteralTypeContext) {
 		p.EnterOuterAlt(localctx, 3)
 		{
 			p.SetState(714)
-			p.Match(GolangParserT__40)
+			p.Match(GolangParserT__39)
 		}
 		{
 			p.SetState(715)
-			p.Match(GolangParserT__45)
+			p.Match(GolangParserT__44)
 		}
 		{
 			p.SetState(716)
-			p.Match(GolangParserT__41)
+			p.Match(GolangParserT__40)
 		}
 		{
 			p.SetState(717)
@@ -10985,7 +11002,7 @@ func (s *LiteralValueContext) ToStringTree(ruleNames []string, recog antlr.Recog
 func (s *LiteralValueContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitLiteralValue(s)
+		return t.VisitLiteralValue(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -11022,7 +11039,7 @@ func (p *GolangParser) LiteralValue() (localctx ILiteralValueContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__11)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-41)&-(0x1f+1)) == 0 && ((1<<uint((_la-41)))&((1<<(GolangParserT__40-41))|(1<<(GolangParserT__42-41))|(1<<(GolangParserT__43-41))|(1<<(GolangParserT__44-41))|(1<<(GolangParserT__46-41))|(1<<(GolangParserIDENTIFIER-41))|(1<<(GolangParserNOT-41))|(1<<(GolangParserINT_LIT-41))|(1<<(GolangParserFLOAT_LIT-41))|(1<<(GolangParserIMAGINARY_LIT-41))|(1<<(GolangParserRUNE_LIT-41))|(1<<(GolangParserSTRING_LIT-41)))) != 0) {
+	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__11)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-40)&-(0x1f+1)) == 0 && ((1<<uint((_la-40)))&((1<<(GolangParserT__39-40))|(1<<(GolangParserT__41-40))|(1<<(GolangParserT__42-40))|(1<<(GolangParserT__43-40))|(1<<(GolangParserT__45-40))|(1<<(GolangParserIDENTIFIER-40))|(1<<(GolangParserNOT-40))|(1<<(GolangParserINT_LIT-40))|(1<<(GolangParserFLOAT_LIT-40))|(1<<(GolangParserIMAGINARY_LIT-40))|(1<<(GolangParserRUNE_LIT-40))|(1<<(GolangParserSTRING_LIT-40)))) != 0) {
 		{
 			p.SetState(724)
 			p.ElementList()
@@ -11120,7 +11137,7 @@ func (s *ElementListContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *ElementListContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitElementList(s)
+		return t.VisitElementList(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -11247,7 +11264,7 @@ func (s *KeyedElementContext) ToStringTree(ruleNames []string, recog antlr.Recog
 func (s *KeyedElementContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitKeyedElement(s)
+		return t.VisitKeyedElement(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -11285,7 +11302,7 @@ func (p *GolangParser) KeyedElement() (localctx IKeyedElementContext) {
 		}
 		{
 			p.SetState(741)
-			p.Match(GolangParserT__24)
+			p.Match(GolangParserT__23)
 		}
 
 	}
@@ -11370,7 +11387,7 @@ func (s *KeyContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) st
 func (s *KeyContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitKey(s)
+		return t.VisitKey(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -11495,7 +11512,7 @@ func (s *ElementContext) ToStringTree(ruleNames []string, recog antlr.Recognizer
 func (s *ElementContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitElement(s)
+		return t.VisitElement(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -11526,7 +11543,7 @@ func (p *GolangParser) Element() (localctx IElementContext) {
 	p.GetErrorHandler().Sync(p)
 
 	switch p.GetTokenStream().LA(1) {
-	case GolangParserT__2, GolangParserT__9, GolangParserT__13, GolangParserT__16, GolangParserT__17, GolangParserT__18, GolangParserT__19, GolangParserT__20, GolangParserT__40, GolangParserT__42, GolangParserT__43, GolangParserT__44, GolangParserT__46, GolangParserIDENTIFIER, GolangParserNOT, GolangParserINT_LIT, GolangParserFLOAT_LIT, GolangParserIMAGINARY_LIT, GolangParserRUNE_LIT, GolangParserSTRING_LIT:
+	case GolangParserT__2, GolangParserT__9, GolangParserT__13, GolangParserT__16, GolangParserT__17, GolangParserT__18, GolangParserT__19, GolangParserT__20, GolangParserT__39, GolangParserT__41, GolangParserT__42, GolangParserT__43, GolangParserT__45, GolangParserIDENTIFIER, GolangParserNOT, GolangParserINT_LIT, GolangParserFLOAT_LIT, GolangParserIMAGINARY_LIT, GolangParserRUNE_LIT, GolangParserSTRING_LIT:
 		p.EnterOuterAlt(localctx, 1)
 		{
 			p.SetState(752)
@@ -11619,7 +11636,7 @@ func (s *StructTypeContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *StructTypeContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitStructType(s)
+		return t.VisitStructType(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -11650,7 +11667,7 @@ func (p *GolangParser) StructType() (localctx IStructTypeContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(756)
-		p.Match(GolangParserT__46)
+		p.Match(GolangParserT__45)
 	}
 	{
 		p.SetState(757)
@@ -11761,7 +11778,7 @@ func (s *FieldDeclContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *FieldDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitFieldDecl(s)
+		return t.VisitFieldDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -11884,7 +11901,7 @@ func (s *AnonymousFieldContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *AnonymousFieldContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitAnonymousField(s)
+		return t.VisitAnonymousField(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -11991,7 +12008,7 @@ func (s *FunctionLitContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *FunctionLitContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitFunctionLit(s)
+		return t.VisitFunctionLit(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -12160,7 +12177,7 @@ func (s *PrimaryExprContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *PrimaryExprContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitPrimaryExpr(s)
+		return t.VisitPrimaryExpr(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -12358,7 +12375,7 @@ func (s *SelectorContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *SelectorContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitSelector(s)
+		return t.VisitSelector(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -12457,7 +12474,7 @@ func (s *IndexContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) 
 func (s *IndexContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitIndex(s)
+		return t.VisitIndex(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -12487,7 +12504,7 @@ func (p *GolangParser) Index() (localctx IIndexContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(806)
-		p.Match(GolangParserT__40)
+		p.Match(GolangParserT__39)
 	}
 	{
 		p.SetState(807)
@@ -12495,7 +12512,7 @@ func (p *GolangParser) Index() (localctx IIndexContext) {
 	}
 	{
 		p.SetState(808)
-		p.Match(GolangParserT__41)
+		p.Match(GolangParserT__40)
 	}
 
 	return localctx
@@ -12573,7 +12590,7 @@ func (s *SliceContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) 
 func (s *SliceContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitSlice(s)
+		return t.VisitSlice(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -12604,7 +12621,7 @@ func (p *GolangParser) Slice() (localctx ISliceContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(810)
-		p.Match(GolangParserT__40)
+		p.Match(GolangParserT__39)
 	}
 	p.SetState(826)
 	p.GetErrorHandler().Sync(p)
@@ -12614,7 +12631,7 @@ func (p *GolangParser) Slice() (localctx ISliceContext) {
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 
-		if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-41)&-(0x1f+1)) == 0 && ((1<<uint((_la-41)))&((1<<(GolangParserT__40-41))|(1<<(GolangParserT__42-41))|(1<<(GolangParserT__43-41))|(1<<(GolangParserT__44-41))|(1<<(GolangParserT__46-41))|(1<<(GolangParserIDENTIFIER-41))|(1<<(GolangParserNOT-41))|(1<<(GolangParserINT_LIT-41))|(1<<(GolangParserFLOAT_LIT-41))|(1<<(GolangParserIMAGINARY_LIT-41))|(1<<(GolangParserRUNE_LIT-41))|(1<<(GolangParserSTRING_LIT-41)))) != 0) {
+		if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-40)&-(0x1f+1)) == 0 && ((1<<uint((_la-40)))&((1<<(GolangParserT__39-40))|(1<<(GolangParserT__41-40))|(1<<(GolangParserT__42-40))|(1<<(GolangParserT__43-40))|(1<<(GolangParserT__45-40))|(1<<(GolangParserIDENTIFIER-40))|(1<<(GolangParserNOT-40))|(1<<(GolangParserINT_LIT-40))|(1<<(GolangParserFLOAT_LIT-40))|(1<<(GolangParserIMAGINARY_LIT-40))|(1<<(GolangParserRUNE_LIT-40))|(1<<(GolangParserSTRING_LIT-40)))) != 0) {
 			{
 				p.SetState(811)
 				p.expression(0)
@@ -12623,13 +12640,13 @@ func (p *GolangParser) Slice() (localctx ISliceContext) {
 		}
 		{
 			p.SetState(814)
-			p.Match(GolangParserT__24)
+			p.Match(GolangParserT__23)
 		}
 		p.SetState(816)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 
-		if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-41)&-(0x1f+1)) == 0 && ((1<<uint((_la-41)))&((1<<(GolangParserT__40-41))|(1<<(GolangParserT__42-41))|(1<<(GolangParserT__43-41))|(1<<(GolangParserT__44-41))|(1<<(GolangParserT__46-41))|(1<<(GolangParserIDENTIFIER-41))|(1<<(GolangParserNOT-41))|(1<<(GolangParserINT_LIT-41))|(1<<(GolangParserFLOAT_LIT-41))|(1<<(GolangParserIMAGINARY_LIT-41))|(1<<(GolangParserRUNE_LIT-41))|(1<<(GolangParserSTRING_LIT-41)))) != 0) {
+		if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-40)&-(0x1f+1)) == 0 && ((1<<uint((_la-40)))&((1<<(GolangParserT__39-40))|(1<<(GolangParserT__41-40))|(1<<(GolangParserT__42-40))|(1<<(GolangParserT__43-40))|(1<<(GolangParserT__45-40))|(1<<(GolangParserIDENTIFIER-40))|(1<<(GolangParserNOT-40))|(1<<(GolangParserINT_LIT-40))|(1<<(GolangParserFLOAT_LIT-40))|(1<<(GolangParserIMAGINARY_LIT-40))|(1<<(GolangParserRUNE_LIT-40))|(1<<(GolangParserSTRING_LIT-40)))) != 0) {
 			{
 				p.SetState(815)
 				p.expression(0)
@@ -12642,7 +12659,7 @@ func (p *GolangParser) Slice() (localctx ISliceContext) {
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 
-		if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-41)&-(0x1f+1)) == 0 && ((1<<uint((_la-41)))&((1<<(GolangParserT__40-41))|(1<<(GolangParserT__42-41))|(1<<(GolangParserT__43-41))|(1<<(GolangParserT__44-41))|(1<<(GolangParserT__46-41))|(1<<(GolangParserIDENTIFIER-41))|(1<<(GolangParserNOT-41))|(1<<(GolangParserINT_LIT-41))|(1<<(GolangParserFLOAT_LIT-41))|(1<<(GolangParserIMAGINARY_LIT-41))|(1<<(GolangParserRUNE_LIT-41))|(1<<(GolangParserSTRING_LIT-41)))) != 0) {
+		if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-40)&-(0x1f+1)) == 0 && ((1<<uint((_la-40)))&((1<<(GolangParserT__39-40))|(1<<(GolangParserT__41-40))|(1<<(GolangParserT__42-40))|(1<<(GolangParserT__43-40))|(1<<(GolangParserT__45-40))|(1<<(GolangParserIDENTIFIER-40))|(1<<(GolangParserNOT-40))|(1<<(GolangParserINT_LIT-40))|(1<<(GolangParserFLOAT_LIT-40))|(1<<(GolangParserIMAGINARY_LIT-40))|(1<<(GolangParserRUNE_LIT-40))|(1<<(GolangParserSTRING_LIT-40)))) != 0) {
 			{
 				p.SetState(818)
 				p.expression(0)
@@ -12651,7 +12668,7 @@ func (p *GolangParser) Slice() (localctx ISliceContext) {
 		}
 		{
 			p.SetState(821)
-			p.Match(GolangParserT__24)
+			p.Match(GolangParserT__23)
 		}
 		{
 			p.SetState(822)
@@ -12659,7 +12676,7 @@ func (p *GolangParser) Slice() (localctx ISliceContext) {
 		}
 		{
 			p.SetState(823)
-			p.Match(GolangParserT__24)
+			p.Match(GolangParserT__23)
 		}
 		{
 			p.SetState(824)
@@ -12669,7 +12686,7 @@ func (p *GolangParser) Slice() (localctx ISliceContext) {
 	}
 	{
 		p.SetState(828)
-		p.Match(GolangParserT__41)
+		p.Match(GolangParserT__40)
 	}
 
 	return localctx
@@ -12734,7 +12751,7 @@ func (s *TypeAssertionContext) ToStringTree(ruleNames []string, recog antlr.Reco
 func (s *TypeAssertionContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTypeAssertion(s)
+		return t.VisitTypeAssertion(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -12851,7 +12868,7 @@ func (s *ArgumentsContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *ArgumentsContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitArguments(s)
+		return t.VisitArguments(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -12888,7 +12905,7 @@ func (p *GolangParser) Arguments() (localctx IArgumentsContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-41)&-(0x1f+1)) == 0 && ((1<<uint((_la-41)))&((1<<(GolangParserT__40-41))|(1<<(GolangParserT__42-41))|(1<<(GolangParserT__43-41))|(1<<(GolangParserT__44-41))|(1<<(GolangParserT__46-41))|(1<<(GolangParserIDENTIFIER-41))|(1<<(GolangParserNOT-41))|(1<<(GolangParserINT_LIT-41))|(1<<(GolangParserFLOAT_LIT-41))|(1<<(GolangParserIMAGINARY_LIT-41))|(1<<(GolangParserRUNE_LIT-41))|(1<<(GolangParserSTRING_LIT-41)))) != 0) {
+	if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__2)|(1<<GolangParserT__9)|(1<<GolangParserT__13)|(1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-40)&-(0x1f+1)) == 0 && ((1<<uint((_la-40)))&((1<<(GolangParserT__39-40))|(1<<(GolangParserT__41-40))|(1<<(GolangParserT__42-40))|(1<<(GolangParserT__43-40))|(1<<(GolangParserT__45-40))|(1<<(GolangParserIDENTIFIER-40))|(1<<(GolangParserNOT-40))|(1<<(GolangParserINT_LIT-40))|(1<<(GolangParserFLOAT_LIT-40))|(1<<(GolangParserIMAGINARY_LIT-40))|(1<<(GolangParserRUNE_LIT-40))|(1<<(GolangParserSTRING_LIT-40)))) != 0) {
 		p.SetState(842)
 		p.GetErrorHandler().Sync(p)
 		switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 85, p.GetParserRuleContext()) {
@@ -12923,10 +12940,10 @@ func (p *GolangParser) Arguments() (localctx IArgumentsContext) {
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 
-		if _la == GolangParserT__45 {
+		if _la == GolangParserT__44 {
 			{
 				p.SetState(844)
-				p.Match(GolangParserT__45)
+				p.Match(GolangParserT__44)
 			}
 
 		}
@@ -13014,7 +13031,7 @@ func (s *MethodExprContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *MethodExprContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitMethodExpr(s)
+		return t.VisitMethodExpr(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -13127,7 +13144,7 @@ func (s *ReceiverTypeContext) ToStringTree(ruleNames []string, recog antlr.Recog
 func (s *ReceiverTypeContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitReceiverType(s)
+		return t.VisitReceiverType(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -13348,7 +13365,7 @@ func (s *ExpressionContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *ExpressionContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitExpression(s)
+		return t.VisitExpression(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -13424,7 +13441,7 @@ func (p *GolangParser) expression(_p int) (localctx IExpressionContext) {
 
 					_la = p.GetTokenStream().LA(1)
 
-					if !(_la == GolangParserT__19 || _la == GolangParserT__20 || (((_la-59)&-(0x1f+1)) == 0 && ((1<<uint((_la-59)))&((1<<(GolangParserDIV-59))|(1<<(GolangParserMOD-59))|(1<<(GolangParserLSH-59))|(1<<(GolangParserRSH-59)))) != 0)) {
+					if !(_la == GolangParserT__19 || _la == GolangParserT__20 || (((_la-58)&-(0x1f+1)) == 0 && ((1<<uint((_la-58)))&((1<<(GolangParserDIV-58))|(1<<(GolangParserMOD-58))|(1<<(GolangParserLSH-58))|(1<<(GolangParserRSH-58)))) != 0)) {
 						var _ri = p.GetErrorHandler().RecoverInline(p)
 
 						localctx.(*ExpressionContext).op = _ri
@@ -13486,7 +13503,7 @@ func (p *GolangParser) expression(_p int) (localctx IExpressionContext) {
 
 					_la = p.GetTokenStream().LA(1)
 
-					if !(((_la-52)&-(0x1f+1)) == 0 && ((1<<uint((_la-52)))&((1<<(GolangParserEQ-52))|(1<<(GolangParserNE-52))|(1<<(GolangParserLT-52))|(1<<(GolangParserLEQ-52))|(1<<(GolangParserGT-52))|(1<<(GolangParserGEQ-52)))) != 0) {
+					if !(((_la-51)&-(0x1f+1)) == 0 && ((1<<uint((_la-51)))&((1<<(GolangParserEQ-51))|(1<<(GolangParserNE-51))|(1<<(GolangParserLT-51))|(1<<(GolangParserLEQ-51))|(1<<(GolangParserGT-51))|(1<<(GolangParserGEQ-51)))) != 0) {
 						var _ri = p.GetErrorHandler().RecoverInline(p)
 
 						localctx.(*ExpressionContext).op = _ri
@@ -13635,7 +13652,7 @@ func (s *UnaryExprContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *UnaryExprContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitUnaryExpr(s)
+		return t.VisitUnaryExpr(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -13772,7 +13789,7 @@ func (s *ConversionContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *ConversionContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitConversion(s)
+		return t.VisitConversion(s)
 
 	default:
 		return t.VisitChildren(s)
