@@ -1,6 +1,6 @@
 package ast
 
-type IStmtNode struct {
+type IStmtNode interface {
 	IASTNode
 }
 
