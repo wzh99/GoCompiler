@@ -7,7 +7,7 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	input := antlr.NewInputStream("package main func A(i int) int { b := 0 return b }")
+	input := antlr.NewInputStream("package main func A(i int) int { b := (*foo)(bar) }")
 	lexer := NewGolangLexer(input)
 	tokens := antlr.NewCommonTokenStream(lexer, antlr.LexerDefaultTokenChannel)
 	parser := NewGolangParser(tokens)

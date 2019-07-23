@@ -781,7 +781,7 @@ func (s *SourceFileContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *SourceFileContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitSourceFile(s)
+		return t.VisitSourceFile(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -903,7 +903,7 @@ func (s *PackageClauseContext) ToStringTree(ruleNames []string, recog antlr.Reco
 func (s *PackageClauseContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitPackageClause(s)
+		return t.VisitPackageClause(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1015,7 +1015,7 @@ func (s *ImportDeclContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *ImportDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitImportDecl(s)
+		return t.VisitImportDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1152,7 +1152,7 @@ func (s *ImportSpecContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *ImportSpecContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitImportSpec(s)
+		return t.VisitImportSpec(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1260,7 +1260,7 @@ func (s *ImportPathContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 func (s *ImportPathContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitImportPath(s)
+		return t.VisitImportPath(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1375,7 +1375,7 @@ func (s *TopLevelDeclContext) ToStringTree(ruleNames []string, recog antlr.Recog
 func (s *TopLevelDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTopLevelDecl(s)
+		return t.VisitTopLevelDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1510,7 +1510,7 @@ func (s *DeclarationContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 func (s *DeclarationContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitDeclaration(s)
+		return t.VisitDeclaration(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1641,7 +1641,7 @@ func (s *ConstDeclContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *ConstDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitConstDecl(s)
+		return t.VisitConstDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1794,7 +1794,7 @@ func (s *ConstSpecContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 func (s *ConstSpecContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitConstSpec(s)
+		return t.VisitConstSpec(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -1913,7 +1913,7 @@ func (s *IdentifierListContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *IdentifierListContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitIdentifierList(s)
+		return t.VisitIdentifierList(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2040,7 +2040,7 @@ func (s *ExpressionListContext) ToStringTree(ruleNames []string, recog antlr.Rec
 func (s *ExpressionListContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitExpressionList(s)
+		return t.VisitExpressionList(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2170,7 +2170,7 @@ func (s *TypeDeclContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *TypeDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTypeDecl(s)
+		return t.VisitTypeDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2307,7 +2307,7 @@ func (s *TypeSpecContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *TypeSpecContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitTypeSpec(s)
+		return t.VisitTypeSpec(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2420,7 +2420,7 @@ func (s *FunctionDeclContext) ToStringTree(ruleNames []string, recog antlr.Recog
 func (s *FunctionDeclContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitFunctionDecl(s)
+		return t.VisitFunctionDecl(s)
 
 	default:
 		return t.VisitChildren(s)
@@ -2545,7 +2545,7 @@ func (s *FunctionContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 func (s *FunctionContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return VisitFunction(s)
+		return t.VisitFunction(s)
 
 	default:
 		return t.VisitChildren(s)
