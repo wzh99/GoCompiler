@@ -403,7 +403,3 @@ func (v *BaseGolangVisitor) VisitExpression(ctx *ExpressionContext) interface{} 
 func (v *BaseGolangVisitor) VisitUnaryExpr(ctx *UnaryExprContext) interface{} {
 	return v.VisitChildren(ctx)
 }
-
-func (v *BaseGolangVisitor) VisitConversion(ctx *ConversionContext) interface{} {
-	return v.VisitChildren(ctx)
-}

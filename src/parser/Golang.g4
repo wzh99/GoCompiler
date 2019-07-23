@@ -475,6 +475,7 @@ basicLit
 
 operandName
     : IDENTIFIER
+    | tp
     | qualifiedIdent
     ;
 
@@ -569,12 +570,12 @@ functionLit
 
 primaryExpr
     : operand
-    | conversion
+    //| conversion // here I treat type conversion as a function.
     | primaryExpr selector
     | primaryExpr index
     | primaryExpr slice
     | primaryExpr typeAssertion
-	| primaryExpr arguments
+    | primaryExpr arguments
     ;
 
 selector
@@ -623,15 +624,17 @@ expression
     ;
 
 unaryExpr
-    : primaryExpr
-    | op=('+'|'-'|'!'|'^'|'*'|'&'|'<-') unaryExpr
+    : op=('+'|'-'|'!'|'^'|'*'|'&'|'<-') unaryExpr
+    // Unary operator has lower precedence than other operators in primary expression.
+    // For example, *foo(bar) is treated as *(foo(bar)), not (*foo)(bar).
+    | primaryExpr
     ;
 
 //Conversion = Type "(" Expression [ "," ] ")" .
-conversion
-    : tp '(' expression ','? ')'
+/*conversion
+    : tp '(' expression ')'
     ;
-
+*/
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

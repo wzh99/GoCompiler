@@ -31,7 +31,7 @@ type IntLiteral struct {
 }
 
 func NewIntLiteral(loc *Location, val int) *IntLiteral {
-	return &IntLiteral{BaseExprNode: *newBaseExprNode(loc, NewPrimType(IntegerType)), val: val}
+	return &IntLiteral{BaseExprNode: *newBaseExprNode(loc, NewPrimType(Int)), val: val}
 }
 
 func (l *IntLiteral) ToStringTree() string {
@@ -44,7 +44,7 @@ type FloatLiteral struct {
 }
 
 func NewFloatLiteral(loc *Location, val float64) *FloatLiteral {
-	return &FloatLiteral{BaseExprNode: *newBaseExprNode(loc, NewPrimType(FloatType)), val: val}
+	return &FloatLiteral{BaseExprNode: *newBaseExprNode(loc, NewPrimType(Float64)), val: val}
 }
 
 func (l *FloatLiteral) ToStringTree() string {

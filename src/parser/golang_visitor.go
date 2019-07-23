@@ -304,7 +304,4 @@ type GolangVisitor interface {
 
 	// Visit a parse tree produced by GolangParser#unaryExpr.
 	VisitUnaryExpr(ctx *UnaryExprContext) interface{}
-
-	// Visit a parse tree produced by GolangParser#conversion.
-	VisitConversion(ctx *ConversionContext) interface{}
 }
