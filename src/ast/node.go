@@ -22,8 +22,8 @@ type ProgramNode struct {
 	decl []IDeclNode
 }
 
-func NewProgramNode() *ProgramNode {
-	return &ProgramNode{*newBaseASTNode(nil), make([]IDeclNode, 0)}
+func NewProgramNode(decl []IDeclNode) *ProgramNode {
+	return &ProgramNode{BaseASTNode: *newBaseASTNode(nil), decl: decl}
 }
 
 func (n *ProgramNode) ToStringTree() string {
@@ -32,10 +32,6 @@ func (n *ProgramNode) ToStringTree() string {
 		str += " " + decl.ToStringTree()
 	}
 	return str + ")"
-}
-
-func (n *ProgramNode) AddDecl(node IDeclNode) {
-	n.decl = append(n.decl, node)
 }
 
 func (n *ProgramNode) GetDecl() []IDeclNode { return n.decl }

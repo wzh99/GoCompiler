@@ -16,8 +16,9 @@ type BaseExprNode struct {
 	tp IType
 }
 
-func newBaseExprNode(loc *Location, tp IType) *BaseExprNode {
-	return &BaseExprNode{BaseStmtNode: *newBaseStmtNode(loc), tp: tp}
+// Type of expressions will be left empty when initialized, except literals.
+func newBaseExprNode(loc *Location) *BaseExprNode {
+	return &BaseExprNode{BaseStmtNode: *newBaseStmtNode(loc)}
 }
 
 func (n *BaseExprNode) GetType() IType { return n.tp }
@@ -31,7 +32,9 @@ type IntLiteral struct {
 }
 
 func NewIntLiteral(loc *Location, val int) *IntLiteral {
-	return &IntLiteral{BaseExprNode: *newBaseExprNode(loc, NewPrimType(Int)), val: val}
+	l := &IntLiteral{BaseExprNode: *newBaseExprNode(loc), val: val}
+	l.SetType(NewPrimType(Int))
+	return l
 }
 
 func (l *IntLiteral) ToStringTree() string {
@@ -44,11 +47,48 @@ type FloatLiteral struct {
 }
 
 func NewFloatLiteral(loc *Location, val float64) *FloatLiteral {
-	return &FloatLiteral{BaseExprNode: *newBaseExprNode(loc, NewPrimType(Float64)), val: val}
+	l := &FloatLiteral{BaseExprNode: *newBaseExprNode(loc), val: val}
+	l.SetType(NewPrimType(Float64))
+	return l
 }
 
 func (l *FloatLiteral) ToStringTree() string {
 	return fmt.Sprintf("%.4f", l.val)
+}
+
+// Identifier expression
+type IdExpr struct {
+	BaseExprNode
+	name string
+}
+
+func NewIdExpr(loc *Location, name string) *IdExpr {
+	return &IdExpr{BaseExprNode: *newBaseExprNode(loc), name: name}
+}
+
+func (i *IdExpr) ToStringTree() string { return i.name }
+
+// Function calling expression
+type FuncCallExpr struct {
+	BaseExprNode
+	fun     IExprNode
+	args    []IExprNode
+	argType TupleType
+}
+
+func NewFuncCallExpr(loc *Location, fun IExprNode, args []IExprNode) *FuncCallExpr {
+	return &FuncCallExpr{BaseExprNode: *newBaseExprNode(loc), args: args}
+}
+
+func (e *FuncCallExpr) ToStringTree() string {
+	str := fmt.Sprintf("(call %s (", e.fun.ToStringTree())
+	for i, arg := range e.args {
+		if i != 0 {
+			str += " "
+		}
+		str += arg.ToStringTree()
+	}
+	return str + "))"
 }
 
 type BinaryOp int
@@ -74,9 +114,10 @@ const (
 	LOR
 )
 
-var BinaryOpStr = [...]string{
-	"*", "/", "%", "<<", ">>", "&", "+", "-", "|", "^", "==", "!=",
-	"<", "<=", ">", ">=", "&&", "||",
+var BinaryOpStr = map[BinaryOp]string{
+	MUL: "*", DIV: "/", MOD: "%", LSH: "<<", RSH: ">>", AAND: "&",
+	ADD: "+", SUB: "-", AOR: "|", XOR: "^", EQ: "==", NEQ: "!=",
+	LT: "<", LEQ: "<=", GT: ">", GEQ: ">=", LAND: "&&", LOR: "||",
 }
 
 var BinaryOpStrToEnum map[string]BinaryOp
@@ -95,7 +136,7 @@ type BinaryExpr struct {
 
 func NewBinaryExpr(loc *Location, op BinaryOp, left, right IExprNode) *BinaryExpr {
 	// result type of binary expression is determined during semantic analysis
-	return &BinaryExpr{BaseExprNode: *newBaseExprNode(loc, nil), op: op, left: left, right: right}
+	return &BinaryExpr{BaseExprNode: *newBaseExprNode(loc), op: op, left: left, right: right}
 }
 
 func (e *BinaryExpr) ToStringTree() string {
@@ -120,8 +161,8 @@ const (
 	REF
 )
 
-var UnaryOpStr = [...]string{
-	"+", "-", "!", "^", "*", "&",
+var UnaryOpStr = map[UnaryOp]string{
+	POS: "+", NEG: "-", NOT: "!", INV: "^", DEREF: "*", REF: "&",
 }
 
 var UnaryOpStrToEnum map[string]UnaryOp
@@ -133,5 +174,5 @@ func init() {
 }
 
 func NewUnaryExpr(loc *Location, op UnaryOp, expr IExprNode) *UnaryExpr {
-	return &UnaryExpr{BaseExprNode: *newBaseExprNode(loc, nil), op: op, expr: expr}
+	return &UnaryExpr{BaseExprNode: *newBaseExprNode(loc), op: op, expr: expr}
 }

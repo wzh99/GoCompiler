@@ -346,7 +346,7 @@ tp // type has conflict with Go keyword
 //TypeName  = identifier | QualifiedIdent .
 typeName
     : IDENTIFIER
-    | qualifiedIdent
+    // | qualifiedIdent
     ;
 
 //TypeLit   = ArrayType | StructType | PointerType | FunctionType | InterfaceType |
@@ -476,13 +476,15 @@ basicLit
 operandName
     : IDENTIFIER
     | tp
-    | qualifiedIdent
+    // | qualifiedIdent
     ;
 
 //QualifiedIdent = PackageName "." identifier .
-qualifiedIdent
+// I merge this to primaryExpr : primaryExpr selector
+/*qualifiedIdent
     : IDENTIFIER '.' IDENTIFIER
-    ;
+    ;*/
+
 
 //CompositeLit  = LiteralType LiteralValue .
 //LiteralType   = StructType | ArrayType | "[" "..." "]" ElementType |

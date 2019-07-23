@@ -50,14 +50,18 @@ const (
 	Nil
 	// Unresolved
 	Unresolved
+	// Tuple type (handle multiple values)
+	Tuple
 )
 
 const (
-	SignedType   = Int8 | Int16 | Int32 | Int64 | Int | Rune
-	UnsignedType = Uint8 | Uint16 | Uint32 | Uint64 | Uint | Uintptr | Byte
-	IntegerType  = SignedType | UnsignedType
-	FloatType    = Float32 | Float64
-	ComplexType  = Complex64 | Complex128
+	SignedType    = Int8 | Int16 | Int32 | Int64 | Int | Rune
+	UnsignedType  = Uint8 | Uint16 | Uint32 | Uint64 | Uint | Uintptr | Byte
+	IntegerType   = SignedType | UnsignedType
+	FloatType     = Float32 | Float64
+	ComplexType   = Complex64 | Complex128
+	PrimitiveType = IntegerType | FloatType | ComplexType
+	CompositeType = Array | Slice | Struct | Ptr | Func | Interface | Map | Channel
 )
 
 var TypeStr = map[TypeEnum]string{
@@ -120,6 +124,9 @@ type PrimType struct {
 }
 
 func NewPrimType(enum TypeEnum) *PrimType {
+	if enum&PrimitiveType == 0 {
+		panic("Not primitive type.")
+	}
 	return &PrimType{BaseType: *newBaseType(enum)}
 }
 
@@ -130,4 +137,48 @@ var PrimTypeSize = map[TypeEnum]int{
 
 func (t *PrimType) GetSize() int {
 	return PrimTypeSize[t.enum]
+}
+
+type TupleType struct {
+	BaseType
+	elem []IType
+}
+
+func NewTupleType(elem []IType) *TupleType {
+	return &TupleType{BaseType: *newBaseType(Tuple), elem: elem}
+}
+
+func (t *TupleType) ToString() string {
+	str := "tuple("
+	for i, e := range t.elem {
+		if i != 0 {
+			str += " "
+		}
+		str += e.ToString()
+	}
+	return str + ")"
+}
+
+func (t *TupleType) IsSameType(o IType) bool {
+	t2, ok := o.(*TupleType)
+	if !ok { // not even tuple type
+		return false
+	}
+	if len(t.elem) != len(t2.elem) { // have different number of elements
+		return false
+	}
+	for i := range t.elem {
+		if !t.elem[i].IsSameType(t2.elem[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (t *TupleType) GetSize() int {
+	size := 0
+	for _, t := range t.elem {
+		size += t.GetSize()
+	}
+	return size
 }
