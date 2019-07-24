@@ -86,7 +86,7 @@ type BaseType struct {
 	enum TypeEnum
 }
 
-func newBaseType(enum TypeEnum) *BaseType {
+func NewBaseType(enum TypeEnum) *BaseType {
 	return &BaseType{enum: enum}
 }
 
@@ -113,7 +113,7 @@ type UnresolvedType struct {
 }
 
 func NewUnresolvedType(name string) *UnresolvedType {
-	return &UnresolvedType{BaseType: *newBaseType(Unresolved), name: name}
+	return &UnresolvedType{BaseType: *NewBaseType(Unresolved), name: name}
 }
 
 func (t *UnresolvedType) GetSize() int { return 0 }
@@ -127,7 +127,7 @@ func NewPrimType(enum TypeEnum) *PrimType {
 	if enum&PrimitiveType == 0 {
 		panic("Not primitive type.")
 	}
-	return &PrimType{BaseType: *newBaseType(enum)}
+	return &PrimType{BaseType: *NewBaseType(enum)}
 }
 
 var PrimTypeSize = map[TypeEnum]int{
@@ -145,7 +145,7 @@ type TupleType struct {
 }
 
 func NewTupleType(elem []IType) *TupleType {
-	return &TupleType{BaseType: *newBaseType(Tuple), elem: elem}
+	return &TupleType{BaseType: *NewBaseType(Tuple), elem: elem}
 }
 
 func (t *TupleType) ToString() string {
@@ -179,6 +179,56 @@ func (t *TupleType) GetSize() int {
 	size := 0
 	for _, t := range t.elem {
 		size += t.GetSize()
+	}
+	return size
+}
+
+type StructType struct {
+	BaseType
+	name  string
+	field *SymbolTable
+}
+
+func NewStructType(name string, field *SymbolTable) *StructType {
+	return &StructType{BaseType: *NewBaseType(Struct), name: name, field: field}
+}
+
+func (t *StructType) ToString() string {
+	str := "struct{"
+	for i, f := range t.field.entries {
+		if i != 0 {
+			str += ", "
+		}
+		str += f.tp.ToString()
+	}
+	return str + "}"
+}
+
+func (t *StructType) IsSameType(o IType) bool {
+	t2, ok := o.(*StructType)
+	if !ok { // not even struct type
+		return false
+	}
+	return t.IsIsomorphic(t2)
+}
+
+// Consider only structure of fields, not names
+func (t *StructType) IsIsomorphic(t2 *StructType) bool {
+	if len(t2.field.entries) != len(t2.field.entries) {
+		return false
+	}
+	for i, e := range t.field.entries {
+		if !e.tp.IsSameType(t2.field.entries[i].tp) {
+			return false
+		}
+	}
+	return true
+}
+
+func (t *StructType) GetSize() int {
+	size := 0
+	for _, f := range t.field.entries {
+		size += f.tp.GetSize()
 	}
 	return size
 }

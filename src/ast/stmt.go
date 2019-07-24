@@ -8,6 +8,6 @@ type BaseStmtNode struct {
 	BaseASTNode
 }
 
-func newBaseStmtNode(loc *Location) *BaseStmtNode {
-	return &BaseStmtNode{*newBaseASTNode(loc)}
+func NewBaseStmtNode(loc *Location) *BaseStmtNode {
+	return &BaseStmtNode{*NewBaseASTNode(loc)}
 }
