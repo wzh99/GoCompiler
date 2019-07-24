@@ -37,5 +37,8 @@ func (t *SymbolTable) Build() {
 }
 
 func (t *SymbolTable) Lookup(name string) *SymbolEntry {
+	if t.table == nil {
+		panic("Table not constructed.")
+	}
 	return t.table[name]
 }

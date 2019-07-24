@@ -1,5 +1,7 @@
 package ast
 
+import "fmt"
+
 type TypeEnum int
 
 // Some type, notably literals, can be more than one type, depending on context.
@@ -149,7 +151,7 @@ func NewTupleType(elem []IType) *TupleType {
 }
 
 func (t *TupleType) ToString() string {
-	str := "tuple("
+	str := "("
 	for i, e := range t.elem {
 		if i != 0 {
 			str += " "
@@ -232,3 +234,26 @@ func (t *StructType) GetSize() int {
 	}
 	return size
 }
+
+type FuncType struct {
+	BaseType
+	params, results *TupleType
+}
+
+func NewFunctionType(params, results *TupleType) *FuncType {
+	return &FuncType{BaseType: *NewBaseType(Func), params: params, results: results}
+}
+
+func (t *FuncType) ToString() string {
+	return fmt.Sprintf("func %s %s", t.params.ToString(), t.results.ToString())
+}
+
+func (t *FuncType) IsSameType(o IType) bool {
+	t2, ok := o.(*FuncType)
+	if !ok {
+		return false
+	}
+	return t.params.IsSameType(t2.params) && t.results.IsSameType(t2.results)
+}
+
+func (t *FuncType) GetSize() int { return 8 }
