@@ -13,26 +13,26 @@ type SymbolEntry struct {
 	loc  *Location
 	name string
 	flag EntryFlag
-	tp   IType
+	tp   IType // if nil, the type of current symbol is unknown
 }
 
 type SymbolTable struct {
-	entries []SymbolEntry           // for ordered access
+	entries []*SymbolEntry          // for ordered access
 	table   map[string]*SymbolEntry // for lookup
 }
 
 func NewSymbolTable() *SymbolTable {
-	return &SymbolTable{entries: make([]SymbolEntry, 0)}
+	return &SymbolTable{entries: make([]*SymbolEntry, 0)}
 }
 
-func (t *SymbolTable) Add(entry SymbolEntry) {
+func (t *SymbolTable) Add(entry *SymbolEntry) {
 	t.entries = append(t.entries, entry)
 }
 
 // Only called when entries are completely added.
 func (t *SymbolTable) Build() {
 	for i, e := range t.entries {
-		t.table[e.name] = &t.entries[i]
+		t.table[e.name] = t.entries[i]
 	}
 }
 
