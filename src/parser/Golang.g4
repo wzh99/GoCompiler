@@ -109,7 +109,8 @@ typeSpec
 //Function     = Signature FunctionBody .
 //FunctionBody = Block .
 functionDecl
-    : 'func' IDENTIFIER ( function | signature )
+    // : 'func' IDENTIFIER ( function | signature ) // wrong, miss function body
+    : 'func' IDENTIFIER function
     ;
 
 function
@@ -119,7 +120,7 @@ function
 //MethodDecl   = "func" Receiver MethodName ( Function | Signature ) .
 //Receiver     = Parameters .
 methodDecl
-    : 'func' receiver IDENTIFIER ( function | signature )
+    : 'func' receiver IDENTIFIER function
     ;
 
 receiver
@@ -475,7 +476,7 @@ basicLit
 
 operandName
     : IDENTIFIER
-    | tp
+    // | tp
     // | qualifiedIdent
     ;
 

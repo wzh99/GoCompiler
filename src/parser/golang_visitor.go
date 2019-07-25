@@ -1,4 +1,4 @@
-// Code generated from C:/Users/wangz/Documents/Projects/Go/GoCompiler/src/parser\Golang.g4 by ANTLR 4.7.2. DO NOT EDIT.
+// Code generated from /Users/littlefrog/GoCompiler/src/parser/Golang.g4 by ANTLR 4.7.2. DO NOT EDIT.
 
 package parser // Golang
 
@@ -238,9 +238,6 @@ type GolangVisitor interface {
 
 	// Visit a parse tree produced by GolangParser#operandName.
 	VisitOperandName(ctx *OperandNameContext) interface{}
-
-	// Visit a parse tree produced by GolangParser#qualifiedIdent.
-	VisitQualifiedIdent(ctx *QualifiedIdentContext) interface{}
 
 	// Visit a parse tree produced by GolangParser#compositeLit.
 	VisitCompositeLit(ctx *CompositeLitContext) interface{}

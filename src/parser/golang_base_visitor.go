@@ -1,4 +1,4 @@
-// Code generated from C:/Users/wangz/Documents/Projects/Go/GoCompiler/src/parser\Golang.g4 by ANTLR 4.7.2. DO NOT EDIT.
+// Code generated from /Users/littlefrog/GoCompiler/src/parser/Golang.g4 by ANTLR 4.7.2. DO NOT EDIT.
 
 package parser // Golang
 
@@ -313,10 +313,6 @@ func (v *BaseGolangVisitor) VisitBasicLit(ctx *BasicLitContext) interface{} {
 }
 
 func (v *BaseGolangVisitor) VisitOperandName(ctx *OperandNameContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BaseGolangVisitor) VisitQualifiedIdent(ctx *QualifiedIdentContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
