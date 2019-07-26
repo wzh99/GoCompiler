@@ -66,14 +66,13 @@ const (
 	CompositeType = Array | Slice | Struct | Ptr | Func | Interface | Map | Channel
 )
 
-var TypeStr = map[TypeEnum]string{
+var TypeToStr = map[TypeEnum]string{
 	Bool: "bool", Int8: "int8", Int16: "int16", Int32: "int32", Int64: "int64",
 	Uint8: "uint8", Uint16: "uint16", Uint32: "uint32", Uint64: "uint64",
 	Int: "int", Uint: "uint", Uintptr: "uintptr", Byte: "byte", Rune: "rune",
 	Float32: "float32", Float64: "float64", Complex64: "complex64", Complex128: "complex128",
-	String: "string", Array: "array", Struct: "struct", Ptr: "ptr", Func: "func",
-	Interface: "interface", Map: "map", Channel: "channel",
-	Nil: "nil", Unresolved: "unresolved",
+	String: "string", Struct: "struct", Func: "func", Interface: "interface", Map: "map",
+	Channel: "channel", Nil: "nil",
 }
 
 // Type interface
@@ -93,7 +92,7 @@ func NewBaseType(enum TypeEnum) *BaseType {
 }
 
 func (t *BaseType) ToString() string {
-	str, ok := TypeStr[t.enum]
+	str, ok := TypeToStr[t.enum]
 	if ok {
 		return str
 	} else {
@@ -119,6 +118,10 @@ func NewUnresolvedType(name string) *UnresolvedType {
 }
 
 func (t *UnresolvedType) GetSize() int { return 0 }
+
+func (t *UnresolvedType) ToString() string {
+	return fmt.Sprintf("unresolved: %s", t.name)
+}
 
 // Value type of integer, float, complex
 type PrimType struct {
@@ -211,16 +214,11 @@ func (t *StructType) IsSameType(o IType) bool {
 	if !ok { // not even struct type
 		return false
 	}
-	return t.IsIsomorphic(t2)
-}
-
-// Consider only structure of fields, not names
-func (t *StructType) IsIsomorphic(t2 *StructType) bool {
 	if len(t2.field.entries) != len(t2.field.entries) {
 		return false
 	}
 	for i, e := range t.field.entries {
-		if !e.tp.IsSameType(t2.field.entries[i].tp) {
+		if (!e.tp.IsSameType(t2.field.entries[i].tp)) || (e.name != t2.name) {
 			return false
 		}
 	}

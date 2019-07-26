@@ -2,6 +2,7 @@ package ast
 
 type IASTNode interface {
 	GetLocation() *Location
+	LocationStr() string
 	ToStringTree() string
 }
 
@@ -14,6 +15,8 @@ func NewBaseASTNode(loc *Location) *BaseASTNode {
 }
 
 func (n *BaseASTNode) GetLocation() *Location { return n.loc }
+
+func (n *BaseASTNode) LocationStr() string { return n.loc.ToString() }
 
 func (n *BaseASTNode) ToStringTree() string { return "()" }
 

@@ -13,7 +13,12 @@ type SymbolEntry struct {
 	loc  *Location
 	name string
 	flag EntryFlag
-	tp   IType // if nil, the type of current symbol is unknown
+	tp   IType       // if nil, the type of current symbol is unknown
+	val  interface{} // reserved for constant expression
+}
+
+func NewSymbolEntry(loc *Location, name string, flag EntryFlag, tp IType, val interface{}) *SymbolEntry {
+	return &SymbolEntry{loc: loc, name: name, flag: flag, tp: tp, val: val}
 }
 
 type SymbolTable struct {

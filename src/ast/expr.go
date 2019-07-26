@@ -25,45 +25,55 @@ func (n *BaseExprNode) GetType() IType { return n.tp }
 
 func (n *BaseExprNode) SetType(tp IType) { n.tp = tp }
 
-// Literal expression
-type IntLiteral struct {
+// Constant expression
+type IConstExpr interface {
+	IExprNode
+	GetValue() interface{}
+}
+
+type IntConst struct {
 	BaseExprNode
 	val int
 }
 
-func NewIntLiteral(loc *Location, val int) *IntLiteral {
-	l := &IntLiteral{BaseExprNode: *NewBaseExprNode(loc), val: val}
-	l.SetType(NewPrimType(Int))
-	return l
+func NewIntConst(loc *Location, val int) *IntConst {
+	c := &IntConst{BaseExprNode: *NewBaseExprNode(loc), val: val}
+	c.SetType(NewPrimType(Int))
+	return c
 }
 
-func (l *IntLiteral) ToStringTree() string {
-	return fmt.Sprint(l.val)
+func (c *IntConst) ToStringTree() string {
+	return fmt.Sprint(c.val)
 }
 
-type FloatLiteral struct {
+func (c *IntConst) GetValue() interface{} { return c.val }
+
+type FloatConst struct {
 	BaseExprNode
 	val float64
 }
 
-func NewFloatLiteral(loc *Location, val float64) *FloatLiteral {
-	l := &FloatLiteral{BaseExprNode: *NewBaseExprNode(loc), val: val}
-	l.SetType(NewPrimType(Float64))
-	return l
+func NewFloatConst(loc *Location, val float64) *FloatConst {
+	c := &FloatConst{BaseExprNode: *NewBaseExprNode(loc), val: val}
+	c.SetType(NewPrimType(Float64))
+	return c
 }
 
-func (l *FloatLiteral) ToStringTree() string {
-	return fmt.Sprintf("%.4f", l.val)
+func (c *FloatConst) ToStringTree() string {
+	return fmt.Sprintf("%.4f", c.val)
 }
+
+func (c *FloatConst) GetValue() interface{} { return c.val }
 
 // Identifier expression
 type IdExpr struct {
 	BaseExprNode
-	name string
+	name   string // should keep name for lookup in global scope
+	symbol *SymbolEntry
 }
 
-func NewIdExpr(loc *Location, name string) *IdExpr {
-	return &IdExpr{BaseExprNode: *NewBaseExprNode(loc), name: name}
+func NewIdExpr(loc *Location, name string, symbol *SymbolEntry) *IdExpr {
+	return &IdExpr{BaseExprNode: *NewBaseExprNode(loc), name: name, symbol: symbol}
 }
 
 func (i *IdExpr) ToStringTree() string { return i.name }

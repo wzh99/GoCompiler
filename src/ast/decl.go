@@ -5,16 +5,18 @@ type IDeclNode interface {
 	GetType() IType
 }
 
-// Only function declarations need to be created as nodes, others are in symbol table.
+// Function declarations are only allowed in global scope
+// In local scope, functions are defined as lambda literals
 type FuncDecl struct {
 	BaseASTNode
+	name  string
 	tp    *FuncType
 	scope *Scope
 	stmts []IStmtNode
 }
 
-func NewFuncDecl(loc *Location, tp *FuncType, scope *Scope, stmt []IStmtNode) *FuncDecl {
-	return &FuncDecl{BaseASTNode: *NewBaseASTNode(loc), tp: tp, scope: scope, stmts: stmt}
+func NewFuncDecl(loc *Location, name string, tp *FuncType, scope *Scope, stmt []IStmtNode) *FuncDecl {
+	return &FuncDecl{BaseASTNode: *NewBaseASTNode(loc), name: name, tp: tp, scope: scope, stmts: stmt}
 }
 
 func (d *FuncDecl) GetType() IType { return d.tp }
