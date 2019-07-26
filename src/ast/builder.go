@@ -18,18 +18,24 @@ func (v *ASTBuilder) VisitSourceFile(ctx *SourceFileContext) interface{} {
 	pkgName := v.VisitPackageClause(ctx.PackageClause().(*PackageClauseContext)).(string)
 	// Initialize program node
 	prog := NewProgramNode(pkgName)
-	// Set global scope pointer
+	// Set global and current scope pointer
 	v.global = prog.scope
+	v.cur = prog.scope
 
 	// Add declarations to program node
 	for _, d := range ctx.AllTopLevelDecl() {
 		switch decl := v.VisitTopLevelDecl(d.(*TopLevelDeclContext)); decl.(type) {
-		// Constants, variables and types are stored only in symbol tables
-		case []*SymbolEntry:
+		case []*SymbolEntry: // several entities may appear in one top level declaration
+			// Constants, variables and types are stored only in symbol tables
+			for _, symbol := range decl.([]*SymbolEntry) {
+				v.cur.AddSymbol(symbol)
+			}
 
-		// Functions are stored both in symbol table of global scope and in program node
-		case []*FuncDecl:
-
+		case *FuncDecl: // one function per declaration
+			// Functions are stored both in symbol table of global scope and in program node
+			fun := decl.(*FuncDecl)
+			v.cur.AddSymbol(fun.GenSymbol())
+			prog.AddFuncDecl(fun)
 		}
 	}
 
@@ -44,7 +50,7 @@ func (v *ASTBuilder) VisitTopLevelDecl(ctx *TopLevelDeclContext) interface{} {
 	if d := ctx.Declaration(); d != nil {
 		return v.VisitDeclaration(d.(*DeclarationContext)) // []*SymbolEntry
 	} else if d := ctx.FunctionDecl(); d != nil {
-		return v.VisitFunctionDecl(d.(*FunctionDeclContext)) // []*FuncDecl
+		return v.VisitFunctionDecl(d.(*FunctionDeclContext)) // *FuncDecl
 	}
 	return nil
 }
@@ -103,4 +109,85 @@ func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 	}
 
 	return specList // []*SymbolEntry
+}
+
+func (v *ASTBuilder) VisitIdentifierList(ctx *IdentifierListContext) interface{} {
+	idList := make([]*IdExpr, 0)
+	for _, id := range ctx.AllIDENTIFIER() {
+		idList = append(idList, NewIdExpr(NewLocationFromToken(id.GetSymbol()), id.GetText(), nil))
+	}
+	return idList // []*IdExpr
+}
+
+func (v *ASTBuilder) VisitExpressionList(ctx *ExpressionListContext) interface{} {
+	exprList := make([]IExprNode, 0)
+	for _, expr := range ctx.AllExpression() {
+		exprList = append(exprList, v.VisitExpression(expr.(*ExpressionContext)).(IExprNode))
+	}
+	return exprList // []IExprNode
+}
+
+func (v *ASTBuilder) VisitTypeDecl(ctx *TypeDeclContext) interface{} {
+	typeList := make([]*SymbolEntry, 0)
+	for _, spec := range ctx.AllTypeSpec() {
+		typeList = append(typeList, v.VisitTypeSpec(spec.(*TypeSpecContext)).(*SymbolEntry))
+	}
+	return typeList // []*SymbolEntry
+}
+
+func (v *ASTBuilder) VisitTypeSpec(ctx *TypeSpecContext) interface{} {
+	name := ctx.IDENTIFIER().GetText()
+	tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
+	alias := NewAliasType(name, tp)
+	return NewSymbolEntry(NewLocationFromContext(ctx), name, TypeEntry, alias, nil) // *SymbolEntry
+}
+
+// Top level function declarations
+func (v *ASTBuilder) VisitFunctionDecl(ctx *FunctionDeclContext) interface{} {
+	name := ctx.IDENTIFIER().GetText()
+	funcDecl := v.VisitFunction(ctx.Function().(*FunctionContext)).(*FuncDecl)
+	funcDecl.name = name
+	return funcDecl // *FuncDecl
+}
+
+func (v *ASTBuilder) VisitFunction(ctx *FunctionContext) interface{} {
+	// Analyze function signature
+	sig := v.VisitSignature(ctx.Signature().(*SignatureContext)).(*FuncSignature)
+	paramType := make([]IType, 0)
+	resultType := make([]IType, 0)
+	namedRet := make([]*SymbolEntry, 0)
+	for _, p := range sig.params {
+		paramType = append(paramType, p.tp)
+	}
+	for _, r := range sig.results {
+		resultType = append(resultType, r.tp)
+		if len(r.name) != 0 {
+			namedRet = append(namedRet, r)
+		}
+	}
+
+	// Panic if mixed named and unnamed parameters
+	if len(namedRet) > 0 && len(namedRet) != len(resultType) {
+		panic(fmt.Sprintf("%s Function has both named and unnamed parameters.",
+			NewLocationFromContext(ctx).ToString()))
+	}
+
+	// Initialize function declaration node
+	decl := NewFuncDecl(NewLocationFromContext(ctx), "", NewFunctionType(paramType, resultType),
+		NewLocalScope(v.cur), namedRet)
+	v.cur = decl.scope // move scope cursor deeper
+
+	// Add parameter and named return value symbols to the function scope
+	for _, p := range sig.params {
+		decl.scope.AddSymbol(p)
+	}
+	for _, r := range namedRet {
+		decl.scope.AddSymbol(r)
+	}
+
+	// Build statement AST nodes
+	decl.stmts = v.VisitBlock(ctx.Block().(*BlockContext)).([]IStmtNode)
+	v.cur = v.cur.parent // move cursor back
+
+	return decl // *FuncDecl
 }

@@ -31,3 +31,7 @@ func NewProgramNode(pkgName string) *ProgramNode {
 	return &ProgramNode{BaseASTNode: *NewBaseASTNode(nil), pkg: pkgName, scope: NewGlobalScope(),
 		funcs: make([]*FuncDecl, 0)}
 }
+
+func (n *ProgramNode) AddFuncDecl(fun *FuncDecl) {
+	n.funcs = append(n.funcs, fun)
+}

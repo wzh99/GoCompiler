@@ -12,7 +12,9 @@ func NewGlobalScope() *Scope {
 }
 
 func NewLocalScope(parent *Scope) *Scope {
-	return &Scope{symbols: NewSymbolTable(), parent: parent, children: make([]*Scope, 0), global: false}
+	s := &Scope{symbols: NewSymbolTable(), parent: parent, children: make([]*Scope, 0), global: false}
+	parent.AddChild(s)
+	return s
 }
 
 func (s *Scope) AddChild(child *Scope) {

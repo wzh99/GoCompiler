@@ -4,7 +4,7 @@ import "fmt"
 
 type TypeEnum int
 
-// Some type, notably literals, can be more than one type, depending on context.
+// Provide a simpler way to mark types tha using type assertions
 const (
 	/* Built-in types */
 	// Boolean type
@@ -79,8 +79,7 @@ var TypeToStr = map[TypeEnum]string{
 type IType interface {
 	ToString() string
 	GetTypeEnum() TypeEnum
-	IsSameType(tp IType) bool
-	GetSize() int // in bytes
+	IsIdentical(tp IType) bool
 }
 
 type BaseType struct {
@@ -103,7 +102,7 @@ func (t *BaseType) ToString() string {
 func (t *BaseType) GetTypeEnum() TypeEnum { return t.enum }
 
 // This method should be overridden by non-primitive type
-func (t *BaseType) IsSameType(tp IType) bool {
+func (t *BaseType) IsIdentical(tp IType) bool {
 	return t.enum == tp.GetTypeEnum()
 }
 
@@ -117,10 +116,49 @@ func NewUnresolvedType(name string) *UnresolvedType {
 	return &UnresolvedType{BaseType: *NewBaseType(Unresolved), name: name}
 }
 
-func (t *UnresolvedType) GetSize() int { return 0 }
-
 func (t *UnresolvedType) ToString() string {
 	return fmt.Sprintf("unresolved: %s", t.name)
+}
+
+func (t *UnresolvedType) IsIdentical(o IType) bool {
+	t2, ok := o.(*UnresolvedType)
+	if !ok {
+		return false
+	}
+	return t.name == t2.name
+}
+
+// Type alias
+type AliasType struct {
+	BaseType
+	name  string
+	under IType
+}
+
+func NewAliasType(name string, under IType) *AliasType {
+	if alias, ok := under.(*AliasType); ok {
+		under = alias.under
+	}
+	return &AliasType{BaseType: *NewBaseType(under.GetTypeEnum()), name: name, under: under}
+}
+
+func (t *AliasType) ToString() string {
+	return fmt.Sprintf("%s: %s", t.name, t.under.ToString())
+}
+
+func (t *AliasType) IsIdentical(o IType) bool {
+	if t2, ok := o.(*AliasType); ok {
+		// all alias type, and have identical underlying type
+		if t.under.IsIdentical(t2.under) {
+			return true
+		}
+	} else { // the second is not alias type
+		// the second is identical to the underlying type of the first
+		if t.under.IsIdentical(o) {
+			return true
+		}
+	}
+	return false
 }
 
 // Value type of integer, float, complex
@@ -129,10 +167,17 @@ type PrimType struct {
 }
 
 func NewPrimType(enum TypeEnum) *PrimType {
-	if enum&PrimitiveType == 0 {
+	if (enum & PrimitiveType) == 0 {
 		panic("Not primitive type.")
 	}
 	return &PrimType{BaseType: *NewBaseType(enum)}
+}
+
+func (t *PrimType) IsIdentical(o IType) bool {
+	if alias, ok := o.(*AliasType); ok {
+		return alias.IsIdentical(t)
+	}
+	return t.GetTypeEnum() == o.GetTypeEnum()
 }
 
 var PrimTypeSize = map[TypeEnum]int{
@@ -144,6 +189,47 @@ func (t *PrimType) GetSize() int {
 	return PrimTypeSize[t.enum]
 }
 
+type StructType struct {
+	BaseType
+	field *SymbolTable
+}
+
+func NewStructType(field *SymbolTable) *StructType {
+	return &StructType{BaseType: *NewBaseType(Struct), field: field}
+}
+
+func (t *StructType) ToString() string {
+	str := "struct{"
+	for i, f := range t.field.entries {
+		if i != 0 {
+			str += ", "
+		}
+		str += f.tp.ToString()
+	}
+	return str + "}"
+}
+
+func (t *StructType) IsIdentical(o IType) bool {
+	if alias, ok := o.(*AliasType); ok {
+		return alias.IsIdentical(t)
+	}
+	t2, ok := o.(*StructType)
+	if !ok { // not even struct type
+		return false
+	}
+	if len(t2.field.entries) != len(t2.field.entries) {
+		return false
+	}
+	for i, e1 := range t.field.entries {
+		e2 := t2.field.entries[i]
+		if (!e1.tp.IsIdentical(e2.tp)) || (e1.name != e2.name) {
+			return false
+		}
+	}
+	return true
+}
+
+// Mainly used in function parameters representation, and assignment semantic analysis
 type TupleType struct {
 	BaseType
 	elem []IType
@@ -164,7 +250,7 @@ func (t *TupleType) ToString() string {
 	return str + ")"
 }
 
-func (t *TupleType) IsSameType(o IType) bool {
+func (t *TupleType) IsIdentical(o IType) bool {
 	t2, ok := o.(*TupleType)
 	if !ok { // not even tuple type
 		return false
@@ -173,85 +259,35 @@ func (t *TupleType) IsSameType(o IType) bool {
 		return false
 	}
 	for i := range t.elem {
-		if !t.elem[i].IsSameType(t2.elem[i]) {
+		if !t.elem[i].IsIdentical(t2.elem[i]) {
 			return false
 		}
 	}
 	return true
-}
-
-func (t *TupleType) GetSize() int {
-	size := 0
-	for _, t := range t.elem {
-		size += t.GetSize()
-	}
-	return size
-}
-
-type StructType struct {
-	BaseType
-	name  string
-	field *SymbolTable
-}
-
-func NewStructType(name string, field *SymbolTable) *StructType {
-	return &StructType{BaseType: *NewBaseType(Struct), name: name, field: field}
-}
-
-func (t *StructType) ToString() string {
-	str := "struct{"
-	for i, f := range t.field.entries {
-		if i != 0 {
-			str += ", "
-		}
-		str += f.tp.ToString()
-	}
-	return str + "}"
-}
-
-func (t *StructType) IsSameType(o IType) bool {
-	t2, ok := o.(*StructType)
-	if !ok { // not even struct type
-		return false
-	}
-	if len(t2.field.entries) != len(t2.field.entries) {
-		return false
-	}
-	for i, e := range t.field.entries {
-		if (!e.tp.IsSameType(t2.field.entries[i].tp)) || (e.name != t2.name) {
-			return false
-		}
-	}
-	return true
-}
-
-func (t *StructType) GetSize() int {
-	size := 0
-	for _, f := range t.field.entries {
-		size += f.tp.GetSize()
-	}
-	return size
+	// tuple is not defined in the language, so there is no type alias
 }
 
 type FuncType struct {
 	BaseType
-	params, results *TupleType
+	param, ret *TupleType
 }
 
-func NewFunctionType(params, results *TupleType) *FuncType {
-	return &FuncType{BaseType: *NewBaseType(Func), params: params, results: results}
+func NewFunctionType(params, results []IType) *FuncType {
+	return &FuncType{BaseType: *NewBaseType(Func), param: NewTupleType(params),
+		ret: NewTupleType(results)}
 }
 
 func (t *FuncType) ToString() string {
-	return fmt.Sprintf("func %s %s", t.params.ToString(), t.results.ToString())
+	return fmt.Sprintf("func %s %s", t.param.ToString(), t.ret.ToString())
 }
 
-func (t *FuncType) IsSameType(o IType) bool {
+func (t *FuncType) IsIdentical(o IType) bool {
+	if alias, ok := o.(*AliasType); ok {
+		return alias.IsIdentical(t)
+	}
 	t2, ok := o.(*FuncType)
 	if !ok {
 		return false
 	}
-	return t.params.IsSameType(t2.params) && t.results.IsSameType(t2.results)
+	return t.param.IsIdentical(t2.param) && t.ret.IsIdentical(t2.ret)
 }
-
-func (t *FuncType) GetSize() int { return 8 }
