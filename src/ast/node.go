@@ -22,14 +22,18 @@ func (n *BaseASTNode) ToStringTree() string { return "()" }
 
 type ProgramNode struct {
 	BaseASTNode
-	pkg   string
-	scope *Scope // root of the scope tree
-	funcs []*FuncDecl
+	pkg    string
+	global *FuncDecl //
+	funcs  []*FuncDecl
 }
 
 func NewProgramNode(pkgName string) *ProgramNode {
-	return &ProgramNode{BaseASTNode: *NewBaseASTNode(nil), pkg: pkgName, scope: NewGlobalScope(),
-		funcs: make([]*FuncDecl, 0)}
+	return &ProgramNode{
+		BaseASTNode: *NewBaseASTNode(nil), pkg: pkgName,
+		global: NewFuncDecl(nil, "_global", NewFunctionType([]IType{}, []IType{}),
+			NewGlobalScope(), nil),
+		funcs: make([]*FuncDecl, 0),
+	}
 }
 
 func (n *ProgramNode) AddFuncDecl(fun *FuncDecl) {

@@ -5,6 +5,7 @@ type Scope struct {
 	children []*Scope
 	symbols  *SymbolTable
 	global   bool
+	fun      *FuncDecl // point back to the function this scope belongs to
 }
 
 func NewGlobalScope() *Scope {
@@ -38,7 +39,7 @@ func (s *Scope) Lookup(name string) (entry *SymbolEntry, scope *Scope) {
 	return nil, nil
 }
 
-func (s *Scope) CheckRedefined(name string) bool {
+func (s *Scope) CheckDefined(name string) bool {
 	_, found := s.symbols.table[name]
 	return found
 }

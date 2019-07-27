@@ -1,6 +1,8 @@
 package ast
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Abstract expression interface
 type IExprNode interface {
@@ -29,6 +31,7 @@ func (n *BaseExprNode) SetType(tp IType) { n.tp = tp }
 type IConstExpr interface {
 	IExprNode
 	GetValue() interface{}
+	ConvertTo(tp IType) (interface{}, error) // convert to a certain type at compile time
 }
 
 type IntConst struct {
@@ -48,6 +51,17 @@ func (c *IntConst) ToStringTree() string {
 
 func (c *IntConst) GetValue() interface{} { return c.val }
 
+func (c *IntConst) ConvertTo(tp IType) (interface{}, error) {
+	switch tp.GetTypeEnum() {
+	case Int:
+		return c.val, nil
+	case Float64:
+		return float64(c.val), nil
+	default:
+		return nil, fmt.Errorf("cannot convert from %s to %s", c.tp.ToString(), tp.ToString())
+	}
+}
+
 type FloatConst struct {
 	BaseExprNode
 	val float64
@@ -64,6 +78,17 @@ func (c *FloatConst) ToStringTree() string {
 }
 
 func (c *FloatConst) GetValue() interface{} { return c.val }
+
+func (c *FloatConst) ConvertTo(tp IType) (interface{}, error) {
+	switch tp.GetTypeEnum() {
+	case Float64:
+		return c.val, nil
+	case Int:
+		return int(c.val), nil
+	default:
+		return nil, fmt.Errorf("cannot convert from %s to %s", c.tp.ToString(), tp.ToString())
+	}
+}
 
 // Identifier expression
 type IdExpr struct {

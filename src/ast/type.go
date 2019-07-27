@@ -168,7 +168,7 @@ type PrimType struct {
 
 func NewPrimType(enum TypeEnum) *PrimType {
 	if (enum & PrimitiveType) == 0 {
-		panic("Not primitive type.")
+		panic("Not primitive type")
 	}
 	return &PrimType{BaseType: *NewBaseType(enum)}
 }
@@ -270,15 +270,17 @@ func (t *TupleType) IsIdentical(o IType) bool {
 type FuncType struct {
 	BaseType
 	param, ret *TupleType
+	receiver   IType // optional for methods, not explicitly assigned in constructor
 }
 
 func NewFunctionType(params, results []IType) *FuncType {
 	return &FuncType{BaseType: *NewBaseType(Func), param: NewTupleType(params),
-		ret: NewTupleType(results)}
+		ret: NewTupleType(results), receiver: nil}
 }
 
 func (t *FuncType) ToString() string {
-	return fmt.Sprintf("func %s %s", t.param.ToString(), t.ret.ToString())
+	return fmt.Sprintf("func (%s) %s %s", t.receiver.ToString(), t.param.ToString(),
+		t.ret.ToString())
 }
 
 func (t *FuncType) IsIdentical(o IType) bool {
@@ -289,5 +291,10 @@ func (t *FuncType) IsIdentical(o IType) bool {
 	if !ok {
 		return false
 	}
-	return t.param.IsIdentical(t2.param) && t.ret.IsIdentical(t2.ret)
+	identical := t.param.IsIdentical(t2.param) && t.ret.IsIdentical(t2.ret)
+	if t.receiver == nil {
+		return identical && t2.receiver == nil
+	} else {
+		return identical && t.receiver.IsIdentical(t2.receiver)
+	}
 }

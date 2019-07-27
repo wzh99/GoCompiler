@@ -24,6 +24,10 @@ func NewFuncDecl(loc *Location, name string, tp *FuncType, scope *Scope,
 
 func (d *FuncDecl) GetType() IType { return d.tp }
 
+func (d *FuncDecl) AddStmt(stmt IStmtNode) {
+	d.stmts = append(d.stmts, stmt)
+}
+
 func (d *FuncDecl) ToStringTree() string {
 	str := "(funcDecl"
 	for _, s := range d.stmts {

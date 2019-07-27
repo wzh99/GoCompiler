@@ -124,7 +124,7 @@ methodDecl
     ;
 
 receiver
-    : parameters
+    : '(' parameterDecl ')'
     ;
 
 //VarDecl     = "var" ( VarSpec | "(" { VarSpec ";" } ")" ) .
@@ -573,13 +573,13 @@ functionLit
 
 primaryExpr
     : operand
-    //| conversion // here I treat type conversion as a function.
+    | conversion
     | primaryExpr selector
     | primaryExpr index
     | primaryExpr slice
     | primaryExpr typeAssertion
     | primaryExpr arguments
-    ;
+    ; // in ANTLR, it's possible that a conversion may be recognized as a function call
 
 selector
     : '.' IDENTIFIER
@@ -634,10 +634,10 @@ unaryExpr
     ;
 
 //Conversion = Type "(" Expression [ "," ] ")" .
-/*conversion
+conversion
     : tp '(' expression ')'
     ;
-*/
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
