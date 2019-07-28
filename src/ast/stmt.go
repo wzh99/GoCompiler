@@ -1,9 +1,5 @@
 package ast
 
-import (
-	"fmt"
-)
-
 type IStmtNode interface {
 	IASTNode
 }
@@ -32,19 +28,6 @@ func (s *BlockStmt) ToStringTree() string {
 		str += s.ToStringTree()
 	}
 	return str + ")"
-}
-
-type ExprStmt struct {
-	BaseASTNode
-	expr IExprNode
-}
-
-func NewExprStmt(loc *Location, expr IExprNode) *ExprStmt {
-	return &ExprStmt{BaseASTNode: *NewBaseASTNode(loc), expr: expr}
-}
-
-func (s *ExprStmt) ToStringTree() string {
-	return fmt.Sprintf("(exprStmt %s)", s.expr.ToStringTree())
 }
 
 type AssignStmt struct {

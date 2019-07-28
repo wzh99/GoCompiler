@@ -14,7 +14,7 @@ type IExprNode interface {
 type BaseExprNode struct {
 	BaseStmtNode
 	// tp is nil: type of current node is unknown, to be determined in a later pass.
-	// tp is Unresolved: type name of current node is known, but its validity remains to be verified.
+	// tp is Unresolved: type name of current node is known, but its validity remains to be checked.
 	tp IType
 }
 
@@ -27,20 +27,45 @@ func (n *BaseExprNode) GetType() IType { return n.tp }
 
 func (n *BaseExprNode) SetType(tp IType) { n.tp = tp }
 
-// Constant expression
-type IConstExpr interface {
+// Literal expressions
+type ILiteralExpr interface {
 	IExprNode
 	GetValue() interface{}
+}
+
+type BaseLiteralExpr struct {
+	BaseExprNode
+}
+
+func NewBaseLiteralExpr(loc *Location) *BaseLiteralExpr {
+	return &BaseLiteralExpr{BaseExprNode: *NewBaseExprNode(loc)}
+}
+
+func (n *BaseLiteralExpr) IsLValue() bool { return true }
+
+// Constant expressions (can be assigned to constant, special case of literal expression)
+type IConstExpr interface {
+	ILiteralExpr
 	ConvertTo(tp IType) (interface{}, error) // convert to a certain type at compile time
 }
 
+type BaseConstExpr struct {
+	BaseLiteralExpr
+}
+
+func NewBaseConstExpr(loc *Location) *BaseConstExpr {
+	return &BaseConstExpr{BaseLiteralExpr: *NewBaseLiteralExpr(loc)}
+}
+
+func (n *BaseConstExpr) IsLValue() bool { return false }
+
 type IntConst struct {
-	BaseExprNode
+	BaseConstExpr
 	val int
 }
 
 func NewIntConst(loc *Location, val int) *IntConst {
-	c := &IntConst{BaseExprNode: *NewBaseExprNode(loc), val: val}
+	c := &IntConst{BaseConstExpr: *NewBaseConstExpr(loc), val: val}
 	c.SetType(NewPrimType(Int))
 	return c
 }
@@ -116,6 +141,14 @@ type IdExpr struct {
 	BaseExprNode
 	name   string // should keep name for lookup in global scope
 	symbol *SymbolEntry
+}
+
+var IsKeyword = map[string]bool{
+	"break": true, "case": true, "chan": true, "const": true, "continue": true,
+	"default": true, "defer": true, "else": true, "fallthrough": true, "for": true,
+	"func": true, "go": true, "goto": true, "if": true, "import": true,
+	"interface": true, "map": true, "package": true, "range": true, "return": true,
+	"select": true, "struct": true, "switch": true, "type": true, "var": true,
 }
 
 func NewIdExpr(loc *Location, name string, symbol *SymbolEntry) *IdExpr {

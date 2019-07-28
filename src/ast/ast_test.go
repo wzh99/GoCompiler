@@ -10,14 +10,17 @@ import (
 const source = `
 package main
 
-var a int
+var a, b int
 
 type Foo struct {
 	bar1 uint
 	bar2 float32
 }
 
-func foo1(a int) (ret int) {}
+func (f Bar) foo1(a float32) (ret int) {
+	var k int
+	{} 
+}
 
 func foo2(foo Foo) {}
 `

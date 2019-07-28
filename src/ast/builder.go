@@ -20,6 +20,11 @@ type ASTBuilder struct {
 
 func NewASTBuilder() *ASTBuilder { return &ASTBuilder{} }
 
+// Add statement to current function
+func (v *ASTBuilder) addStmt(stmt IStmtNode) {
+	v.cur.fun.AddStmt(stmt)
+}
+
 func (v *ASTBuilder) VisitSourceFile(ctx *SourceFileContext) interface{} {
 	// Get package name
 	pkgName := v.VisitPackageClause(ctx.PackageClause().(*PackageClauseContext)).(string)
@@ -103,7 +108,7 @@ func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 		specTp = v.VisitTp(ctx.Tp().(*TpContext)).(IType)
 	}
 	for i := range lhs {
-		tp := rhs[i].GetType()
+		tp := rhs[i].GetType() // rhs must be constant expression, its type must be clear then
 		val := rhs[i].(IConstExpr).GetValue()
 		loc := lhs[i].GetLocation()
 
@@ -112,7 +117,7 @@ func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 			var err error
 			val, err = rhs[i].(IConstExpr).ConvertTo(specTp) // try to convert to target type
 			if err != nil {
-				panic(loc.ToString() + " " + err.Error()) // cannot convert
+				panic(fmt.Errorf("%s %s", loc.ToString(), err.Error())) // cannot convert
 			}
 			tp = specTp
 		}
@@ -127,6 +132,10 @@ func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 func (v *ASTBuilder) VisitIdentifierList(ctx *IdentifierListContext) interface{} {
 	idList := make([]*IdExpr, 0)
 	for _, id := range ctx.AllIDENTIFIER() {
+		if IsKeyword[id.GetText()] {
+			panic(fmt.Errorf("%s cannot use keyword as identifier: %s",
+				NewLocationFromTerminal(id).ToString(), id.GetText()))
+		}
 		idList = append(idList, NewIdExpr(NewLocationFromToken(id.GetSymbol()), id.GetText(),
 			nil))
 	}
@@ -198,14 +207,14 @@ func (v *ASTBuilder) VisitFunction(ctx *FunctionContext) interface{} {
 	v.cur = decl.scope // move scope cursor deeper
 
 	// Add named parameter and return value symbols to the function scope
+	if v.receiver != nil { // add receiver to the method scope
+		decl.scope.AddSymbol(v.receiver)
+		v.receiver = nil // receiver should no longer be recorded
+	}
 	for _, p := range sig.params {
 		if p.IsNamed() {
 			decl.scope.AddSymbol(p)
 		}
-	}
-	if v.receiver != nil { // add receiver to the method scope
-		decl.scope.AddSymbol(v.receiver)
-		v.receiver = nil // receiver should no longer be recorded
 	}
 
 	// Initialize named return values
@@ -238,7 +247,12 @@ func (v *ASTBuilder) VisitMethodDecl(ctx *MethodDeclContext) interface{} {
 }
 
 func (v *ASTBuilder) VisitReceiver(ctx *ReceiverContext) interface{} {
-	return v.VisitParameterDecl(ctx.ParameterDecl().(*ParameterDeclContext)) // *SymbolEntry
+	decl := v.VisitParameterDecl(ctx.ParameterDecl().(*ParameterDeclContext)).([]*SymbolEntry)
+	if len(decl) != 1 {
+		panic(fmt.Errorf("%s expect one paramter in method receiver, have %d",
+			NewLocationFromContext(ctx).ToString(), len(decl)))
+	}
+	return decl[0] // *SymbolEntry
 }
 
 func (v *ASTBuilder) VisitVarDecl(ctx *VarDeclContext) interface{} {
@@ -249,6 +263,12 @@ func (v *ASTBuilder) VisitVarDecl(ctx *VarDeclContext) interface{} {
 }
 
 func (v *ASTBuilder) VisitVarSpec(ctx *VarSpecContext) interface{} {
+	// Get expression list
+	var exprList []IExprNode
+	if ctx.ExpressionList() != nil {
+		exprList = v.VisitExpressionList(ctx.ExpressionList().(*ExpressionListContext)).([]IExprNode)
+	}
+
 	// Get specified variables
 	idList := v.VisitIdentifierList(ctx.IdentifierList().(*IdentifierListContext)).([]*IdExpr)
 
@@ -258,26 +278,20 @@ func (v *ASTBuilder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 		specType = v.VisitTp(ctx.Tp().(*TpContext)).(IType)
 	}
 
-	// Add variables to symbol table
-	for _, id := range idList {
-		// type maybe unknown at this time
-		v.cur.AddSymbol(NewSymbolEntry(id.GetLocation(), id.name, VarEntry, specType, nil))
-	}
-
-	// Get expression list
-	var exprList []IExprNode
-	if ctx.ExpressionList() != nil {
-		exprList = v.VisitExpressionList(ctx.ExpressionList().(*ExpressionListContext)).([]IExprNode)
-	}
-	if len(exprList) > 0 && len(exprList) != len(idList) {
+	// Reject if assignment count mismatch
+	// If len(exprList) == 1 and len(idList) > 1, the right hand expression could a call
+	// to a function that return multiple values. We cannot tell whether there is any error.
+	if len(exprList) > 1 && len(exprList) != len(idList) {
 		panic(fmt.Errorf("%s assignment count mismatch %d = %d",
 			NewLocationFromContext(ctx).ToString(), len(idList), len(exprList)))
 	}
 
-	// Generate lhs list for statement node
+	// Add variables to symbol table
 	lhs := make([]IExprNode, 0)
 	for _, id := range idList {
-		id.symbol, _ = v.cur.Lookup(id.name) // must be in current scope
+		// type maybe unknown at this time
+		id.symbol = NewSymbolEntry(id.GetLocation(), id.name, VarEntry, specType, nil)
+		v.cur.AddSymbol(id.symbol)
 		lhs = append(lhs, id)
 	}
 
@@ -288,7 +302,7 @@ func (v *ASTBuilder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 			exprList[i] = NewZeroValue()
 		}
 	}
-	v.cur.fun.AddStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, exprList))
+	v.addStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, exprList))
 
 	return nil
 }
@@ -309,15 +323,84 @@ func (v *ASTBuilder) VisitStatementList(ctx *StatementListContext) interface{} {
 func (v *ASTBuilder) VisitStatement(ctx *StatementContext) interface{} {
 	if s := ctx.Declaration(); s != nil {
 		v.VisitDeclaration(s.(*DeclarationContext))
+	} else if s := ctx.SimpleStmt(); s != nil {
+		v.VisitSimpleStmt(s.(*SimpleStmtContext))
 	} else if s := ctx.Block(); s != nil {
 		// Create new scope for block statements
-		scope := NewLocalScope(v.cur)
-		v.cur = scope
+		v.cur = NewLocalScope(v.cur)
 		// Visit block
 		v.VisitBlock(s.(*BlockContext))
 		// Restore parent scope
 		v.cur = v.cur.parent
 	}
+	return nil
+}
+
+func (v *ASTBuilder) VisitSimpleStmt(ctx *SimpleStmtContext) interface{} {
+	if s := ctx.ExpressionStmt(); s != nil {
+		v.VisitExpressionStmt(s.(*ExpressionStmtContext))
+	} else if s := ctx.Assignment(); s != nil {
+		v.VisitAssignment(s.(*AssignmentContext))
+	} else if s := ctx.ShortVarDecl(); s != nil {
+		v.VisitShortVarDecl(s.(*ShortVarDeclContext))
+	}
+	return nil
+}
+
+func (v *ASTBuilder) VisitExpressionStmt(ctx *ExpressionStmtContext) interface{} {
+	expr := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(IExprNode)
+	v.addStmt(expr)
+	return nil
+}
+
+func (v *ASTBuilder) VisitAssignment(ctx *AssignmentContext) interface{} {
+	if op := ctx.GetOp(); op != nil { // assignment after operation
+		lhs := v.VisitExpression(ctx.Expression(0).(*ExpressionContext)).(IExprNode)
+		rhs := v.VisitExpression(ctx.Expression(1).(*ExpressionContext)).(IExprNode)
+		opExpr := NewBinaryExpr(NewLocationFromContext(ctx), BinaryOpStrToEnum[op.GetText()],
+			lhs, rhs)
+		v.addStmt(NewAssignStmt(NewLocationFromContext(ctx), []IExprNode{lhs},
+			[]IExprNode{opExpr}))
+
+	} else { // only assignment, but can assign multiple values
+		lhs := v.VisitExpressionList(ctx.ExpressionList(0).(*ExpressionListContext)).([]IExprNode)
+		rhs := v.VisitExpressionList(ctx.ExpressionList(1).(*ExpressionListContext)).([]IExprNode)
+		// Check length of expressions on both sides, similar to variable specification
+		if len(rhs) > 1 && len(lhs) != len(rhs) {
+			panic(fmt.Errorf("%s assignment count mismatch %d = %d",
+				NewLocationFromContext(ctx).ToString(), len(lhs), len(rhs)))
+		}
+		v.addStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, rhs))
+	}
+	return nil
+}
+
+func (v *ASTBuilder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
+	// Get identifier list (lhs) and expression list (rhs)
+	exprList := v.VisitExpressionList(ctx.ExpressionList().(*ExpressionListContext)).([]IExprNode)
+	idList := v.VisitIdentifierList(ctx.IdentifierList().(*IdentifierListContext)).([]*IdExpr)
+
+	// Check if numbers of expressions on both sides match
+	if len(exprList) > 1 && len(idList) != len(exprList) {
+		panic(fmt.Errorf("%s assignment count mismatch %d = %d",
+			NewLocationFromContext(ctx).ToString(), len(idList), len(exprList)))
+	}
+
+	// Add undefined identifier to symbol table (some can be defined at current scope)
+	lhs := make([]IExprNode, 0)
+	for _, id := range idList {
+		if v.cur.CheckDefined(id.name) { // already defined at current scope
+			id.symbol, _ = v.cur.Lookup(id.name)
+		} else {
+			id.symbol = NewSymbolEntry(id.loc, id.name, VarEntry, nil, nil)
+			v.cur.AddSymbol(id.symbol)
+		}
+		lhs = append(lhs, id)
+	}
+
+	// Add statement to current function
+	v.addStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, exprList))
+
 	return nil
 }
 
@@ -333,19 +416,20 @@ func (v *ASTBuilder) VisitTp(ctx *TpContext) interface{} {
 }
 
 func (v *ASTBuilder) VisitTypeName(ctx *TypeNameContext) interface{} {
-	// Get name string
-	name := ctx.IDENTIFIER().GetText()
 	// Check if is primitive type
+	name := ctx.IDENTIFIER().GetText()
 	tp, ok := StrToPrimType[name]
 	if ok {
 		return NewPrimType(tp)
 	}
+
 	// Try to resolve type symbol
 	// It's OK to be unresolved, since it may be defined later in global scope.
 	symbol, _ := v.cur.Lookup(name)
 	if symbol != nil && symbol.flag == TypeEntry { // resolved and represents type
 		return symbol.tp
 	}
+
 	return NewUnresolvedType(name) // cannot resolve at present
 }
 

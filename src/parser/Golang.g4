@@ -194,14 +194,9 @@ incDecStmt
 
 //Assignment = ExpressionList assign_op ExpressionList .
 assignment
-    : expressionList assignOp expressionList
+    : expression op=('+' | '-' | '|' | '^' | '*' | '/' | '%' | '<<' | '>>' | '&' )'=' expression
+    | expressionList '=' expressionList
     ;
-
-//assign_op = [ add_op | mul_op ] "=" .
-assignOp
-    : op=('+' | '-' | '|' | '^' | '*' | '/' | '%' | '<<' | '>>' | '&' )? '='
-    ;
-
 
 //ShortVarDecl = IdentifierList ":=" ExpressionList .
 shortVarDecl
@@ -618,7 +613,6 @@ receiverType
 
 expression
     : unaryExpr
-//    | expression BINARY_OP expression
     | expression op=( '*' | '/' | '%' | '<<' | '>>' | '&' ) expression
     | expression op=( '+' | '-' | '|' | '^' ) expression
     | expression op=( '==' | '!=' | '<' | '<=' | '>' | '>=' ) expression
