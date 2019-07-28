@@ -1,5 +1,7 @@
 package ast
 
+import "fmt"
+
 type Scope struct {
 	parent   *Scope
 	children []*Scope
@@ -13,7 +15,8 @@ func NewGlobalScope() *Scope {
 }
 
 func NewLocalScope(parent *Scope) *Scope {
-	s := &Scope{symbols: NewSymbolTable(), parent: parent, children: make([]*Scope, 0), global: false}
+	s := &Scope{symbols: NewSymbolTable(), parent: parent, children: make([]*Scope, 0), global: false,
+		fun: parent.fun}
 	parent.AddChild(s)
 	return s
 }
@@ -22,21 +25,29 @@ func (s *Scope) AddChild(child *Scope) {
 	s.children = append(s.children, child)
 }
 
-func (s *Scope) AddSymbol(entry *SymbolEntry) { s.symbols.Add(entry) }
-
-func (s *Scope) BuildTable() { s.symbols.Build() }
+func (s *Scope) AddSymbol(entry *SymbolEntry) {
+	// Reject unnamed symbol
+	if len(entry.name) == 0 {
+		panic(fmt.Errorf("%s unnamed symbol", entry.loc.ToString()))
+	}
+	// Reject redefined symbol
+	if s.CheckDefined(entry.name) {
+		panic(fmt.Errorf("%s redefined symbol: %s", entry.loc.ToString(), entry.name))
+	}
+	s.symbols.Add(entry)
+}
 
 // Look up symbol, considering nested scopes
 func (s *Scope) Lookup(name string) (entry *SymbolEntry, scope *Scope) {
-	cur := s
-	for cur != nil {
-		entry := cur.symbols.Lookup(name)
+	scope = s
+	for scope != nil {
+		entry = scope.symbols.Lookup(name)
 		if entry != nil {
-			return entry, cur
+			return
 		}
-		cur = cur.parent
+		scope = scope.parent
 	}
-	return nil, nil
+	return
 }
 
 func (s *Scope) CheckDefined(name string) bool {

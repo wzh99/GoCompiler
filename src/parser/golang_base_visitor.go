@@ -116,7 +116,7 @@ func (v *BaseGolangVisitor) VisitAssignment(ctx *AssignmentContext) interface{} 
 	return v.VisitChildren(ctx)
 }
 
-func (v *BaseGolangVisitor) VisitAssign_op(ctx *Assign_opContext) interface{} {
+func (v *BaseGolangVisitor) VisitAssignOp(ctx *AssignOpContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 

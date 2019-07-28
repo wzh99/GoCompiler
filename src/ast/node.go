@@ -28,12 +28,14 @@ type ProgramNode struct {
 }
 
 func NewProgramNode(pkgName string) *ProgramNode {
-	return &ProgramNode{
+	n := &ProgramNode{
 		BaseASTNode: *NewBaseASTNode(nil), pkg: pkgName,
 		global: NewFuncDecl(nil, "_global", NewFunctionType([]IType{}, []IType{}),
 			NewGlobalScope(), nil),
 		funcs: make([]*FuncDecl, 0),
 	}
+	n.global.scope.fun = n.global
+	return n
 }
 
 func (n *ProgramNode) AddFuncDecl(fun *FuncDecl) {

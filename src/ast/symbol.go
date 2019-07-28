@@ -21,29 +21,28 @@ func NewSymbolEntry(loc *Location, name string, flag EntryFlag, tp IType, val in
 	return &SymbolEntry{loc: loc, name: name, flag: flag, tp: tp, val: val}
 }
 
+func (e *SymbolEntry) IsNamed() bool { return len(e.name) > 0 }
+
+func (e *SymbolEntry) TypeUnknown() bool { return e.tp == nil }
+
 type SymbolTable struct {
 	entries []*SymbolEntry          // for ordered access
 	table   map[string]*SymbolEntry // for lookup
 }
 
 func NewSymbolTable() *SymbolTable {
-	return &SymbolTable{entries: make([]*SymbolEntry, 0)}
+	return &SymbolTable{entries: make([]*SymbolEntry, 0), table: make(map[string]*SymbolEntry)}
 }
 
-func (t *SymbolTable) Add(entry *SymbolEntry) {
-	t.entries = append(t.entries, entry)
-}
-
-// Only called when entries are completely added.
-func (t *SymbolTable) Build() {
-	for i, e := range t.entries {
-		t.table[e.name] = t.entries[i]
+// This method does not check the validity of entry.
+// The check is done in Scope.AddEntry()
+func (t *SymbolTable) Add(entries ...*SymbolEntry) {
+	for _, e := range entries {
+		t.entries = append(t.entries, e)
+		t.table[e.name] = e
 	}
 }
 
 func (t *SymbolTable) Lookup(name string) *SymbolEntry {
-	if t.table == nil {
-		panic("Table not constructed.")
-	}
 	return t.table[name]
 }

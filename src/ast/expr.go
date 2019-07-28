@@ -90,6 +90,27 @@ func (c *FloatConst) ConvertTo(tp IType) (interface{}, error) {
 	}
 }
 
+type ZeroValue struct {
+	BaseExprNode
+}
+
+func NewZeroValue() *ZeroValue { return &ZeroValue{} }
+
+func (c *ZeroValue) ToStringTree() string { return "0" }
+
+func (c *ZeroValue) GetValue() interface{} { return nil }
+
+func (c *ZeroValue) ConvertTo(tp IType) (interface{}, error) {
+	switch tp.GetTypeEnum() {
+	case Int:
+		return 0, nil
+	case Float64:
+		return 0., nil
+	default:
+		return nil, nil
+	}
+}
+
 // Identifier expression
 type IdExpr struct {
 	BaseExprNode
@@ -147,7 +168,7 @@ var UnaryOpStr = map[UnaryOp]string{
 	POS: "+", NEG: "-", NOT: "!", INV: "^", DEREF: "*", REF: "&",
 }
 
-var UnaryOpStrToEnum map[string]UnaryOp
+var UnaryOpStrToEnum = map[string]UnaryOp{}
 
 func init() {
 	for op := POS; op <= REF; op++ {
@@ -188,7 +209,7 @@ var BinaryOpStr = map[BinaryOp]string{
 	LT: "<", LEQ: "<=", GT: ">", GEQ: ">=", LAND: "&&", LOR: "||",
 }
 
-var BinaryOpStrToEnum map[string]BinaryOp
+var BinaryOpStrToEnum = map[string]BinaryOp{}
 
 func init() {
 	for op := MUL; op <= LOR; op++ {

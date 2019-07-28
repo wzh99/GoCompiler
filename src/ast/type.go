@@ -166,6 +166,13 @@ type PrimType struct {
 	BaseType
 }
 
+var StrToPrimType = map[string]TypeEnum{
+	"bool": Bool, "int8": Int8, "int16": Int16, "int32": Int32, "int64": Int64,
+	"uint8": Uint8, "uint16": Uint16, "uint32": Uint32, "uint64": Uint64,
+	"int": Int, "uint": Uint, "uintptr": Uintptr, "byte": Byte, "rune": Rune,
+	"float32": Float32, "float64": Float64, "complex64": Complex64, "complex128": Complex128,
+}
+
 func NewPrimType(enum TypeEnum) *PrimType {
 	if (enum & PrimitiveType) == 0 {
 		panic("Not primitive type")
@@ -187,6 +194,19 @@ var PrimTypeSize = map[TypeEnum]int{
 
 func (t *PrimType) GetSize() int {
 	return PrimTypeSize[t.enum]
+}
+
+type NilType struct {
+	BaseType
+}
+
+func NewNilType() *NilType {
+	return &NilType{BaseType: *NewBaseType(Nil)}
+}
+
+func (t *NilType) IsIdentical(o IType) bool {
+	_, ok := o.(*NilType)
+	return ok
 }
 
 type StructType struct {

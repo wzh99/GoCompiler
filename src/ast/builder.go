@@ -8,10 +8,12 @@ import (
 // Build AST from CST. build scopes with symbol tables, and perform basic checks.
 type ASTBuilder struct {
 	BaseGolangVisitor
+	// Global and local cursor of scope
 	global, cur *Scope
-	prog        *ProgramNode
+	// Point to the program being constructed
+	prog *ProgramNode
 	// Track receiver of the method next child scope belongs to
-	// Since methods and functions share the same function body AST construction procedure,
+	// Since methods and functions share a single function body AST construction procedure,
 	// the procedure itself has no idea whether it has receiver.
 	receiver *SymbolEntry
 }
@@ -26,8 +28,6 @@ func (v *ASTBuilder) VisitSourceFile(ctx *SourceFileContext) interface{} {
 	// Set global and current scope pointer
 	v.global = v.prog.global.scope
 	v.cur = v.global
-	// Point scope back to the function it belongs to
-	v.prog.global.scope.fun = v.prog.global
 
 	// Add declarations to program node
 	for _, decl := range ctx.AllTopLevelDecl() {
@@ -61,7 +61,7 @@ func (v *ASTBuilder) VisitDeclaration(ctx *DeclarationContext) interface{} {
 	} else if d := ctx.TypeDecl(); d != nil {
 		v.VisitTypeDecl(d.(*TypeDeclContext))
 	}
-	return nil // []*SymbolEntry
+	return nil
 }
 
 // A specific constant declaration scope: const (... = ..., ... = ...)
@@ -75,8 +75,8 @@ func (v *ASTBuilder) VisitConstDecl(ctx *ConstDeclContext) interface{} {
 // One line of constant specification: id_1, id_2, ..., id_n = expr_1, expr_2, ..., expr_n
 func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 	// Get expression list on both sides of equation
-	lhs := v.VisitIdentifierList(ctx.IdentifierList().(*IdentifierListContext)).([]*IdExpr)
 	rhs := v.VisitExpressionList(ctx.ExpressionList().(*ExpressionListContext)).([]IExprNode)
+	lhs := v.VisitIdentifierList(ctx.IdentifierList().(*IdentifierListContext)).([]*IdExpr)
 
 	// Validate expressions
 	// Ensure same length
@@ -127,7 +127,8 @@ func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 func (v *ASTBuilder) VisitIdentifierList(ctx *IdentifierListContext) interface{} {
 	idList := make([]*IdExpr, 0)
 	for _, id := range ctx.AllIDENTIFIER() {
-		idList = append(idList, NewIdExpr(NewLocationFromToken(id.GetSymbol()), id.GetText(), nil))
+		idList = append(idList, NewIdExpr(NewLocationFromToken(id.GetSymbol()), id.GetText(),
+			nil))
 	}
 	return idList // []*IdExpr
 }
@@ -176,7 +177,7 @@ func (v *ASTBuilder) VisitFunction(ctx *FunctionContext) interface{} {
 	}
 	for _, r := range sig.results {
 		resultType = append(resultType, r.tp)
-		if len(r.name) != 0 {
+		if r.IsNamed() { // return type has associated name
 			namedRet = append(namedRet, r)
 		}
 	}
@@ -196,16 +197,27 @@ func (v *ASTBuilder) VisitFunction(ctx *FunctionContext) interface{} {
 	}
 	v.cur = decl.scope // move scope cursor deeper
 
-	// Add parameter and named return value symbols to the function scope
+	// Add named parameter and return value symbols to the function scope
 	for _, p := range sig.params {
-		decl.scope.AddSymbol(p)
-	}
-	for _, r := range namedRet {
-		decl.scope.AddSymbol(r)
+		if p.IsNamed() {
+			decl.scope.AddSymbol(p)
+		}
 	}
 	if v.receiver != nil { // add receiver to the method scope
 		decl.scope.AddSymbol(v.receiver)
 		v.receiver = nil // receiver should no longer be recorded
+	}
+
+	// Initialize named return values
+	if len(namedRet) > 0 {
+		lhs := make([]IExprNode, 0, len(namedRet))
+		rhs := make([]IExprNode, 0, len(namedRet))
+		for _, r := range namedRet {
+			decl.scope.AddSymbol(r)
+			lhs = append(lhs, NewIdExpr(r.loc, r.name, r))
+			rhs = append(rhs, NewZeroValue())
+		}
+		decl.scope.fun.AddStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, rhs))
 	}
 
 	// Build statement AST nodes
@@ -248,10 +260,6 @@ func (v *ASTBuilder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 
 	// Add variables to symbol table
 	for _, id := range idList {
-		// Check if defined in current scope before
-		if v.cur.CheckDefined(id.name) {
-			panic(fmt.Errorf("%s symbol redefined: %s", id.LocationStr(), id.name))
-		}
 		// type maybe unknown at this time
 		v.cur.AddSymbol(NewSymbolEntry(id.GetLocation(), id.name, VarEntry, specType, nil))
 	}
@@ -274,7 +282,162 @@ func (v *ASTBuilder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 	}
 
 	// Add statement to current scope
+	if exprList == nil { // all declared variables should be assigned zero value
+		exprList = make([]IExprNode, len(idList))
+		for i := range exprList {
+			exprList[i] = NewZeroValue()
+		}
+	}
 	v.cur.fun.AddStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, exprList))
 
+	return nil
+}
+
+// Scope should be set up before visiting block
+func (v *ASTBuilder) VisitBlock(ctx *BlockContext) interface{} {
+	v.VisitStatementList(ctx.StatementList().(*StatementListContext))
+	return nil
+}
+
+func (v *ASTBuilder) VisitStatementList(ctx *StatementListContext) interface{} {
+	for _, stmt := range ctx.AllStatement() {
+		v.VisitStatement(stmt.(*StatementContext))
+	}
+	return nil
+}
+
+func (v *ASTBuilder) VisitStatement(ctx *StatementContext) interface{} {
+	if s := ctx.Declaration(); s != nil {
+		v.VisitDeclaration(s.(*DeclarationContext))
+	} else if s := ctx.Block(); s != nil {
+		// Create new scope for block statements
+		scope := NewLocalScope(v.cur)
+		v.cur = scope
+		// Visit block
+		v.VisitBlock(s.(*BlockContext))
+		// Restore parent scope
+		v.cur = v.cur.parent
+	}
+	return nil
+}
+
+func (v *ASTBuilder) VisitTp(ctx *TpContext) interface{} {
+	if tp := ctx.TypeName(); tp != nil {
+		return v.VisitTypeName(tp.(*TypeNameContext)).(IType)
+	} else if tp := ctx.TypeLit(); tp != nil {
+		return v.VisitTypeLit(tp.(*TypeLitContext)).(IType)
+	} else if tp := ctx.Tp(); tp != nil {
+		return v.VisitTp(tp.(*TpContext)).(IType)
+	}
+	return nil // IType
+}
+
+func (v *ASTBuilder) VisitTypeName(ctx *TypeNameContext) interface{} {
+	// Get name string
+	name := ctx.IDENTIFIER().GetText()
+	// Check if is primitive type
+	tp, ok := StrToPrimType[name]
+	if ok {
+		return NewPrimType(tp)
+	}
+	// Try to resolve type symbol
+	// It's OK to be unresolved, since it may be defined later in global scope.
+	symbol, _ := v.cur.Lookup(name)
+	if symbol != nil && symbol.flag == TypeEntry { // resolved and represents type
+		return symbol.tp
+	}
+	return NewUnresolvedType(name) // cannot resolve at present
+}
+
+func (v *ASTBuilder) VisitTypeLit(ctx *TypeLitContext) interface{} {
+	if tp := ctx.FunctionType(); tp != nil {
+		return v.VisitFunctionType(tp.(*FunctionTypeContext))
+	} else if tp := ctx.StructType(); tp != nil {
+		return v.VisitStructType(tp.(*StructTypeContext))
+	}
+	return nil
+}
+
+func (v *ASTBuilder) VisitFunctionType(ctx *FunctionTypeContext) interface{} {
+	sig := v.VisitSignature(ctx.Signature().(*SignatureContext)).(*FuncSignature)
+	paramType := make([]IType, 0)
+	resultType := make([]IType, 0)
+	for _, p := range sig.params {
+		paramType = append(paramType, p.tp)
+	}
+	for _, r := range sig.results {
+		resultType = append(resultType, r.tp)
+	}
+	return NewFunctionType(paramType, resultType) // *FunctionType
+}
+
+func (v *ASTBuilder) VisitSignature(ctx *SignatureContext) interface{} {
+	params := v.VisitParameters(ctx.Parameters().(*ParametersContext)).([]*SymbolEntry)
+	results := make([]*SymbolEntry, 0)
+	if r := ctx.Result(); r != nil {
+		results = v.VisitResult(r.(*ResultContext)).([]*SymbolEntry)
+	}
+	return &FuncSignature{params: params, results: results}
+}
+
+func (v *ASTBuilder) VisitResult(ctx *ResultContext) interface{} {
+	if r := ctx.Tp(); r != nil {
+		tp := v.VisitTp(r.(*TpContext)).(IType)
+		return []*SymbolEntry{
+			NewSymbolEntry(NewLocationFromContext(ctx), "", VarEntry, tp, nil)}
+	} else if r := ctx.Parameters(); r != nil {
+		return v.VisitParameters(r.(*ParametersContext)).([]*SymbolEntry)
+	}
+	return nil // []*SymbolEntry
+}
+
+func (v *ASTBuilder) VisitParameters(ctx *ParametersContext) interface{} {
+	if p := ctx.ParameterList(); p != nil {
+		return v.VisitParameterList(p.(*ParameterListContext)).([]*SymbolEntry)
+	} else {
+		return make([]*SymbolEntry, 0)
+	} // []*SymbolEntry
+}
+
+func (v *ASTBuilder) VisitParameterList(ctx *ParameterListContext) interface{} {
+	list := make([]*SymbolEntry, 0)
+	for _, d := range ctx.AllParameterDecl() {
+		list = append(list, v.VisitParameterDecl(d.(*ParameterDeclContext)).([]*SymbolEntry)...)
+	}
+	return list
+}
+
+func (v *ASTBuilder) VisitParameterDecl(ctx *ParameterDeclContext) interface{} {
+	tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
+	idList := v.VisitIdentifierList(ctx.IdentifierList().(*IdentifierListContext)).([]*IdExpr)
+	if idList == nil {
+		return []*SymbolEntry{
+			NewSymbolEntry(NewLocationFromContext(ctx), "", VarEntry, tp, 0)}
+	}
+	declList := make([]*SymbolEntry, 0)
+	for _, id := range idList {
+		declList = append(declList, NewSymbolEntry(id.loc, id.name, VarEntry, tp, 0))
+	}
+	return declList // []*SymbolEntry
+}
+
+func (v *ASTBuilder) VisitStructType(ctx *StructTypeContext) interface{} {
+	table := NewSymbolTable()
+	for _, f := range ctx.AllFieldDecl() {
+		table.Add(v.VisitFieldDecl(f.(*FieldDeclContext)).([]*SymbolEntry)...)
+	}
+	return NewStructType(table) // *StructType
+}
+
+func (v *ASTBuilder) VisitFieldDecl(ctx *FieldDeclContext) interface{} {
+	if l := ctx.IdentifierList(); l != nil {
+		idList := v.VisitIdentifierList(l.(*IdentifierListContext)).([]*IdExpr)
+		tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
+		declList := make([]*SymbolEntry, 0)
+		for _, id := range idList {
+			declList = append(declList, NewSymbolEntry(id.loc, id.name, VarEntry, tp, nil))
+		}
+		return declList
+	}
 	return nil
 }

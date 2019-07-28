@@ -194,11 +194,11 @@ incDecStmt
 
 //Assignment = ExpressionList assign_op ExpressionList .
 assignment
-    : expressionList assign_op expressionList
+    : expressionList assignOp expressionList
     ;
 
 //assign_op = [ add_op | mul_op ] "=" .
-assign_op
+assignOp
     : op=('+' | '-' | '|' | '^' | '*' | '/' | '%' | '<<' | '>>' | '&' )? '='
     ;
 

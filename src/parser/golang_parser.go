@@ -446,19 +446,19 @@ var ruleNames = []string{
 	"expressionList", "typeDecl", "typeSpec", "functionDecl", "function", "methodDecl",
 	"receiver", "varDecl", "varSpec", "block", "statementList", "statement",
 	"simpleStmt", "expressionStmt", "sendStmt", "incDecStmt", "assignment",
-	"assign_op", "shortVarDecl", "emptyStmt", "labeledStmt", "returnStmt",
-	"breakStmt", "continueStmt", "gotoStmt", "fallthroughStmt", "deferStmt",
-	"ifStmt", "switchStmt", "exprSwitchStmt", "exprCaseClause", "exprSwitchCase",
-	"typeSwitchStmt", "typeSwitchGuard", "typeCaseClause", "typeSwitchCase",
-	"typeList", "selectStmt", "commClause", "commCase", "recvStmt", "forStmt",
-	"forClause", "rangeClause", "goStmt", "tp", "typeName", "typeLit", "arrayType",
-	"arrayLength", "elementType", "pointerType", "interfaceType", "sliceType",
-	"mapType", "channelType", "methodSpec", "functionType", "signature", "result",
-	"parameters", "parameterList", "parameterDecl", "operand", "literal", "basicLit",
-	"operandName", "compositeLit", "literalType", "literalValue", "elementList",
-	"keyedElement", "key", "element", "structType", "fieldDecl", "anonymousField",
-	"functionLit", "primaryExpr", "selector", "index", "slice", "typeAssertion",
-	"arguments", "methodExpr", "receiverType", "expression", "unaryExpr", "conversion",
+	"assignOp", "shortVarDecl", "emptyStmt", "labeledStmt", "returnStmt", "breakStmt",
+	"continueStmt", "gotoStmt", "fallthroughStmt", "deferStmt", "ifStmt", "switchStmt",
+	"exprSwitchStmt", "exprCaseClause", "exprSwitchCase", "typeSwitchStmt",
+	"typeSwitchGuard", "typeCaseClause", "typeSwitchCase", "typeList", "selectStmt",
+	"commClause", "commCase", "recvStmt", "forStmt", "forClause", "rangeClause",
+	"goStmt", "tp", "typeName", "typeLit", "arrayType", "arrayLength", "elementType",
+	"pointerType", "interfaceType", "sliceType", "mapType", "channelType",
+	"methodSpec", "functionType", "signature", "result", "parameters", "parameterList",
+	"parameterDecl", "operand", "literal", "basicLit", "operandName", "compositeLit",
+	"literalType", "literalValue", "elementList", "keyedElement", "key", "element",
+	"structType", "fieldDecl", "anonymousField", "functionLit", "primaryExpr",
+	"selector", "index", "slice", "typeAssertion", "arguments", "methodExpr",
+	"receiverType", "expression", "unaryExpr", "conversion",
 }
 var decisionToDFA = make([]*antlr.DFA, len(deserializedATN.DecisionToState))
 
@@ -594,7 +594,7 @@ const (
 	GolangParserRULE_sendStmt        = 24
 	GolangParserRULE_incDecStmt      = 25
 	GolangParserRULE_assignment      = 26
-	GolangParserRULE_assign_op       = 27
+	GolangParserRULE_assignOp        = 27
 	GolangParserRULE_shortVarDecl    = 28
 	GolangParserRULE_emptyStmt       = 29
 	GolangParserRULE_labeledStmt     = 30
@@ -4209,14 +4209,14 @@ func (s *AssignmentContext) ExpressionList(i int) IExpressionListContext {
 	return t.(IExpressionListContext)
 }
 
-func (s *AssignmentContext) Assign_op() IAssign_opContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IAssign_opContext)(nil)).Elem(), 0)
+func (s *AssignmentContext) AssignOp() IAssignOpContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IAssignOpContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IAssign_opContext)
+	return t.(IAssignOpContext)
 }
 
 func (s *AssignmentContext) GetRuleContext() antlr.RuleContext {
@@ -4264,7 +4264,7 @@ func (p *GolangParser) Assignment() (localctx IAssignmentContext) {
 	}
 	{
 		p.SetState(379)
-		p.Assign_op()
+		p.AssignOp()
 	}
 	{
 		p.SetState(380)
@@ -4274,8 +4274,8 @@ func (p *GolangParser) Assignment() (localctx IAssignmentContext) {
 	return localctx
 }
 
-// IAssign_opContext is an interface to support dynamic dispatch.
-type IAssign_opContext interface {
+// IAssignOpContext is an interface to support dynamic dispatch.
+type IAssignOpContext interface {
 	antlr.ParserRuleContext
 
 	// GetParser returns the parser.
@@ -4287,83 +4287,83 @@ type IAssign_opContext interface {
 	// SetOp sets the op token.
 	SetOp(antlr.Token)
 
-	// IsAssign_opContext differentiates from other interfaces.
-	IsAssign_opContext()
+	// IsAssignOpContext differentiates from other interfaces.
+	IsAssignOpContext()
 }
 
-type Assign_opContext struct {
+type AssignOpContext struct {
 	*antlr.BaseParserRuleContext
 	parser antlr.Parser
 	op     antlr.Token
 }
 
-func NewEmptyAssign_opContext() *Assign_opContext {
-	var p = new(Assign_opContext)
+func NewEmptyAssignOpContext() *AssignOpContext {
+	var p = new(AssignOpContext)
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
-	p.RuleIndex = GolangParserRULE_assign_op
+	p.RuleIndex = GolangParserRULE_assignOp
 	return p
 }
 
-func (*Assign_opContext) IsAssign_opContext() {}
+func (*AssignOpContext) IsAssignOpContext() {}
 
-func NewAssign_opContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *Assign_opContext {
-	var p = new(Assign_opContext)
+func NewAssignOpContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *AssignOpContext {
+	var p = new(AssignOpContext)
 
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
 
 	p.parser = parser
-	p.RuleIndex = GolangParserRULE_assign_op
+	p.RuleIndex = GolangParserRULE_assignOp
 
 	return p
 }
 
-func (s *Assign_opContext) GetParser() antlr.Parser { return s.parser }
+func (s *AssignOpContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *Assign_opContext) GetOp() antlr.Token { return s.op }
+func (s *AssignOpContext) GetOp() antlr.Token { return s.op }
 
-func (s *Assign_opContext) SetOp(v antlr.Token) { s.op = v }
+func (s *AssignOpContext) SetOp(v antlr.Token) { s.op = v }
 
-func (s *Assign_opContext) AOR() antlr.TerminalNode {
+func (s *AssignOpContext) AOR() antlr.TerminalNode {
 	return s.GetToken(GolangParserAOR, 0)
 }
 
-func (s *Assign_opContext) DIV() antlr.TerminalNode {
+func (s *AssignOpContext) DIV() antlr.TerminalNode {
 	return s.GetToken(GolangParserDIV, 0)
 }
 
-func (s *Assign_opContext) MOD() antlr.TerminalNode {
+func (s *AssignOpContext) MOD() antlr.TerminalNode {
 	return s.GetToken(GolangParserMOD, 0)
 }
 
-func (s *Assign_opContext) LSH() antlr.TerminalNode {
+func (s *AssignOpContext) LSH() antlr.TerminalNode {
 	return s.GetToken(GolangParserLSH, 0)
 }
 
-func (s *Assign_opContext) RSH() antlr.TerminalNode {
+func (s *AssignOpContext) RSH() antlr.TerminalNode {
 	return s.GetToken(GolangParserRSH, 0)
 }
 
-func (s *Assign_opContext) GetRuleContext() antlr.RuleContext {
+func (s *AssignOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *Assign_opContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+func (s *AssignOpContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
-func (s *Assign_opContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
+func (s *AssignOpContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 	switch t := visitor.(type) {
 	case GolangVisitor:
-		return t.VisitAssign_op(s)
+		return t.VisitAssignOp(s)
 
 	default:
 		return t.VisitChildren(s)
 	}
 }
 
-func (p *GolangParser) Assign_op() (localctx IAssign_opContext) {
-	localctx = NewAssign_opContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 54, GolangParserRULE_assign_op)
+func (p *GolangParser) AssignOp() (localctx IAssignOpContext) {
+	localctx = NewAssignOpContext(p, p.GetParserRuleContext(), p.GetState())
+	p.EnterRule(localctx, 54, GolangParserRULE_assignOp)
 	var _la int
 
 	defer func() {
@@ -4393,14 +4393,14 @@ func (p *GolangParser) Assign_op() (localctx IAssign_opContext) {
 
 			var _lt = p.GetTokenStream().LT(1)
 
-			localctx.(*Assign_opContext).op = _lt
+			localctx.(*AssignOpContext).op = _lt
 
 			_la = p.GetTokenStream().LA(1)
 
 			if !((((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<GolangParserT__16)|(1<<GolangParserT__17)|(1<<GolangParserT__18)|(1<<GolangParserT__19)|(1<<GolangParserT__20))) != 0) || (((_la-57)&-(0x1f+1)) == 0 && ((1<<uint((_la-57)))&((1<<(GolangParserAOR-57))|(1<<(GolangParserDIV-57))|(1<<(GolangParserMOD-57))|(1<<(GolangParserLSH-57))|(1<<(GolangParserRSH-57)))) != 0)) {
 				var _ri = p.GetErrorHandler().RecoverInline(p)
 
-				localctx.(*Assign_opContext).op = _ri
+				localctx.(*AssignOpContext).op = _ri
 			} else {
 				p.GetErrorHandler().ReportMatch(p)
 				p.Consume()
