@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 	. "parser"
+	"strconv"
 )
 
 // Build AST from CST. build scopes with symbol tables, and perform basic checks.
@@ -97,7 +98,7 @@ func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 	}
 	// rhs symbols are all constant expressions
 	for _, expr := range rhs {
-		if _, ok := expr.(IConstExpr); !ok {
+		if _, ok := expr.(*ConstExpr); !ok {
 			panic(fmt.Errorf("%s not constant expression", expr.LocationStr()))
 		}
 	}
@@ -109,16 +110,17 @@ func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 	}
 	for i := range lhs {
 		tp := rhs[i].GetType() // rhs must be constant expression, its type must be clear then
-		val := rhs[i].(IConstExpr).GetValue()
+		val := rhs[i].(*ConstExpr).val
 		loc := lhs[i].GetLocation()
 
 		// Check if need conversion in compile time
 		if specTp != nil && !specTp.IsIdentical(tp) {
-			var err error
-			val, err = rhs[i].(IConstExpr).ConvertTo(specTp) // try to convert to target type
-			if err != nil {
-				panic(fmt.Errorf("%s %s", loc.ToString(), err.Error())) // cannot convert
+			convert := constTypeConvert[tp.GetTypeEnum()][specTp.GetTypeEnum()]
+			if convert == nil {
+				panic(fmt.Errorf("%s cannot convert from %s to %s", loc.ToString(),
+					TypeToStr[tp.GetTypeEnum()], TypeToStr[specTp.GetTypeEnum()]))
 			}
+			val = convert(val)
 			tp = specTp
 		}
 
@@ -355,16 +357,16 @@ func (v *ASTBuilder) VisitExpressionStmt(ctx *ExpressionStmtContext) interface{}
 
 func (v *ASTBuilder) VisitAssignment(ctx *AssignmentContext) interface{} {
 	if op := ctx.GetOp(); op != nil { // assignment after operation
-		lhs := v.VisitExpression(ctx.Expression(0).(*ExpressionContext)).(IExprNode)
 		rhs := v.VisitExpression(ctx.Expression(1).(*ExpressionContext)).(IExprNode)
+		lhs := v.VisitExpression(ctx.Expression(0).(*ExpressionContext)).(IExprNode)
 		opExpr := NewBinaryExpr(NewLocationFromContext(ctx), BinaryOpStrToEnum[op.GetText()],
 			lhs, rhs)
 		v.addStmt(NewAssignStmt(NewLocationFromContext(ctx), []IExprNode{lhs},
 			[]IExprNode{opExpr}))
 
 	} else { // only assignment, but can assign multiple values
-		lhs := v.VisitExpressionList(ctx.ExpressionList(0).(*ExpressionListContext)).([]IExprNode)
 		rhs := v.VisitExpressionList(ctx.ExpressionList(1).(*ExpressionListContext)).([]IExprNode)
+		lhs := v.VisitExpressionList(ctx.ExpressionList(0).(*ExpressionListContext)).([]IExprNode)
 		// Check length of expressions on both sides, similar to variable specification
 		if len(rhs) > 1 && len(lhs) != len(rhs) {
 			panic(fmt.Errorf("%s assignment count mismatch %d = %d",
@@ -388,14 +390,26 @@ func (v *ASTBuilder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
 
 	// Add undefined identifier to symbol table (some can be defined at current scope)
 	lhs := make([]IExprNode, 0)
+	nNew := 0
 	for _, id := range idList {
 		if v.cur.CheckDefined(id.name) { // already defined at current scope
-			id.symbol, _ = v.cur.Lookup(id.name)
+			symbol, _ := v.cur.Lookup(id.name)
+			if symbol.flag != VarEntry { // report error if this symbol is not a variable
+				panic(fmt.Errorf("%s not a variable", id.loc.ToString()))
+			}
+			id.symbol = symbol
 		} else {
 			id.symbol = NewSymbolEntry(id.loc, id.name, VarEntry, nil, nil)
 			v.cur.AddSymbol(id.symbol)
+			nNew++
 		}
 		lhs = append(lhs, id)
+	}
+
+	// Report error if no new variables are declared
+	if nNew == 0 {
+		panic(fmt.Errorf("%s no new variables are declared",
+			NewLocationFromContext(ctx).ToString()))
 	}
 
 	// Add statement to current function
@@ -505,6 +519,41 @@ func (v *ASTBuilder) VisitParameterDecl(ctx *ParameterDeclContext) interface{} {
 	return declList // []*SymbolEntry
 }
 
+func (v *ASTBuilder) VisitOperand(ctx *OperandContext) interface{} {
+	if o := ctx.Literal(); o != nil {
+		return v.VisitLiteral(o.(*LiteralContext)).(IExprNode)
+	} else if o := ctx.OperandName(); o != nil {
+		return v.VisitOperandName(o.(*OperandNameContext)).(IExprNode)
+	} else if o := ctx.Expression(); o != nil {
+		return v.VisitExpression(o.(*ExpressionContext)).(IExprNode)
+	}
+	return nil // IExprNode
+}
+
+func (v *ASTBuilder) VisitLiteral(ctx *LiteralContext) interface{} {
+	if l := ctx.BasicLit(); l != nil {
+		return v.VisitBasicLit(l.(*BasicLitContext)).(IExprNode)
+	}
+	return nil
+}
+
+func (v *ASTBuilder) VisitBasicLit(ctx *BasicLitContext) interface{} {
+	if l := ctx.INT_LIT(); l != nil {
+		lit, _ := strconv.ParseInt(l.GetText(), 0, 0)
+		return NewIntConst(NewLocationFromTerminal(l), int(lit))
+	} else if l = ctx.FLOAT_LIT(); l != nil {
+		lit, _ := strconv.ParseFloat(l.GetText(), 64)
+		return NewFloatConst(NewLocationFromTerminal(l), lit)
+	}
+	return nil
+}
+
+func (v *ASTBuilder) VisitOperandName(ctx *OperandNameContext) interface{} {
+	name := ctx.IDENTIFIER().GetText()
+	symbol, _ := v.cur.Lookup(name)
+	return NewIdExpr(NewLocationFromContext(ctx), name, symbol)
+}
+
 func (v *ASTBuilder) VisitStructType(ctx *StructTypeContext) interface{} {
 	table := NewSymbolTable()
 	for _, f := range ctx.AllFieldDecl() {
@@ -521,7 +570,65 @@ func (v *ASTBuilder) VisitFieldDecl(ctx *FieldDeclContext) interface{} {
 		for _, id := range idList {
 			declList = append(declList, NewSymbolEntry(id.loc, id.name, VarEntry, tp, nil))
 		}
-		return declList
+		return declList // []*SymbolEntry
 	}
 	return nil
+}
+
+func (v *ASTBuilder) VisitPrimaryExpr(ctx *PrimaryExprContext) interface{} {
+	if e := ctx.Operand(); e != nil {
+		return v.VisitOperand(e.(*OperandContext)).(IExprNode)
+	}
+	return nil // IExprNode
+}
+
+func (v *ASTBuilder) VisitExpression(ctx *ExpressionContext) interface{} {
+	// Forward unary expression
+	if e := ctx.UnaryExpr(); e != nil {
+		return v.VisitUnaryExpr(e.(*UnaryExprContext)).(IExprNode)
+	}
+
+	// Deal with binary expression
+	op := BinaryOpStrToEnum[ctx.GetOp().GetText()]
+	left := v.VisitExpression(ctx.Expression(0).(*ExpressionContext)).(IExprNode)
+	right := v.VisitExpression(ctx.Expression(1).(*ExpressionContext)).(IExprNode)
+
+	// Evaluate constant expression
+	lConst, lok := left.(*ConstExpr)
+	rConst, rok := right.(*ConstExpr)
+	if lok && rok {
+		fun := binaryConstExpr[op][lConst.tp.GetTypeEnum()][rConst.tp.GetTypeEnum()]
+		if fun != nil {
+			return fun(lConst, rConst)
+		} else {
+			panic(fmt.Errorf("%s cannot evaluate constant expression",
+				NewLocationFromContext(ctx).ToString()))
+		}
+	}
+
+	return NewBinaryExpr(NewLocationFromContext(ctx), op, left, right) // IExprNode
+}
+
+func (v *ASTBuilder) VisitUnaryExpr(ctx *UnaryExprContext) interface{} {
+	// Forward primary expression
+	if e := ctx.PrimaryExpr(); e != nil {
+		return v.VisitPrimaryExpr(e.(*PrimaryExprContext)).(IExprNode)
+	}
+
+	// Deal with unary expression
+	op := UnaryOpStrToEnum[ctx.GetOp().GetText()]
+	prim := v.VisitUnaryExpr(ctx.UnaryExpr().(*UnaryExprContext)).(IExprNode)
+
+	// Evaluate constant expression
+	if pConst, ok := prim.(*ConstExpr); ok {
+		fun := unaryConstExpr[op][pConst.tp.GetTypeEnum()]
+		if fun != nil {
+			return fun(pConst)
+		} else {
+			panic(fmt.Errorf("%s cannot evaluate constant expression",
+				NewLocationFromContext(ctx).ToString()))
+		}
+	}
+
+	return NewUnaryExpr(NewLocationFromContext(ctx), op, prim)
 }

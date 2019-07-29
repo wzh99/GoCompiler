@@ -18,7 +18,8 @@ type Foo struct {
 }
 
 func (f Bar) foo1(a float32) (ret int) {
-	var k int
+	const k = (5. + 4) / 3 == 2
+	c, d := 3, 4
 	{} 
 }
 

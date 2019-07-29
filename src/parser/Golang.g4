@@ -471,7 +471,6 @@ basicLit
 
 operandName
     : IDENTIFIER
-    // | tp
     // | qualifiedIdent
     ;
 
@@ -622,7 +621,7 @@ expression
 
 unaryExpr
     : op=('+'|'-'|'!'|'^'|'*'|'&'|'<-') unaryExpr
-    // Unary operator has lower precedence than other operators in primary expression.
+    // Unary operator has higher precedence than other operators in primary expression.
     // For example, *foo(bar) is treated as *(foo(bar)), not (*foo)(bar).
     | primaryExpr
     ;

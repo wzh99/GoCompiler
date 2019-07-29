@@ -62,7 +62,7 @@ const (
 	IntegerType   = SignedType | UnsignedType
 	FloatType     = Float32 | Float64
 	ComplexType   = Complex64 | Complex128
-	PrimitiveType = IntegerType | FloatType | ComplexType
+	PrimitiveType = Bool | IntegerType | FloatType | ComplexType
 	CompositeType = Array | Slice | Struct | Ptr | Func | Interface | Map | Channel
 )
 
