@@ -20,10 +20,22 @@ type Foo struct {
 func (f Bar) foo1(a float32) (ret int) {
 	const k = (5. + 4) / 3 == 2
 	c, d := 3, 4
-	{} 
+	r := foo2(k)
+	{
+		const a = 2
+		b := foo1(a)
+		f := func(x int) {
+			a := (c + d) / r
+			{
+				h := k
+			}
+			d := b
+		}
+	} 
+	g := k
 }
 
-func foo2(foo Foo) {}
+func foo2(foo Foo) int {}
 `
 
 func TestASTBuild(t *testing.T) {

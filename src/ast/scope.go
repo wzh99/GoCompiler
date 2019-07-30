@@ -3,11 +3,12 @@ package ast
 import "fmt"
 
 type Scope struct {
-	parent   *Scope
-	children []*Scope
-	symbols  *SymbolTable
-	global   bool
-	fun      *FuncDecl // point back to the function this scope belongs to
+	parent    *Scope
+	children  []*Scope
+	symbols   *SymbolTable
+	operandId map[*IdExpr]bool // all operand identifiers mentioned in statements
+	global    bool
+	fun       *FuncDecl // point back to the function this scope belongs to
 }
 
 func NewGlobalScope() *Scope {
@@ -35,6 +36,13 @@ func (s *Scope) AddSymbol(entry *SymbolEntry) {
 		panic(fmt.Errorf("%s redefined symbol: %s", entry.loc.ToString(), entry.name))
 	}
 	s.symbols.Add(entry)
+}
+
+func (s *Scope) AddOperandId(id *IdExpr) {
+	if s.operandId == nil {
+		s.operandId = make(map[*IdExpr]bool)
+	}
+	s.operandId[id] = true
 }
 
 // Look up symbol, considering nested scopes

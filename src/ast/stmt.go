@@ -18,8 +18,12 @@ type BlockStmt struct {
 	stmts []IStmtNode
 }
 
-func NewBlockStmt(loc *Location, scope *Scope, stmts []IStmtNode) *BlockStmt {
-	return &BlockStmt{BaseASTNode: *NewBaseASTNode(loc), scope: scope, stmts: stmts}
+func NewBlockStmt(loc *Location, scope *Scope) *BlockStmt {
+	return &BlockStmt{BaseASTNode: *NewBaseASTNode(loc), scope: scope}
+}
+
+func (s *BlockStmt) AddStmt(stmt IStmtNode) {
+	s.stmts = append(s.stmts, stmt)
 }
 
 func (s *BlockStmt) ToStringTree() string {

@@ -17,14 +17,43 @@ type ASTBuilder struct {
 	// Since methods and functions share a single function body AST construction procedure,
 	// the procedure itself has no idea whether it has receiver.
 	receiver *SymbolEntry
+	// Block stack
+	blocks [][]*BlockStmt // [func][block]
 }
 
 func NewASTBuilder() *ASTBuilder { return &ASTBuilder{} }
 
 // Add statement to current function
 func (v *ASTBuilder) addStmt(stmt IStmtNode) {
-	v.cur.fun.AddStmt(stmt)
+	if len(v.blocks) == 0 { // in global function
+		v.cur.fun.AddStmt(stmt)
+	} else if l := len(v.blocks[len(v.blocks)-1]); l == 0 { // scope of function
+		v.cur.fun.AddStmt(stmt)
+	} else { // scope of block
+		v.blocks[len(v.blocks)-1][l-1].AddStmt(stmt)
+	}
 }
+
+func (v *ASTBuilder) pushFuncBlock() {
+	v.blocks = append(v.blocks, make([]*BlockStmt, 0))
+}
+
+func (v *ASTBuilder) popFuncBlock() {
+	v.blocks = v.blocks[:len(v.blocks)-1]
+}
+
+func (v *ASTBuilder) pushBlockStmt(block *BlockStmt) {
+	v.addStmt(block)
+	v.blocks[len(v.blocks)-1] = append(v.blocks[len(v.blocks)-1], block)
+}
+
+func (v *ASTBuilder) popBlockStmt() {
+	v.blocks[len(v.blocks)-1] = v.blocks[len(v.blocks)-1][:len(v.blocks[len(v.blocks)-1])-1]
+}
+
+func (v *ASTBuilder) pushScope(scope *Scope) { v.cur = scope }
+
+func (v *ASTBuilder) popScope() { v.cur = v.cur.parent }
 
 func (v *ASTBuilder) VisitSourceFile(ctx *SourceFileContext) interface{} {
 	// Get package name
@@ -206,7 +235,8 @@ func (v *ASTBuilder) VisitFunction(ctx *FunctionContext) interface{} {
 	if v.receiver != nil { // add receiver to function type if it is a method
 		decl.tp.receiver = v.receiver.tp
 	}
-	v.cur = decl.scope // move scope cursor deeper
+	v.pushFuncBlock()
+	v.pushScope(decl.scope) // move scope cursor deeper
 
 	// Add named parameter and return value symbols to the function scope
 	if v.receiver != nil { // add receiver to the method scope
@@ -228,12 +258,13 @@ func (v *ASTBuilder) VisitFunction(ctx *FunctionContext) interface{} {
 			lhs = append(lhs, NewIdExpr(r.loc, r.name, r))
 			rhs = append(rhs, NewZeroValue())
 		}
-		decl.scope.fun.AddStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, rhs))
+		v.addStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, rhs))
 	}
 
 	// Build statement AST nodes
 	v.VisitBlock(ctx.Block().(*BlockContext)) // statements are added during visit
-	v.cur = v.cur.parent                      // move cursor back
+	v.popFuncBlock()
+	v.popScope() // move cursor back
 
 	return decl // *FuncDecl
 }
@@ -310,6 +341,7 @@ func (v *ASTBuilder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 }
 
 // Scope should be set up before visiting block
+// This may be a function definition block, not necessarily a block statement
 func (v *ASTBuilder) VisitBlock(ctx *BlockContext) interface{} {
 	v.VisitStatementList(ctx.StatementList().(*StatementListContext))
 	return nil
@@ -329,11 +361,15 @@ func (v *ASTBuilder) VisitStatement(ctx *StatementContext) interface{} {
 		v.VisitSimpleStmt(s.(*SimpleStmtContext))
 	} else if s := ctx.Block(); s != nil {
 		// Create new scope for block statements
-		v.cur = NewLocalScope(v.cur)
+		v.pushScope(NewLocalScope(v.cur))
+		// Create block statement and push block onto stack
+		block := NewBlockStmt(NewLocationFromContext(ctx), v.cur)
+		v.pushBlockStmt(block)
 		// Visit block
 		v.VisitBlock(s.(*BlockContext))
-		// Restore parent scope
-		v.cur = v.cur.parent
+		// Restore parent scope and block
+		v.popScope()
+		v.popBlockStmt()
 	}
 	return nil
 }
@@ -533,6 +569,8 @@ func (v *ASTBuilder) VisitOperand(ctx *OperandContext) interface{} {
 func (v *ASTBuilder) VisitLiteral(ctx *LiteralContext) interface{} {
 	if l := ctx.BasicLit(); l != nil {
 		return v.VisitBasicLit(l.(*BasicLitContext)).(IExprNode)
+	} else if l := ctx.FunctionLit(); l != nil {
+		return v.VisitFunctionLit(l.(*FunctionLitContext)).(IExprNode)
 	}
 	return nil
 }
@@ -549,9 +587,16 @@ func (v *ASTBuilder) VisitBasicLit(ctx *BasicLitContext) interface{} {
 }
 
 func (v *ASTBuilder) VisitOperandName(ctx *OperandNameContext) interface{} {
+	// Create operand identifier
 	name := ctx.IDENTIFIER().GetText()
-	symbol, _ := v.cur.Lookup(name)
-	return NewIdExpr(NewLocationFromContext(ctx), name, symbol)
+	symbol, scope := v.cur.Lookup(name)
+	id := NewIdExpr(NewLocationFromContext(ctx), name, symbol)
+
+	// Decide if it should be captured
+	id.capture = scope != nil && !scope.global && scope.fun != v.cur.fun
+	v.cur.AddOperandId(id)
+
+	return id
 }
 
 func (v *ASTBuilder) VisitStructType(ctx *StructTypeContext) interface{} {
@@ -575,11 +620,55 @@ func (v *ASTBuilder) VisitFieldDecl(ctx *FieldDeclContext) interface{} {
 	return nil
 }
 
+func (v *ASTBuilder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
+	// Get declaration from function context
+	decl := v.VisitFunction(ctx.Function().(*FunctionContext)).(*FuncDecl)
+
+	// Create lambda capture set
+	// Visit scopes of declared function and its nested scopes (excluding the scopes of its nested
+	// functions), using DFS
+	captureSet := make(map[*SymbolEntry]bool, 0)
+	stack := []*Scope{decl.scope}
+	for len(stack) > 0 {
+		// Process operand identifiers in current scope
+		top := stack[len(stack)-1]
+		stack = stack[:len(stack)-1] // pop an element from stack
+		for id, _ := range top.operandId {
+			if id.capture {
+				captureSet[id.symbol] = true
+			}
+		}
+
+		// Push children scopes to stack, within the function
+		for _, child := range top.children {
+			if child.fun == decl {
+				stack = append(stack, child)
+			}
+		}
+	}
+
+	return NewFuncLiteral(NewLocationFromContext(ctx), decl, captureSet)
+}
+
 func (v *ASTBuilder) VisitPrimaryExpr(ctx *PrimaryExprContext) interface{} {
 	if e := ctx.Operand(); e != nil {
 		return v.VisitOperand(e.(*OperandContext)).(IExprNode)
+	} else if e := ctx.Conversion(); e != nil {
+		return v.VisitConversion(e.(*ConversionContext)).(IExprNode)
 	}
+
+	// Must be a recursive call then
+	prim := v.VisitPrimaryExpr(ctx.PrimaryExpr().(*PrimaryExprContext)).(IExprNode)
+	if e := ctx.Arguments(); e != nil {
+		args := v.VisitArguments(e.(*ArgumentsContext)).([]IExprNode)
+		return NewFuncCallExpr(NewLocationFromContext(ctx), prim, args)
+	}
+
 	return nil // IExprNode
+}
+
+func (v *ASTBuilder) VisitArguments(ctx *ArgumentsContext) interface{} {
+	return v.VisitExpressionList(ctx.ExpressionList().(*ExpressionListContext)).([]IExprNode)
 }
 
 func (v *ASTBuilder) VisitExpression(ctx *ExpressionContext) interface{} {
@@ -630,5 +719,5 @@ func (v *ASTBuilder) VisitUnaryExpr(ctx *UnaryExprContext) interface{} {
 		}
 	}
 
-	return NewUnaryExpr(NewLocationFromContext(ctx), op, prim)
+	return NewUnaryExpr(NewLocationFromContext(ctx), op, prim) // IExprNode
 }

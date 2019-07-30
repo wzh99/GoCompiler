@@ -9,6 +9,7 @@ type IExprNode interface {
 	IStmtNode
 	GetType() IType
 	SetType(tp IType)
+	IsLValue() bool
 }
 
 type BaseExprNode struct {
@@ -42,6 +43,17 @@ func NewBaseLiteralExpr(loc *Location) *BaseLiteralExpr {
 }
 
 func (n *BaseLiteralExpr) IsLValue() bool { return true }
+
+// Anonymous function (lambda)
+type FuncLiteral struct {
+	BaseLiteralExpr
+	decl    *FuncDecl
+	capture map[*SymbolEntry]bool // lambda capture list
+}
+
+func NewFuncLiteral(loc *Location, decl *FuncDecl, capture map[*SymbolEntry]bool) *FuncLiteral {
+	return &FuncLiteral{BaseLiteralExpr: *NewBaseLiteralExpr(loc), decl: decl, capture: capture}
+}
 
 // Constant expressions (can be assigned to constant, special case of literal expression)
 type ConstExpr struct {
@@ -81,6 +93,8 @@ func (c *ZeroValue) ToStringTree() string { return "0" }
 
 func (c *ZeroValue) GetValue() interface{} { return nil }
 
+func (c *ZeroValue) IsLValue() bool { return false }
+
 // nil is a predeclared identifier representing the zero value for a pointer, channel, func,
 // interface, map, or slice type. It can be declared as a literal
 type NilValue struct {
@@ -97,11 +111,14 @@ func (c *NilValue) ToStringTree() string { return "nil" }
 
 func (c *NilValue) GetValue() interface{} { return nil }
 
+func (c *NilValue) IsLValue() bool { return false }
+
 // Identifier expression
 type IdExpr struct {
 	BaseExprNode
-	name   string // should keep name for lookup in global scope
-	symbol *SymbolEntry
+	name    string // should keep name for lookup in global scope
+	symbol  *SymbolEntry
+	capture bool
 }
 
 var IsKeyword = map[string]bool{
@@ -118,16 +135,17 @@ func NewIdExpr(loc *Location, name string, symbol *SymbolEntry) *IdExpr {
 
 func (i *IdExpr) ToStringTree() string { return i.name }
 
+func (i *IdExpr) IsLValue() bool { return true }
+
 // Function calling expression
 type FuncCallExpr struct {
 	BaseExprNode
-	fun     IExprNode
-	args    []IExprNode
-	argType TupleType
+	fun  IExprNode
+	args []IExprNode
 }
 
 func NewFuncCallExpr(loc *Location, fun IExprNode, args []IExprNode) *FuncCallExpr {
-	return &FuncCallExpr{BaseExprNode: *NewBaseExprNode(loc), args: args}
+	return &FuncCallExpr{BaseExprNode: *NewBaseExprNode(loc), fun: fun, args: args}
 }
 
 func (e *FuncCallExpr) ToStringTree() string {
@@ -140,6 +158,8 @@ func (e *FuncCallExpr) ToStringTree() string {
 	}
 	return str + "))"
 }
+
+func (e *FuncCallExpr) IsLValue() bool { return false }
 
 type UnaryExpr struct {
 	BaseExprNode
@@ -173,6 +193,8 @@ func init() {
 func NewUnaryExpr(loc *Location, op UnaryOp, expr IExprNode) *UnaryExpr {
 	return &UnaryExpr{BaseExprNode: *NewBaseExprNode(loc), op: op, expr: expr}
 }
+
+func (e *UnaryExpr) IsLValue() bool { return false }
 
 type BinaryOp int
 
@@ -226,6 +248,8 @@ func (e *BinaryExpr) ToStringTree() string {
 	return fmt.Sprintf("(%s %s %s)", BinaryOpStr[e.op], e.left.ToStringTree(),
 		e.right.ToStringTree())
 }
+
+func (e *BinaryExpr) IsLValue() bool { return false }
 
 var constTypeConvert = map[TypeEnum]map[TypeEnum]func(interface{}) interface{}{
 	Int: {
