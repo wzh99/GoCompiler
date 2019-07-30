@@ -543,16 +543,17 @@ func (v *ASTBuilder) VisitParameterList(ctx *ParameterListContext) interface{} {
 
 func (v *ASTBuilder) VisitParameterDecl(ctx *ParameterDeclContext) interface{} {
 	tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
-	idList := v.VisitIdentifierList(ctx.IdentifierList().(*IdentifierListContext)).([]*IdExpr)
-	if idList == nil {
+	if idListCxt := ctx.IdentifierList(); idListCxt == nil {
 		return []*SymbolEntry{
 			NewSymbolEntry(NewLocationFromContext(ctx), "", VarEntry, tp, 0)}
+	} else {
+		idList := v.VisitIdentifierList(idListCxt.(*IdentifierListContext)).([]*IdExpr)
+		declList := make([]*SymbolEntry, 0)
+		for _, id := range idList {
+			declList = append(declList, NewSymbolEntry(id.loc, id.name, VarEntry, tp, 0))
+		}
+		return declList // []*SymbolEntry
 	}
-	declList := make([]*SymbolEntry, 0)
-	for _, id := range idList {
-		declList = append(declList, NewSymbolEntry(id.loc, id.name, VarEntry, tp, 0))
-	}
-	return declList // []*SymbolEntry
 }
 
 func (v *ASTBuilder) VisitOperand(ctx *OperandContext) interface{} {
@@ -593,7 +594,7 @@ func (v *ASTBuilder) VisitOperandName(ctx *OperandNameContext) interface{} {
 	id := NewIdExpr(NewLocationFromContext(ctx), name, symbol)
 
 	// Decide if it should be captured
-	id.capture = scope != nil && !scope.global && scope.fun != v.cur.fun
+	id.captured = scope != nil && !scope.global && scope.fun != v.cur.fun
 	v.cur.AddOperandId(id)
 
 	return id
@@ -624,18 +625,18 @@ func (v *ASTBuilder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 	// Get declaration from function context
 	decl := v.VisitFunction(ctx.Function().(*FunctionContext)).(*FuncDecl)
 
-	// Create lambda capture set
+	// Create lambda capture set (identifier in different blocks may repeat)
 	// Visit scopes of declared function and its nested scopes (excluding the scopes of its nested
 	// functions), using DFS
-	captureSet := make(map[*SymbolEntry]bool, 0)
+	closureSet := make(map[*SymbolEntry]bool, 0)
 	stack := []*Scope{decl.scope}
 	for len(stack) > 0 {
 		// Process operand identifiers in current scope
 		top := stack[len(stack)-1]
 		stack = stack[:len(stack)-1] // pop an element from stack
 		for id, _ := range top.operandId {
-			if id.capture {
-				captureSet[id.symbol] = true
+			if id.captured {
+				closureSet[id.symbol] = true
 			}
 		}
 
@@ -647,7 +648,13 @@ func (v *ASTBuilder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 		}
 	}
 
-	return NewFuncLiteral(NewLocationFromContext(ctx), decl, captureSet)
+	// Convert set to symbol table (repeating captured identifiers merged)
+	closureTable := NewSymbolTable()
+	for entry, _ := range closureSet {
+		closureTable.Add(entry)
+	}
+
+	return NewFuncLiteral(NewLocationFromContext(ctx), decl, closureTable)
 }
 
 func (v *ASTBuilder) VisitPrimaryExpr(ctx *PrimaryExprContext) interface{} {

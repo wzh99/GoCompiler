@@ -34,7 +34,7 @@ grammar Golang;
 
 //SourceFile       = PackageClause ";" { ImportDecl ";" } { TopLevelDecl ";" } .
 sourceFile
-    : packageClause ( importDecl )* ( topLevelDecl )* EOF
+    : LINE_FEED+ packageClause LINE_FEED+ ( importDecl LINE_FEED+ )* ( topLevelDecl LINE_FEED+ )* EOF
     ;
 
 //PackageClause  = "package" PackageName .
@@ -44,7 +44,7 @@ packageClause
     ;
 
 importDecl
-    : 'import' ( importSpec | '(' ( importSpec )* ')' )
+    : 'import' ( importSpec | '(' ( importSpec LINE_FEED+ )* ')' )
     ;
 
 importSpec
@@ -140,12 +140,12 @@ varSpec
 
 //Block = "{" StatementList "}" .
 block
-    : '{' statementList '}'
+    : '{' LINE_FEED? statementList LINE_FEED? '}'
     ;
 
 //StatementList = { Statement ";" } .
 statementList
-    : ( statement )*
+    : ( statement LINE_FEED+ )*
     ;
 
 statement
@@ -1185,10 +1185,7 @@ COMMENT
     :   '/*' .*? '*/' -> channel(HIDDEN)
     ;
 
-TERMINATOR
-	: [\r\n]+ -> channel(HIDDEN)
-	;
-
+LINE_FEED: ('\r'?'\n')+;
 
 LINE_COMMENT
     :   '//' ~[\r\n]* -> skip

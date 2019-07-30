@@ -89,9 +89,6 @@ type GolangVisitor interface {
 	// Visit a parse tree produced by GolangParser#assignment.
 	VisitAssignment(ctx *AssignmentContext) interface{}
 
-	// Visit a parse tree produced by GolangParser#assignOp.
-	VisitAssignOp(ctx *AssignOpContext) interface{}
-
 	// Visit a parse tree produced by GolangParser#shortVarDecl.
 	VisitShortVarDecl(ctx *ShortVarDeclContext) interface{}
 

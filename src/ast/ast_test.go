@@ -10,32 +10,12 @@ import (
 const source = `
 package main
 
-var a, b int
-
-type Foo struct {
-	bar1 uint
-	bar2 float32
+func foo1() {
+	var f func(int)
+	f = func(x int) {
+		t := f
+	}
 }
-
-func (f Bar) foo1(a float32) (ret int) {
-	const k = (5. + 4) / 3 == 2
-	c, d := 3, 4
-	r := foo2(k)
-	{
-		const a = 2
-		b := foo1(a)
-		f := func(x int) {
-			a := (c + d) / r
-			{
-				h := k
-			}
-			d := b
-		}
-	} 
-	g := k
-}
-
-func foo2(foo Foo) int {}
 `
 
 func TestASTBuild(t *testing.T) {

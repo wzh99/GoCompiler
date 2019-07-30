@@ -48,11 +48,11 @@ func (n *BaseLiteralExpr) IsLValue() bool { return true }
 type FuncLiteral struct {
 	BaseLiteralExpr
 	decl    *FuncDecl
-	capture map[*SymbolEntry]bool // lambda capture list
+	closure *SymbolTable
 }
 
-func NewFuncLiteral(loc *Location, decl *FuncDecl, capture map[*SymbolEntry]bool) *FuncLiteral {
-	return &FuncLiteral{BaseLiteralExpr: *NewBaseLiteralExpr(loc), decl: decl, capture: capture}
+func NewFuncLiteral(loc *Location, decl *FuncDecl, closure *SymbolTable) *FuncLiteral {
+	return &FuncLiteral{BaseLiteralExpr: *NewBaseLiteralExpr(loc), decl: decl, closure: closure}
 }
 
 // Constant expressions (can be assigned to constant, special case of literal expression)
@@ -116,9 +116,9 @@ func (c *NilValue) IsLValue() bool { return false }
 // Identifier expression
 type IdExpr struct {
 	BaseExprNode
-	name    string // should keep name for lookup in global scope
-	symbol  *SymbolEntry
-	capture bool
+	name     string // should keep name for lookup in global scope
+	symbol   *SymbolEntry
+	captured bool
 }
 
 var IsKeyword = map[string]bool{
