@@ -484,12 +484,56 @@ func (v *ASTBuilder) VisitTypeName(ctx *TypeNameContext) interface{} {
 }
 
 func (v *ASTBuilder) VisitTypeLit(ctx *TypeLitContext) interface{} {
-	if tp := ctx.FunctionType(); tp != nil {
-		return v.VisitFunctionType(tp.(*FunctionTypeContext))
+	if tp := ctx.ArrayType(); tp != nil {
+		return v.VisitArrayType(tp.(*ArrayTypeContext)).(IType)
+	} else if tp := ctx.SliceType(); tp != nil {
+		return v.VisitSliceType(tp.(*SliceTypeContext)).(IType)
+	} else if tp := ctx.MapType(); tp != nil {
+		return v.VisitMapType(tp.(*MapTypeContext)).(IType)
+	} else if tp := ctx.FunctionType(); tp != nil {
+		return v.VisitFunctionType(tp.(*FunctionTypeContext)).(IType)
 	} else if tp := ctx.StructType(); tp != nil {
-		return v.VisitStructType(tp.(*StructTypeContext))
+		return v.VisitStructType(tp.(*StructTypeContext)).(IType)
 	}
 	return nil
+}
+
+func (v *ASTBuilder) VisitArrayType(ctx *ArrayTypeContext) interface{} {
+	elem := v.VisitElementType(ctx.ElementType().(*ElementTypeContext)).(IType)
+	length := v.VisitArrayLength(ctx.ArrayLength().(*ArrayLengthContext)).(int)
+	return NewArrayType(elem, length)
+}
+
+func (v *ASTBuilder) VisitArrayLength(ctx *ArrayLengthContext) interface{} {
+	expr, ok := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(*ConstExpr)
+	if !ok {
+		panic(fmt.Errorf("%s array length should be constant expression",
+			NewLocationFromContext(ctx).ToString()))
+	}
+	val, ok := expr.val.(int)
+	if !ok {
+		panic(fmt.Errorf("%s array length should be an constant integer",
+			NewLocationFromContext(ctx).ToString()))
+	}
+	return val
+}
+
+func (v *ASTBuilder) VisitElementType(ctx *ElementTypeContext) interface{} {
+	return v.VisitTp(ctx.Tp().(*TpContext)).(IType)
+}
+
+func (v *ASTBuilder) VisitPointerType(ctx *PointerTypeContext) interface{} {
+	return NewPtrType(v.VisitTp(ctx.Tp().(*TpContext)).(IType))
+}
+
+func (v *ASTBuilder) VisitSliceType(ctx *SliceTypeContext) interface{} {
+	return NewSliceType(v.VisitElementType(ctx.ElementType().(*ElementTypeContext)).(IType))
+}
+
+func (v *ASTBuilder) VisitMapType(ctx *MapTypeContext) interface{} {
+	key := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
+	val := v.VisitElementType(ctx.ElementType().(*ElementTypeContext)).(IType)
+	return NewMapType(key, val)
 }
 
 func (v *ASTBuilder) VisitFunctionType(ctx *FunctionTypeContext) interface{} {

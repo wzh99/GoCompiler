@@ -209,6 +209,91 @@ func (t *NilType) IsIdentical(o IType) bool {
 	return ok
 }
 
+type PtrType struct {
+	BaseType
+	ref IType
+}
+
+func NewPtrType(ref IType) *PtrType {
+	return &PtrType{BaseType: *NewBaseType(Ptr), ref: ref}
+}
+
+func (t *PtrType) ToString() string {
+	return fmt.Sprintf("*%s", t.ref.ToString())
+}
+
+func (t *PtrType) IsIdentical(o IType) bool {
+	if alias, ok := o.(*AliasType); ok {
+		return alias.IsIdentical(t)
+	}
+	t2, ok := o.(*PtrType)
+	return ok && t.ref.IsIdentical(t2.ref)
+}
+
+type ArrayType struct {
+	BaseType
+	elem IType
+	len  int
+}
+
+func NewArrayType(elem IType, len int) *ArrayType {
+	return &ArrayType{BaseType: *NewBaseType(Array), elem: elem, len: len}
+}
+
+func (t *ArrayType) ToString() string {
+	return fmt.Sprintf("[%d]%s", t.len, t.elem.ToString())
+}
+
+func (t *ArrayType) IsIdentical(o IType) bool {
+	if alias, ok := o.(*AliasType); ok {
+		return alias.IsIdentical(t)
+	}
+	t2, ok := o.(*ArrayType)
+	return ok && t.elem.IsIdentical(t2.elem) && t.len == t2.len
+}
+
+type SliceType struct {
+	BaseType
+	elem IType
+}
+
+func NewSliceType(elem IType) *SliceType {
+	return &SliceType{BaseType: *NewBaseType(Slice), elem: elem}
+}
+
+func (t *SliceType) ToString() string {
+	return fmt.Sprintf("[]%s", t.elem.ToString())
+}
+
+func (t *SliceType) IsIdentical(o IType) bool {
+	if alias, ok := o.(*AliasType); ok {
+		return alias.IsIdentical(t)
+	}
+	t2, ok := o.(*SliceType)
+	return ok && t.elem.IsIdentical(t2.elem)
+}
+
+type MapType struct {
+	BaseType
+	key, val IType
+}
+
+func NewMapType(key, val IType) *MapType {
+	return &MapType{BaseType: *NewBaseType(Map), key: key, val: val}
+}
+
+func (t *MapType) ToString() string {
+	return fmt.Sprintf("[%s]%s", t.key.ToString(), t.val.ToString())
+}
+
+func (t *MapType) IsIdentical(o IType) bool {
+	if alias, ok := o.(*AliasType); ok {
+		return alias.IsIdentical(t)
+	}
+	t2, ok := o.(*MapType)
+	return ok && t.key.IsIdentical(t2.key) && t2.val.IsIdentical(t2.val)
+}
+
 type StructType struct {
 	BaseType
 	field *SymbolTable
@@ -289,18 +374,18 @@ func (t *TupleType) IsIdentical(o IType) bool {
 
 type FuncType struct {
 	BaseType
-	param, ret *TupleType
-	receiver   IType // optional for methods, not explicitly assigned in constructor
+	param, result *TupleType
+	receiver      IType // optional for methods, not explicitly assigned in constructor
 }
 
-func NewFunctionType(params, results []IType) *FuncType {
-	return &FuncType{BaseType: *NewBaseType(Func), param: NewTupleType(params),
-		ret: NewTupleType(results), receiver: nil}
+func NewFunctionType(param, result []IType) *FuncType {
+	return &FuncType{BaseType: *NewBaseType(Func), param: NewTupleType(param),
+		result: NewTupleType(result), receiver: nil}
 }
 
 func (t *FuncType) ToString() string {
 	return fmt.Sprintf("func (%s) %s %s", t.receiver.ToString(), t.param.ToString(),
-		t.ret.ToString())
+		t.result.ToString())
 }
 
 func (t *FuncType) IsIdentical(o IType) bool {
@@ -311,10 +396,14 @@ func (t *FuncType) IsIdentical(o IType) bool {
 	if !ok {
 		return false
 	}
-	identical := t.param.IsIdentical(t2.param) && t.ret.IsIdentical(t2.ret)
+	identical := t.param.IsIdentical(t2.param) && t.result.IsIdentical(t2.result)
 	if t.receiver == nil {
 		return identical && t2.receiver == nil
 	} else {
 		return identical && t.receiver.IsIdentical(t2.receiver)
 	}
 }
+
+func (t *FuncType) GetParamType() []IType { return t.param.elem }
+
+func (t *FuncType) GetResultType() []IType { return t.result.elem }
