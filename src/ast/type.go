@@ -62,7 +62,7 @@ const (
 	IntegerType   = SignedType | UnsignedType
 	FloatType     = Float32 | Float64
 	ComplexType   = Complex64 | Complex128
-	PrimitiveType = Bool | IntegerType | FloatType | ComplexType
+	PrimitiveType = Bool | IntegerType | FloatType | ComplexType | String
 	CompositeType = Array | Slice | Struct | Ptr | Func | Interface | Map | Channel
 )
 
@@ -171,6 +171,7 @@ var StrToPrimType = map[string]TypeEnum{
 	"uint8": Uint8, "uint16": Uint16, "uint32": Uint32, "uint64": Uint64,
 	"int": Int, "uint": Uint, "uintptr": Uintptr, "byte": Byte, "rune": Rune,
 	"float32": Float32, "float64": Float64, "complex64": Complex64, "complex128": Complex128,
+	"string": String,
 }
 
 func NewPrimType(enum TypeEnum) *PrimType {

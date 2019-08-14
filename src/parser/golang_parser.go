@@ -4210,6 +4210,12 @@ type IIncDecStmtContext interface {
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
+	// GetOp returns the op token.
+	GetOp() antlr.Token
+
+	// SetOp sets the op token.
+	SetOp(antlr.Token)
+
 	// IsIncDecStmtContext differentiates from other interfaces.
 	IsIncDecStmtContext()
 }
@@ -4217,6 +4223,7 @@ type IIncDecStmtContext interface {
 type IncDecStmtContext struct {
 	*antlr.BaseParserRuleContext
 	parser antlr.Parser
+	op     antlr.Token
 }
 
 func NewEmptyIncDecStmtContext() *IncDecStmtContext {
@@ -4240,6 +4247,10 @@ func NewIncDecStmtContext(parser antlr.Parser, parent antlr.ParserRuleContext, i
 }
 
 func (s *IncDecStmtContext) GetParser() antlr.Parser { return s.parser }
+
+func (s *IncDecStmtContext) GetOp() antlr.Token { return s.op }
+
+func (s *IncDecStmtContext) SetOp(v antlr.Token) { s.op = v }
 
 func (s *IncDecStmtContext) Expression() IExpressionContext {
 	var t = s.GetTypedRuleContext(reflect.TypeOf((*IExpressionContext)(nil)).Elem(), 0)
@@ -4297,10 +4308,17 @@ func (p *GolangParser) IncDecStmt() (localctx IIncDecStmtContext) {
 	}
 	{
 		p.SetState(410)
+
+		var _lt = p.GetTokenStream().LT(1)
+
+		localctx.(*IncDecStmtContext).op = _lt
+
 		_la = p.GetTokenStream().LA(1)
 
 		if !(_la == GolangParserT__14 || _la == GolangParserT__15) {
-			p.GetErrorHandler().RecoverInline(p)
+			var _ri = p.GetErrorHandler().RecoverInline(p)
+
+			localctx.(*IncDecStmtContext).op = _ri
 		} else {
 			p.GetErrorHandler().ReportMatch(p)
 			p.Consume()

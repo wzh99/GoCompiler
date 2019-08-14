@@ -11,10 +11,7 @@ const source = `
 package main
 
 func foo1() {
-	var f func(int)
-	f = func(x int) {
-		t := f
-	}
+	
 }
 `
 

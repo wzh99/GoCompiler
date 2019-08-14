@@ -189,7 +189,7 @@ sendStmt
 
 //IncDecStmt = Expression ( "++" | "--" ) .
 incDecStmt
-    : expression ( '++' | '--' )
+    : expression op=( '++' | '--' )
     ;
 
 //Assignment = ExpressionList assign_op ExpressionList .

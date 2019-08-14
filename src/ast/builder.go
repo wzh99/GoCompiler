@@ -42,6 +42,10 @@ func (v *ASTBuilder) popFuncBlock() {
 	v.blocks = v.blocks[:len(v.blocks)-1]
 }
 
+func (v *ASTBuilder) getBlocksOfCurFunc() []*BlockStmt {
+	return v.blocks[len(v.blocks)-1]
+}
+
 func (v *ASTBuilder) pushBlockStmt(block *BlockStmt) {
 	v.addStmt(block)
 	v.blocks[len(v.blocks)-1] = append(v.blocks[len(v.blocks)-1], block)
@@ -312,7 +316,7 @@ func (v *ASTBuilder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 	}
 
 	// Reject if assignment count mismatch
-	// If len(exprList) == 1 and len(idList) > 1, the right hand expression could a call
+	// If len(exprList) == 1 and len(idList) > 1, the right hand expression could be a call
 	// to a function that return multiple values. We cannot tell whether there is any error.
 	if len(exprList) > 1 && len(exprList) != len(idList) {
 		panic(fmt.Errorf("%s assignment count mismatch %d = %d",
@@ -335,7 +339,7 @@ func (v *ASTBuilder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 			exprList[i] = NewZeroValue()
 		}
 	}
-	v.addStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, exprList))
+	v.addStmt(NewInitStmt(NewLocationFromContext(ctx), lhs, exprList))
 
 	return nil
 }
@@ -389,6 +393,12 @@ func (v *ASTBuilder) VisitExpressionStmt(ctx *ExpressionStmtContext) interface{}
 	expr := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(IExprNode)
 	v.addStmt(expr)
 	return nil
+}
+
+func (v *ASTBuilder) VisitIncDecStmt(ctx *IncDecStmtContext) interface{} {
+	expr := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(IExprNode)
+	inc := ctx.GetOp().GetText() == "++"
+	return NewIncDecStmt(NewLocationFromContext(ctx), expr, inc)
 }
 
 func (v *ASTBuilder) VisitAssignment(ctx *AssignmentContext) interface{} {
@@ -449,9 +459,33 @@ func (v *ASTBuilder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
 	}
 
 	// Add statement to current function
-	v.addStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, exprList))
+	v.addStmt(NewInitStmt(NewLocationFromContext(ctx), lhs, exprList))
 
 	return nil
+}
+
+func (v *ASTBuilder) VisitReturnStmt(ctx *ReturnStmtContext) interface{} {
+	exprList := make([]IExprNode, 0)
+	if exprCtx := ctx.ExpressionList(); exprCtx != nil {
+		exprList = v.VisitExpressionList(exprCtx.(*ExpressionListContext)).([]IExprNode)
+	}
+	return NewReturnStmt(NewLocationFromContext(ctx), exprList)
+}
+
+func (v *ASTBuilder) VisitBreakStmt(ctx *BreakStmtContext) interface{} {
+	blocks := v.getBlocksOfCurFunc()
+	var target IStmtNode
+	for i := len(blocks) - 1; i >= 0; i-- { // find the innermost breakable target
+		if stmt := blocks[i].breakable; stmt != nil {
+			target = stmt
+			break
+		}
+	}
+	loc := NewLocationFromContext(ctx)
+	if target == nil {
+		panic(fmt.Errorf("%s cannot find break target", loc.ToString()))
+	}
+	return NewBreakStmt(loc, target)
 }
 
 func (v *ASTBuilder) VisitTp(ctx *TpContext) interface{} {
@@ -669,7 +703,7 @@ func (v *ASTBuilder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 	// Get declaration from function context
 	decl := v.VisitFunction(ctx.Function().(*FunctionContext)).(*FuncDecl)
 
-	// Create lambda capture set (identifier in different blocks may repeat)
+	// Create lambda capture set (identifiers in different blocks may repeat)
 	// Visit scopes of declared function and its nested scopes (excluding the scopes of its nested
 	// functions), using DFS
 	closureSet := make(map[*SymbolEntry]bool, 0)
@@ -678,7 +712,7 @@ func (v *ASTBuilder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 		// Process operand identifiers in current scope
 		top := stack[len(stack)-1]
 		stack = stack[:len(stack)-1] // pop an element from stack
-		for id, _ := range top.operandId {
+		for id := range top.operandId {
 			if id.captured {
 				closureSet[id.symbol] = true
 			}
@@ -692,9 +726,9 @@ func (v *ASTBuilder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 		}
 	}
 
-	// Convert set to symbol table (repeating captured identifiers merged)
+	// Convert set to symbol table (to merge repeated identifiers)
 	closureTable := NewSymbolTable()
-	for entry, _ := range closureSet {
+	for entry := range closureSet {
 		closureTable.Add(entry)
 	}
 
