@@ -125,6 +125,12 @@ func (s *ReturnStmt) ToStringTree() string {
 	return str + ")"
 }
 
+type ForClause struct {
+	init IStmtNode
+	cond IExprNode
+	post IStmtNode
+}
+
 type ForClauseStmt struct {
 	BaseASTNode
 	init  IStmtNode

@@ -11,7 +11,11 @@ const source = `
 package main
 
 func foo1() {
-	
+	a := 3
+	for i := 0; i < 4; i++ {
+		a += i
+		break
+	}
 }
 `
 

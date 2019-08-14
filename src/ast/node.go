@@ -34,7 +34,6 @@ func NewProgramNode(pkgName string) *ProgramNode {
 			NewGlobalScope(), nil),
 		funcs: make([]*FuncDecl, 0),
 	}
-	n.global.scope.fun = n.global
 	return n
 }
 

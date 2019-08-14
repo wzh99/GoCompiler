@@ -47,7 +47,6 @@ func (v *ASTBuilder) getBlocksOfCurFunc() []*BlockStmt {
 }
 
 func (v *ASTBuilder) pushBlockStmt(block *BlockStmt) {
-	v.addStmt(block)
 	v.blocks[len(v.blocks)-1] = append(v.blocks[len(v.blocks)-1], block)
 }
 
@@ -235,7 +234,6 @@ func (v *ASTBuilder) VisitFunction(ctx *FunctionContext) interface{} {
 	// Initialize function declaration node
 	decl := NewFuncDecl(NewLocationFromContext(ctx), "", NewFunctionType(paramType, resultType),
 		NewLocalScope(v.cur), namedRet)
-	decl.scope.fun = decl
 	if v.receiver != nil { // add receiver to function type if it is a method
 		decl.tp.receiver = v.receiver.tp
 	}
@@ -362,37 +360,48 @@ func (v *ASTBuilder) VisitStatement(ctx *StatementContext) interface{} {
 	if s := ctx.Declaration(); s != nil {
 		v.VisitDeclaration(s.(*DeclarationContext))
 	} else if s := ctx.SimpleStmt(); s != nil {
-		v.VisitSimpleStmt(s.(*SimpleStmtContext))
+		// Simple statements should be later added to
+		stmt := v.VisitSimpleStmt(s.(*SimpleStmtContext)).(IStmtNode)
+		v.addStmt(stmt)
+	} else if s := ctx.ReturnStmt(); s != nil {
+		v.VisitReturnStmt(s.(*ReturnStmtContext))
+	} else if s := ctx.BreakStmt(); s != nil {
+		v.VisitBreakStmt(s.(*BreakStmtContext))
 	} else if s := ctx.Block(); s != nil {
 		// Create new scope for block statements
 		v.pushScope(NewLocalScope(v.cur))
 		// Create block statement and push block onto stack
 		block := NewBlockStmt(NewLocationFromContext(ctx), v.cur)
+		v.addStmt(block)
 		v.pushBlockStmt(block)
 		// Visit block
 		v.VisitBlock(s.(*BlockContext))
 		// Restore parent scope and block
 		v.popScope()
 		v.popBlockStmt()
+	} else if s := ctx.ForStmt(); s != nil {
+		v.VisitForStmt(s.(*ForStmtContext))
 	}
 	return nil
 }
 
+// Simple statement could appear in if or for clause, so it should be returned
 func (v *ASTBuilder) VisitSimpleStmt(ctx *SimpleStmtContext) interface{} {
 	if s := ctx.ExpressionStmt(); s != nil {
-		v.VisitExpressionStmt(s.(*ExpressionStmtContext))
+		return v.VisitExpressionStmt(s.(*ExpressionStmtContext)).(IStmtNode)
+	} else if s := ctx.IncDecStmt(); s != nil {
+		return v.VisitIncDecStmt(s.(*IncDecStmtContext)).(IStmtNode)
 	} else if s := ctx.Assignment(); s != nil {
-		v.VisitAssignment(s.(*AssignmentContext))
+		return v.VisitAssignment(s.(*AssignmentContext)).(IStmtNode)
 	} else if s := ctx.ShortVarDecl(); s != nil {
-		v.VisitShortVarDecl(s.(*ShortVarDeclContext))
+		return v.VisitShortVarDecl(s.(*ShortVarDeclContext)).(IStmtNode)
 	}
 	return nil
 }
 
 func (v *ASTBuilder) VisitExpressionStmt(ctx *ExpressionStmtContext) interface{} {
 	expr := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(IExprNode)
-	v.addStmt(expr)
-	return nil
+	return expr
 }
 
 func (v *ASTBuilder) VisitIncDecStmt(ctx *IncDecStmtContext) interface{} {
@@ -402,13 +411,13 @@ func (v *ASTBuilder) VisitIncDecStmt(ctx *IncDecStmtContext) interface{} {
 }
 
 func (v *ASTBuilder) VisitAssignment(ctx *AssignmentContext) interface{} {
+	var stmt IStmtNode
 	if op := ctx.GetOp(); op != nil { // assignment after operation
 		rhs := v.VisitExpression(ctx.Expression(1).(*ExpressionContext)).(IExprNode)
 		lhs := v.VisitExpression(ctx.Expression(0).(*ExpressionContext)).(IExprNode)
 		opExpr := NewBinaryExpr(NewLocationFromContext(ctx), BinaryOpStrToEnum[op.GetText()],
 			lhs, rhs)
-		v.addStmt(NewAssignStmt(NewLocationFromContext(ctx), []IExprNode{lhs},
-			[]IExprNode{opExpr}))
+		stmt = NewAssignStmt(NewLocationFromContext(ctx), []IExprNode{lhs}, []IExprNode{opExpr})
 
 	} else { // only assignment, but can assign multiple values
 		rhs := v.VisitExpressionList(ctx.ExpressionList(1).(*ExpressionListContext)).([]IExprNode)
@@ -418,9 +427,9 @@ func (v *ASTBuilder) VisitAssignment(ctx *AssignmentContext) interface{} {
 			panic(fmt.Errorf("%s assignment count mismatch %d = %d",
 				NewLocationFromContext(ctx).ToString(), len(lhs), len(rhs)))
 		}
-		v.addStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, rhs))
+		stmt = NewAssignStmt(NewLocationFromContext(ctx), lhs, rhs)
 	}
-	return nil
+	return stmt
 }
 
 func (v *ASTBuilder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
@@ -459,9 +468,8 @@ func (v *ASTBuilder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
 	}
 
 	// Add statement to current function
-	v.addStmt(NewInitStmt(NewLocationFromContext(ctx), lhs, exprList))
-
-	return nil
+	stmt := NewInitStmt(NewLocationFromContext(ctx), lhs, exprList)
+	return stmt
 }
 
 func (v *ASTBuilder) VisitReturnStmt(ctx *ReturnStmtContext) interface{} {
@@ -469,7 +477,8 @@ func (v *ASTBuilder) VisitReturnStmt(ctx *ReturnStmtContext) interface{} {
 	if exprCtx := ctx.ExpressionList(); exprCtx != nil {
 		exprList = v.VisitExpressionList(exprCtx.(*ExpressionListContext)).([]IExprNode)
 	}
-	return NewReturnStmt(NewLocationFromContext(ctx), exprList)
+	v.addStmt(NewReturnStmt(NewLocationFromContext(ctx), exprList))
+	return nil
 }
 
 func (v *ASTBuilder) VisitBreakStmt(ctx *BreakStmtContext) interface{} {
@@ -485,7 +494,51 @@ func (v *ASTBuilder) VisitBreakStmt(ctx *BreakStmtContext) interface{} {
 	if target == nil {
 		panic(fmt.Errorf("%s cannot find break target", loc.ToString()))
 	}
-	return NewBreakStmt(loc, target)
+	v.addStmt(NewBreakStmt(loc, target))
+	return nil
+}
+
+func (v *ASTBuilder) VisitForStmt(ctx *ForStmtContext) interface{} {
+	// Visit for clause
+	var init, post IStmtNode
+	var cond IExprNode
+	v.pushScope(NewLocalScope(v.cur)) // enter initialization scope
+	if c := ctx.Expression(); c != nil {
+		cond = v.VisitExpression(c.(*ExpressionContext)).(IExprNode)
+	} else if c := ctx.ForClause(); c != nil {
+		clause := v.VisitForClause(c.(*ForClauseContext)).(*ForClause)
+		init, cond, post = clause.init, clause.cond, clause.post
+	}
+
+	// Visit block
+	v.pushScope(NewLocalScope(v.cur)) // enter block scope
+	blockCtx := ctx.Block().(*BlockContext)
+	blockStmt := NewBlockStmt(NewLocationFromContext(blockCtx), v.cur)
+	// A for block may contain break statement. To ensure this for statement is found,
+	// its node must be added before block is visited
+	v.addStmt(NewForClauseStmt(NewLocationFromContext(ctx), init, cond, post, blockStmt))
+	v.pushBlockStmt(blockStmt)
+	v.VisitBlock(blockCtx)
+	v.popBlockStmt()
+	v.popScope() // exit block scope
+	v.popScope() // exit initialization scope
+
+	return nil
+}
+
+func (v *ASTBuilder) VisitForClause(ctx *ForClauseContext) interface{} {
+	var init, post IStmtNode
+	var cond IExprNode
+	if initCtx := ctx.SimpleStmt(0); initCtx != nil {
+		init = v.VisitSimpleStmt(initCtx.(*SimpleStmtContext)).(IStmtNode)
+	}
+	if postCtx := ctx.SimpleStmt(1); postCtx != nil {
+		post = v.VisitSimpleStmt(postCtx.(*SimpleStmtContext)).(IStmtNode)
+	}
+	if condCtx := ctx.Expression(); condCtx != nil {
+		cond = v.VisitExpression(condCtx.(*ExpressionContext)).(IExprNode)
+	}
+	return &ForClause{init: init, cond: cond, post: post}
 }
 
 func (v *ASTBuilder) VisitTp(ctx *TpContext) interface{} {

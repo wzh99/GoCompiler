@@ -18,8 +18,10 @@ type FuncDecl struct {
 
 func NewFuncDecl(loc *Location, name string, tp *FuncType, scope *Scope,
 	namedRet []*SymbolEntry) *FuncDecl {
-	return &FuncDecl{BaseASTNode: *NewBaseASTNode(loc), name: name, tp: tp, scope: scope,
+	d := &FuncDecl{BaseASTNode: *NewBaseASTNode(loc), name: name, tp: tp, scope: scope,
 		stmts: make([]IStmtNode, 0), namedRet: namedRet}
+	d.scope.fun = d
+	return d
 }
 
 func (d *FuncDecl) GetType() IType { return d.tp }
