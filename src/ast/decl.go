@@ -9,37 +9,37 @@ type IDeclNode interface {
 // In global scope, Only function declarations are translated to AST nodes.
 type FuncDecl struct {
 	BaseASTNode
-	name     string
-	tp       *FuncType
-	scope    *Scope
-	stmts    []IStmtNode
-	namedRet []*SymbolEntry // for named return values
+	Name     string
+	Type     *FuncType
+	Scope    *Scope
+	Stmts    []IStmtNode
+	NamedRet []*SymbolEntry // for named return values
 }
 
 func NewFuncDecl(loc *Location, name string, tp *FuncType, scope *Scope,
 	namedRet []*SymbolEntry) *FuncDecl {
-	d := &FuncDecl{BaseASTNode: *NewBaseASTNode(loc), name: name, tp: tp, scope: scope,
-		stmts: make([]IStmtNode, 0), namedRet: namedRet}
-	d.scope.fun = d
+	d := &FuncDecl{BaseASTNode: *NewBaseASTNode(loc), Name: name, Type: tp, Scope: scope,
+		Stmts: make([]IStmtNode, 0), NamedRet: namedRet}
+	d.Scope.Func = d
 	return d
 }
 
-func (d *FuncDecl) GetType() IType { return d.tp }
+func (d *FuncDecl) GetType() IType { return d.Type }
 
 func (d *FuncDecl) AddStmt(stmt IStmtNode) {
-	d.stmts = append(d.stmts, stmt)
+	d.Stmts = append(d.Stmts, stmt)
 }
 
 func (d *FuncDecl) ToStringTree() string {
 	str := "(funcDecl"
-	for _, s := range d.stmts {
+	for _, s := range d.Stmts {
 		str += " " + s.ToStringTree()
 	}
 	return str + ")"
 }
 
 func (d *FuncDecl) GenSymbol() *SymbolEntry {
-	return NewSymbolEntry(d.GetLocation(), d.name, FuncEntry, d.tp, nil)
+	return NewSymbolEntry(d.GetLocation(), d.Name, FuncEntry, d.Type, nil)
 }
 
 // An intermediate structure when building AST

@@ -13,8 +13,12 @@ package main
 func foo1() {
 	a := 3
 	for i := 0; i < 4; i++ {
-		a += i
-		break
+		if b := i * i; b > 4 {
+			a += b
+		} else {
+			a -= b
+		}
+		continue
 	}
 }
 `

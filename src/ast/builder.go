@@ -26,9 +26,9 @@ func NewASTBuilder() *ASTBuilder { return &ASTBuilder{} }
 // Add statement to current function
 func (v *ASTBuilder) addStmt(stmt IStmtNode) {
 	if len(v.blocks) == 0 { // in global function
-		v.cur.fun.AddStmt(stmt)
+		v.cur.Func.AddStmt(stmt)
 	} else if l := len(v.blocks[len(v.blocks)-1]); l == 0 { // scope of function
-		v.cur.fun.AddStmt(stmt)
+		v.cur.Func.AddStmt(stmt)
 	} else { // scope of block
 		v.blocks[len(v.blocks)-1][l-1].AddStmt(stmt)
 	}
@@ -56,7 +56,7 @@ func (v *ASTBuilder) popBlockStmt() {
 
 func (v *ASTBuilder) pushScope(scope *Scope) { v.cur = scope }
 
-func (v *ASTBuilder) popScope() { v.cur = v.cur.parent }
+func (v *ASTBuilder) popScope() { v.cur = v.cur.Parent }
 
 func (v *ASTBuilder) VisitSourceFile(ctx *SourceFileContext) interface{} {
 	// Get package name
@@ -64,7 +64,7 @@ func (v *ASTBuilder) VisitSourceFile(ctx *SourceFileContext) interface{} {
 	// Initialize program node
 	v.prog = NewProgramNode(pkgName)
 	// Set global and current scope pointer
-	v.global = v.prog.global.scope
+	v.global = v.prog.Global.Scope
 	v.cur = v.global
 
 	// Add declarations to program node
@@ -124,8 +124,8 @@ func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 	}
 	// lhs symbols haven't been defined before
 	for _, id := range lhs {
-		if v.cur.CheckDefined(id.name) { // redefined symbol
-			panic(fmt.Errorf("%s redefined symbol: %s", id.LocationStr(), id.name))
+		if v.cur.CheckDefined(id.Name) { // redefined symbol
+			panic(fmt.Errorf("%s redefined symbol: %s", id.LocationStr(), id.Name))
 		}
 	}
 	// rhs symbols are all constant expressions
@@ -142,7 +142,7 @@ func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 	}
 	for i := range lhs {
 		tp := rhs[i].GetType() // rhs must be constant expression, its type must be clear then
-		val := rhs[i].(*ConstExpr).val
+		val := rhs[i].(*ConstExpr).Val
 		loc := lhs[i].GetLocation()
 
 		// Check if need conversion in compile time
@@ -157,7 +157,7 @@ func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 		}
 
 		// Add to symbol table of current scope
-		v.cur.AddSymbol(NewSymbolEntry(loc, lhs[i].name, ConstEntry, tp, val))
+		v.cur.AddSymbol(NewSymbolEntry(loc, lhs[i].Name, ConstEntry, tp, val))
 	}
 
 	return nil
@@ -203,7 +203,7 @@ func (v *ASTBuilder) VisitTypeSpec(ctx *TypeSpecContext) interface{} {
 func (v *ASTBuilder) VisitFunctionDecl(ctx *FunctionDeclContext) interface{} {
 	name := ctx.IDENTIFIER().GetText()
 	funcDecl := v.VisitFunction(ctx.Function().(*FunctionContext)).(*FuncDecl)
-	funcDecl.name = name
+	funcDecl.Name = name
 	v.global.AddSymbol(funcDecl.GenSymbol())
 	v.prog.AddFuncDecl(funcDecl)
 	return nil
@@ -216,10 +216,10 @@ func (v *ASTBuilder) VisitFunction(ctx *FunctionContext) interface{} {
 	resultType := make([]IType, 0)
 	namedRet := make([]*SymbolEntry, 0)
 	for _, p := range sig.params {
-		paramType = append(paramType, p.tp)
+		paramType = append(paramType, p.Type)
 	}
 	for _, r := range sig.results {
-		resultType = append(resultType, r.tp)
+		resultType = append(resultType, r.Type)
 		if r.IsNamed() { // return type has associated name
 			namedRet = append(namedRet, r)
 		}
@@ -235,19 +235,19 @@ func (v *ASTBuilder) VisitFunction(ctx *FunctionContext) interface{} {
 	decl := NewFuncDecl(NewLocationFromContext(ctx), "", NewFunctionType(paramType, resultType),
 		NewLocalScope(v.cur), namedRet)
 	if v.receiver != nil { // add receiver to function type if it is a method
-		decl.tp.receiver = v.receiver.tp
+		decl.Type.Receiver = v.receiver.Type
 	}
 	v.pushFuncBlock()
-	v.pushScope(decl.scope) // move scope cursor deeper
+	v.pushScope(decl.Scope) // move scope cursor deeper
 
 	// Add named parameter and return value symbols to the function scope
 	if v.receiver != nil { // add receiver to the method scope
-		decl.scope.AddSymbol(v.receiver)
+		decl.Scope.AddSymbol(v.receiver)
 		v.receiver = nil // receiver should no longer be recorded
 	}
 	for _, p := range sig.params {
 		if p.IsNamed() {
-			decl.scope.AddSymbol(p)
+			decl.Scope.AddSymbol(p)
 		}
 	}
 
@@ -256,8 +256,8 @@ func (v *ASTBuilder) VisitFunction(ctx *FunctionContext) interface{} {
 		lhs := make([]IExprNode, 0, len(namedRet))
 		rhs := make([]IExprNode, 0, len(namedRet))
 		for _, r := range namedRet {
-			decl.scope.AddSymbol(r)
-			lhs = append(lhs, NewIdExpr(r.loc, r.name, r))
+			decl.Scope.AddSymbol(r)
+			lhs = append(lhs, NewIdExpr(r.Loc, r.Name, r))
 			rhs = append(rhs, NewZeroValue())
 		}
 		v.addStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, rhs))
@@ -275,7 +275,7 @@ func (v *ASTBuilder) VisitMethodDecl(ctx *MethodDeclContext) interface{} {
 	name := ctx.IDENTIFIER().GetText()
 	v.receiver = v.VisitReceiver(ctx.Receiver().(*ReceiverContext)).(*SymbolEntry) // register receiver
 	funcDecl := v.VisitFunction(ctx.Function().(*FunctionContext)).(*FuncDecl)
-	funcDecl.name = name
+	funcDecl.Name = name
 	v.global.AddSymbol(funcDecl.GenSymbol())
 	v.prog.AddFuncDecl(funcDecl)
 	return nil
@@ -325,8 +325,8 @@ func (v *ASTBuilder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 	lhs := make([]IExprNode, 0)
 	for _, id := range idList {
 		// type maybe unknown at this time
-		id.symbol = NewSymbolEntry(id.GetLocation(), id.name, VarEntry, specType, nil)
-		v.cur.AddSymbol(id.symbol)
+		id.Symbol = NewSymbolEntry(id.GetLocation(), id.Name, VarEntry, specType, nil)
+		v.cur.AddSymbol(id.Symbol)
 		lhs = append(lhs, id)
 	}
 
@@ -360,13 +360,14 @@ func (v *ASTBuilder) VisitStatement(ctx *StatementContext) interface{} {
 	if s := ctx.Declaration(); s != nil {
 		v.VisitDeclaration(s.(*DeclarationContext))
 	} else if s := ctx.SimpleStmt(); s != nil {
-		// Simple statements should be later added to
 		stmt := v.VisitSimpleStmt(s.(*SimpleStmtContext)).(IStmtNode)
-		v.addStmt(stmt)
+		v.addStmt(stmt) // it's impossible that a control statement may need it then
 	} else if s := ctx.ReturnStmt(); s != nil {
 		v.VisitReturnStmt(s.(*ReturnStmtContext))
 	} else if s := ctx.BreakStmt(); s != nil {
 		v.VisitBreakStmt(s.(*BreakStmtContext))
+	} else if s := ctx.ContinueStmt(); s != nil {
+		v.VisitContinueStmt(s.(*ContinueStmtContext))
 	} else if s := ctx.Block(); s != nil {
 		// Create new scope for block statements
 		v.pushScope(NewLocalScope(v.cur))
@@ -377,8 +378,10 @@ func (v *ASTBuilder) VisitStatement(ctx *StatementContext) interface{} {
 		// Visit block
 		v.VisitBlock(s.(*BlockContext))
 		// Restore parent scope and block
-		v.popScope()
 		v.popBlockStmt()
+		v.popScope()
+	} else if s := ctx.IfStmt(); s != nil {
+		v.VisitIfStmt(s.(*IfStmtContext))
 	} else if s := ctx.ForStmt(); s != nil {
 		v.VisitForStmt(s.(*ForStmtContext))
 	}
@@ -447,15 +450,15 @@ func (v *ASTBuilder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
 	lhs := make([]IExprNode, 0)
 	nNew := 0
 	for _, id := range idList {
-		if v.cur.CheckDefined(id.name) { // already defined at current scope
-			symbol, _ := v.cur.Lookup(id.name)
-			if symbol.flag != VarEntry { // report error if this symbol is not a variable
-				panic(fmt.Errorf("%s not a variable", id.loc.ToString()))
+		if v.cur.CheckDefined(id.Name) { // already defined at current scope
+			symbol, _ := v.cur.Lookup(id.Name)
+			if symbol.Flag != VarEntry { // report error if this symbol is not a variable
+				panic(fmt.Errorf("%s not a variable", id.Loc.ToString()))
 			}
-			id.symbol = symbol
+			id.Symbol = symbol
 		} else {
-			id.symbol = NewSymbolEntry(id.loc, id.name, VarEntry, nil, nil)
-			v.cur.AddSymbol(id.symbol)
+			id.Symbol = NewSymbolEntry(id.Loc, id.Name, VarEntry, nil, nil)
+			v.cur.AddSymbol(id.Symbol)
 			nNew++
 		}
 		lhs = append(lhs, id)
@@ -484,10 +487,12 @@ func (v *ASTBuilder) VisitReturnStmt(ctx *ReturnStmtContext) interface{} {
 func (v *ASTBuilder) VisitBreakStmt(ctx *BreakStmtContext) interface{} {
 	blocks := v.getBlocksOfCurFunc()
 	var target IStmtNode
-	for i := len(blocks) - 1; i >= 0; i-- { // find the innermost breakable target
-		if stmt := blocks[i].breakable; stmt != nil {
-			target = stmt
-			break
+FindStmt:
+	for i := len(blocks) - 1; i >= 0; i-- { // find the innermost target
+		switch ctrl := blocks[i].Ctrl; ctrl.(type) {
+		case *ForClauseStmt:
+			target = ctrl
+			break FindStmt
 		}
 	}
 	loc := NewLocationFromContext(ctx)
@@ -495,6 +500,63 @@ func (v *ASTBuilder) VisitBreakStmt(ctx *BreakStmtContext) interface{} {
 		panic(fmt.Errorf("%s cannot find break target", loc.ToString()))
 	}
 	v.addStmt(NewBreakStmt(loc, target))
+	return nil
+}
+
+func (v *ASTBuilder) VisitContinueStmt(ctx *ContinueStmtContext) interface{} {
+	blocks := v.getBlocksOfCurFunc()
+	var target IStmtNode
+FindStmt:
+	for i := len(blocks) - 1; i >= 0; i-- { // find the innermost target
+		switch ctrl := blocks[i].Ctrl; ctrl.(type) {
+		case *ForClauseStmt:
+			target = ctrl
+			break FindStmt
+		}
+	}
+	loc := NewLocationFromContext(ctx)
+	if target == nil {
+		panic(fmt.Errorf("%s cannot find continue target", loc.ToString()))
+	}
+	v.addStmt(NewContinueStmt(loc, target))
+	return nil
+}
+
+func (v *ASTBuilder) VisitIfStmt(ctx *IfStmtContext) interface{} {
+	// Visit if clause
+	var init IStmtNode
+	v.pushScope(NewLocalScope(v.cur)) // enter if clause scope
+	if s := ctx.SimpleStmt(); s != nil {
+		init = v.VisitSimpleStmt(s.(*SimpleStmtContext)).(IStmtNode)
+	}
+	cond := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(IExprNode)
+
+	// Visit if block
+	v.pushScope(NewLocalScope(v.cur)) // enter if block scope
+	blockCtx := ctx.Block(0).(*BlockContext)
+	blockStmt := NewBlockStmt(NewLocationFromContext(blockCtx), v.cur)
+	v.pushBlockStmt(blockStmt)
+	v.VisitBlock(blockCtx)
+	v.popBlockStmt()
+	v.popScope() // exit block scope
+
+	// Visit else case
+	var els IStmtNode
+	if s := ctx.IfStmt(); s != nil {
+		els = v.VisitIfStmt(s.(*IfStmtContext)).(*IfStmt)
+	} else if s := ctx.Block(1); s != nil {
+		v.pushScope(NewLocalScope(v.cur)) // enter else block scope
+		block := NewBlockStmt(NewLocationFromContext(ctx), v.cur)
+		v.pushBlockStmt(block)
+		els = block
+		v.VisitBlock(s.(*BlockContext))
+		v.popBlockStmt()
+		v.popScope() // exit else block scope
+	}
+
+	// Finish if statement
+	v.popScope() // exit if clause scope
+	v.addStmt(NewIfStmt(NewLocationFromContext(ctx), init, cond, blockStmt, els))
 	return nil
 }
 
@@ -563,8 +625,8 @@ func (v *ASTBuilder) VisitTypeName(ctx *TypeNameContext) interface{} {
 	// Try to resolve type symbol
 	// It's OK to be unresolved, since it may be defined later in global scope.
 	symbol, _ := v.cur.Lookup(name)
-	if symbol != nil && symbol.flag == TypeEntry { // resolved and represents type
-		return symbol.tp
+	if symbol != nil && symbol.Flag == TypeEntry { // resolved and represents type
+		return symbol.Type
 	}
 
 	return NewUnresolvedType(name) // cannot resolve at present
@@ -594,12 +656,12 @@ func (v *ASTBuilder) VisitArrayType(ctx *ArrayTypeContext) interface{} {
 func (v *ASTBuilder) VisitArrayLength(ctx *ArrayLengthContext) interface{} {
 	expr, ok := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(*ConstExpr)
 	if !ok {
-		panic(fmt.Errorf("%s array length should be constant expression",
+		panic(fmt.Errorf("%s array length should be a constant expression",
 			NewLocationFromContext(ctx).ToString()))
 	}
-	val, ok := expr.val.(int)
+	val, ok := expr.Val.(int)
 	if !ok {
-		panic(fmt.Errorf("%s array length should be an constant integer",
+		panic(fmt.Errorf("%s array length should be a constant integer",
 			NewLocationFromContext(ctx).ToString()))
 	}
 	return val
@@ -628,10 +690,10 @@ func (v *ASTBuilder) VisitFunctionType(ctx *FunctionTypeContext) interface{} {
 	paramType := make([]IType, 0)
 	resultType := make([]IType, 0)
 	for _, p := range sig.params {
-		paramType = append(paramType, p.tp)
+		paramType = append(paramType, p.Type)
 	}
 	for _, r := range sig.results {
-		resultType = append(resultType, r.tp)
+		resultType = append(resultType, r.Type)
 	}
 	return NewFunctionType(paramType, resultType) // *FunctionType
 }
@@ -681,7 +743,7 @@ func (v *ASTBuilder) VisitParameterDecl(ctx *ParameterDeclContext) interface{} {
 		idList := v.VisitIdentifierList(idListCxt.(*IdentifierListContext)).([]*IdExpr)
 		declList := make([]*SymbolEntry, 0)
 		for _, id := range idList {
-			declList = append(declList, NewSymbolEntry(id.loc, id.name, VarEntry, tp, 0))
+			declList = append(declList, NewSymbolEntry(id.Loc, id.Name, VarEntry, tp, 0))
 		}
 		return declList // []*SymbolEntry
 	}
@@ -725,7 +787,7 @@ func (v *ASTBuilder) VisitOperandName(ctx *OperandNameContext) interface{} {
 	id := NewIdExpr(NewLocationFromContext(ctx), name, symbol)
 
 	// Decide if it should be captured
-	id.captured = scope != nil && !scope.global && scope.fun != v.cur.fun
+	id.Captured = scope != nil && !scope.Global && scope.Func != v.cur.Func
 	v.cur.AddOperandId(id)
 
 	return id
@@ -745,7 +807,7 @@ func (v *ASTBuilder) VisitFieldDecl(ctx *FieldDeclContext) interface{} {
 		tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
 		declList := make([]*SymbolEntry, 0)
 		for _, id := range idList {
-			declList = append(declList, NewSymbolEntry(id.loc, id.name, VarEntry, tp, nil))
+			declList = append(declList, NewSymbolEntry(id.Loc, id.Name, VarEntry, tp, nil))
 		}
 		return declList // []*SymbolEntry
 	}
@@ -760,20 +822,20 @@ func (v *ASTBuilder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 	// Visit scopes of declared function and its nested scopes (excluding the scopes of its nested
 	// functions), using DFS
 	closureSet := make(map[*SymbolEntry]bool, 0)
-	stack := []*Scope{decl.scope}
+	stack := []*Scope{decl.Scope}
 	for len(stack) > 0 {
 		// Process operand identifiers in current scope
 		top := stack[len(stack)-1]
 		stack = stack[:len(stack)-1] // pop an element from stack
-		for id := range top.operandId {
-			if id.captured {
-				closureSet[id.symbol] = true
+		for id := range top.OperandId {
+			if id.Captured {
+				closureSet[id.Symbol] = true
 			}
 		}
 
 		// Push children scopes to stack, within the function
-		for _, child := range top.children {
-			if child.fun == decl {
+		for _, child := range top.Children {
+			if child.Func == decl {
 				stack = append(stack, child)
 			}
 		}
@@ -824,7 +886,7 @@ func (v *ASTBuilder) VisitExpression(ctx *ExpressionContext) interface{} {
 	lConst, lok := left.(*ConstExpr)
 	rConst, rok := right.(*ConstExpr)
 	if lok && rok {
-		fun := binaryConstExpr[op][lConst.tp.GetTypeEnum()][rConst.tp.GetTypeEnum()]
+		fun := binaryConstExpr[op][lConst.Type.GetTypeEnum()][rConst.Type.GetTypeEnum()]
 		if fun != nil {
 			return fun(lConst, rConst)
 		} else {
@@ -848,7 +910,7 @@ func (v *ASTBuilder) VisitUnaryExpr(ctx *UnaryExprContext) interface{} {
 
 	// Evaluate constant expression
 	if pConst, ok := prim.(*ConstExpr); ok {
-		fun := unaryConstExpr[op][pConst.tp.GetTypeEnum()]
+		fun := unaryConstExpr[op][pConst.Type.GetTypeEnum()]
 		if fun != nil {
 			return fun(pConst)
 		} else {

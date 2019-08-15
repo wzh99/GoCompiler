@@ -16,7 +16,7 @@ type BaseExprNode struct {
 	BaseStmtNode
 	// tp is nil: type of current node is unknown, to be determined in a later pass.
 	// tp is Unresolved: type name of current node is known, but its validity remains to be checked.
-	tp IType
+	Type IType
 }
 
 // Type of expressions will be left empty when initialized, except literals.
@@ -24,9 +24,9 @@ func NewBaseExprNode(loc *Location) *BaseExprNode {
 	return &BaseExprNode{BaseStmtNode: *NewBaseStmtNode(loc)}
 }
 
-func (n *BaseExprNode) GetType() IType { return n.tp }
+func (n *BaseExprNode) GetType() IType { return n.Type }
 
-func (n *BaseExprNode) SetType(tp IType) { n.tp = tp }
+func (n *BaseExprNode) SetType(tp IType) { n.Type = tp }
 
 // Literal expressions
 type ILiteralExpr interface {
@@ -47,37 +47,37 @@ func (n *BaseLiteralExpr) IsLValue() bool { return true }
 // Anonymous function (lambda)
 type FuncLiteral struct {
 	BaseLiteralExpr
-	decl    *FuncDecl
-	closure *SymbolTable
+	Decl    *FuncDecl
+	Closure *SymbolTable
 }
 
 func NewFuncLiteral(loc *Location, decl *FuncDecl, closure *SymbolTable) *FuncLiteral {
-	return &FuncLiteral{BaseLiteralExpr: *NewBaseLiteralExpr(loc), decl: decl, closure: closure}
+	return &FuncLiteral{BaseLiteralExpr: *NewBaseLiteralExpr(loc), Decl: decl, Closure: closure}
 }
 
 // Constant expressions (can be assigned to constant, special case of literal expression)
 type ConstExpr struct {
 	BaseLiteralExpr
-	val interface{}
+	Val interface{}
 }
 
-func (e *ConstExpr) GetValue() interface{} { return e.val }
+func (e *ConstExpr) GetValue() interface{} { return e.Val }
 
 func NewIntConst(loc *Location, val int) *ConstExpr {
-	e := &ConstExpr{BaseLiteralExpr: *NewBaseLiteralExpr(loc), val: val}
-	e.tp = NewPrimType(Int)
+	e := &ConstExpr{BaseLiteralExpr: *NewBaseLiteralExpr(loc), Val: val}
+	e.Type = NewPrimType(Int)
 	return e
 }
 
 func NewFloatConst(loc *Location, val float64) *ConstExpr {
-	e := &ConstExpr{BaseLiteralExpr: *NewBaseLiteralExpr(loc), val: val}
-	e.tp = NewPrimType(Float64)
+	e := &ConstExpr{BaseLiteralExpr: *NewBaseLiteralExpr(loc), Val: val}
+	e.Type = NewPrimType(Float64)
 	return e
 }
 
 func NewBoolConst(loc *Location, val bool) *ConstExpr {
-	e := &ConstExpr{BaseLiteralExpr: *NewBaseLiteralExpr(loc), val: val}
-	e.tp = NewPrimType(Bool)
+	e := &ConstExpr{BaseLiteralExpr: *NewBaseLiteralExpr(loc), Val: val}
+	e.Type = NewPrimType(Bool)
 	return e
 }
 
@@ -98,12 +98,12 @@ func (c *ZeroValue) IsLValue() bool { return false }
 // nil is a predeclared identifier representing the zero value for a pointer, channel, func,
 // interface, map, or slice type. It can be declared as a literal
 type NilValue struct {
-	BaseExprNode
+	BaseLiteralExpr
 }
 
 func NewNilValue(loc *Location) *NilValue {
-	n := &NilValue{BaseExprNode: *NewBaseExprNode(loc)}
-	n.tp = NewNilType()
+	n := &NilValue{BaseLiteralExpr: *NewBaseLiteralExpr(loc)}
+	n.Type = NewNilType()
 	return n
 }
 
@@ -116,9 +116,9 @@ func (c *NilValue) IsLValue() bool { return false }
 // Identifier expression
 type IdExpr struct {
 	BaseExprNode
-	name     string // should keep name for lookup in global scope
-	symbol   *SymbolEntry
-	captured bool
+	Name     string // should keep name for lookup in global scope
+	Symbol   *SymbolEntry
+	Captured bool
 }
 
 var IsKeyword = map[string]bool{
@@ -130,27 +130,27 @@ var IsKeyword = map[string]bool{
 }
 
 func NewIdExpr(loc *Location, name string, symbol *SymbolEntry) *IdExpr {
-	return &IdExpr{BaseExprNode: *NewBaseExprNode(loc), name: name, symbol: symbol}
+	return &IdExpr{BaseExprNode: *NewBaseExprNode(loc), Name: name, Symbol: symbol}
 }
 
-func (i *IdExpr) ToStringTree() string { return i.name }
+func (i *IdExpr) ToStringTree() string { return i.Name }
 
 func (i *IdExpr) IsLValue() bool { return true }
 
 // Function calling expression
 type FuncCallExpr struct {
 	BaseExprNode
-	fun  IExprNode
-	args []IExprNode
+	Func IExprNode
+	Args []IExprNode
 }
 
 func NewFuncCallExpr(loc *Location, fun IExprNode, args []IExprNode) *FuncCallExpr {
-	return &FuncCallExpr{BaseExprNode: *NewBaseExprNode(loc), fun: fun, args: args}
+	return &FuncCallExpr{BaseExprNode: *NewBaseExprNode(loc), Func: fun, Args: args}
 }
 
 func (e *FuncCallExpr) ToStringTree() string {
-	str := fmt.Sprintf("(call %s (", e.fun.ToStringTree())
-	for i, arg := range e.args {
+	str := fmt.Sprintf("(call %s (", e.Func.ToStringTree())
+	for i, arg := range e.Args {
 		if i != 0 {
 			str += " "
 		}
@@ -163,8 +163,8 @@ func (e *FuncCallExpr) IsLValue() bool { return false }
 
 type UnaryExpr struct {
 	BaseExprNode
-	op   UnaryOp
-	expr IExprNode
+	Op   UnaryOp
+	Expr IExprNode
 }
 
 type UnaryOp int
@@ -191,7 +191,7 @@ func init() {
 }
 
 func NewUnaryExpr(loc *Location, op UnaryOp, expr IExprNode) *UnaryExpr {
-	return &UnaryExpr{BaseExprNode: *NewBaseExprNode(loc), op: op, expr: expr}
+	return &UnaryExpr{BaseExprNode: *NewBaseExprNode(loc), Op: op, Expr: expr}
 }
 
 func (e *UnaryExpr) IsLValue() bool { return false }
@@ -235,18 +235,18 @@ func init() {
 
 type BinaryExpr struct {
 	BaseExprNode
-	op          BinaryOp
-	left, right IExprNode
+	Op          BinaryOp
+	Left, Right IExprNode
 }
 
 func NewBinaryExpr(loc *Location, op BinaryOp, left, right IExprNode) *BinaryExpr {
 	// result type of binary expression is determined during semantic analysis
-	return &BinaryExpr{BaseExprNode: *NewBaseExprNode(loc), op: op, left: left, right: right}
+	return &BinaryExpr{BaseExprNode: *NewBaseExprNode(loc), Op: op, Left: left, Right: right}
 }
 
 func (e *BinaryExpr) ToStringTree() string {
-	return fmt.Sprintf("(%s %s %s)", BinaryOpStr[e.op], e.left.ToStringTree(),
-		e.right.ToStringTree())
+	return fmt.Sprintf("(%s %s %s)", BinaryOpStr[e.Op], e.Left.ToStringTree(),
+		e.Right.ToStringTree())
 }
 
 func (e *BinaryExpr) IsLValue() bool { return false }
@@ -264,18 +264,18 @@ var constTypeConvert = map[TypeEnum]map[TypeEnum]func(interface{}) interface{}{
 
 var unaryConstExpr = map[UnaryOp]map[TypeEnum]func(*ConstExpr) *ConstExpr{
 	POS: {
-		Int:     func(e *ConstExpr) *ConstExpr { return NewIntConst(e.loc, e.val.(int)) },
-		Float64: func(e *ConstExpr) *ConstExpr { return NewFloatConst(e.loc, e.val.(float64)) },
+		Int:     func(e *ConstExpr) *ConstExpr { return NewIntConst(e.Loc, e.Val.(int)) },
+		Float64: func(e *ConstExpr) *ConstExpr { return NewFloatConst(e.Loc, e.Val.(float64)) },
 	},
 	NEG: {
-		Int:     func(e *ConstExpr) *ConstExpr { return NewIntConst(e.loc, -e.val.(int)) },
-		Float64: func(e *ConstExpr) *ConstExpr { return NewFloatConst(e.loc, -e.val.(float64)) },
+		Int:     func(e *ConstExpr) *ConstExpr { return NewIntConst(e.Loc, -e.Val.(int)) },
+		Float64: func(e *ConstExpr) *ConstExpr { return NewFloatConst(e.Loc, -e.Val.(float64)) },
 	},
 	NOT: {
-		Bool: func(e *ConstExpr) *ConstExpr { return NewBoolConst(e.loc, !e.val.(bool)) },
+		Bool: func(e *ConstExpr) *ConstExpr { return NewBoolConst(e.Loc, !e.Val.(bool)) },
 	},
 	INV: {
-		Int: func(e *ConstExpr) *ConstExpr { return NewIntConst(e.loc, ^e.val.(int)) },
+		Int: func(e *ConstExpr) *ConstExpr { return NewIntConst(e.Loc, ^e.Val.(int)) },
 	},
 }
 
@@ -283,246 +283,246 @@ var binaryConstExpr = map[BinaryOp]map[TypeEnum]map[TypeEnum]func(l, r *ConstExp
 	ADD: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewIntConst(l.loc, l.val.(int)+r.val.(int))
+				return NewIntConst(l.Loc, l.Val.(int)+r.Val.(int))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewFloatConst(l.loc, float64(l.val.(int))+r.val.(float64))
+				return NewFloatConst(l.Loc, float64(l.Val.(int))+r.Val.(float64))
 			},
 		},
 		Float64: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewFloatConst(l.loc, l.val.(float64)+float64(r.val.(int)))
+				return NewFloatConst(l.Loc, l.Val.(float64)+float64(r.Val.(int)))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewFloatConst(l.loc, l.val.(float64)+r.val.(float64))
+				return NewFloatConst(l.Loc, l.Val.(float64)+r.Val.(float64))
 			},
 		},
 	},
 	SUB: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewIntConst(l.loc, l.val.(int)-r.val.(int))
+				return NewIntConst(l.Loc, l.Val.(int)-r.Val.(int))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewFloatConst(l.loc, float64(l.val.(int))-r.val.(float64))
+				return NewFloatConst(l.Loc, float64(l.Val.(int))-r.Val.(float64))
 			},
 		},
 		Float64: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewFloatConst(l.loc, l.val.(float64)-float64(r.val.(int)))
+				return NewFloatConst(l.Loc, l.Val.(float64)-float64(r.Val.(int)))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewFloatConst(l.loc, l.val.(float64)-r.val.(float64))
+				return NewFloatConst(l.Loc, l.Val.(float64)-r.Val.(float64))
 			},
 		},
 	},
 	MUL: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewIntConst(l.loc, l.val.(int)*r.val.(int))
+				return NewIntConst(l.Loc, l.Val.(int)*r.Val.(int))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewFloatConst(l.loc, float64(l.val.(int))*r.val.(float64))
+				return NewFloatConst(l.Loc, float64(l.Val.(int))*r.Val.(float64))
 			},
 		},
 		Float64: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewFloatConst(l.loc, l.val.(float64)*float64(r.val.(int)))
+				return NewFloatConst(l.Loc, l.Val.(float64)*float64(r.Val.(int)))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewFloatConst(l.loc, l.val.(float64)*r.val.(float64))
+				return NewFloatConst(l.Loc, l.Val.(float64)*r.Val.(float64))
 			},
 		},
 	},
 	DIV: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewIntConst(l.loc, l.val.(int)/r.val.(int))
+				return NewIntConst(l.Loc, l.Val.(int)/r.Val.(int))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewFloatConst(l.loc, float64(l.val.(int))/r.val.(float64))
+				return NewFloatConst(l.Loc, float64(l.Val.(int))/r.Val.(float64))
 			},
 		},
 		Float64: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewFloatConst(l.loc, l.val.(float64)/float64(r.val.(int)))
+				return NewFloatConst(l.Loc, l.Val.(float64)/float64(r.Val.(int)))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewFloatConst(l.loc, l.val.(float64)/r.val.(float64))
+				return NewFloatConst(l.Loc, l.Val.(float64)/r.Val.(float64))
 			},
 		},
 	},
 	MOD: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewIntConst(l.loc, l.val.(int)%r.val.(int))
+				return NewIntConst(l.Loc, l.Val.(int)%r.Val.(int))
 			},
 		},
 	},
 	LSH: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewIntConst(l.loc, l.val.(int)<<uint(r.val.(int)))
+				return NewIntConst(l.Loc, l.Val.(int)<<uint(r.Val.(int)))
 			},
 		},
 	},
 	RSH: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewIntConst(l.loc, l.val.(int)>>uint(r.val.(int)))
+				return NewIntConst(l.Loc, l.Val.(int)>>uint(r.Val.(int)))
 			},
 		},
 	},
 	AAND: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewIntConst(l.loc, l.val.(int)&r.val.(int))
+				return NewIntConst(l.Loc, l.Val.(int)&r.Val.(int))
 			},
 		},
 	},
 	AOR: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewIntConst(l.loc, l.val.(int)|r.val.(int))
+				return NewIntConst(l.Loc, l.Val.(int)|r.Val.(int))
 			},
 		},
 	},
 	XOR: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewIntConst(l.loc, l.val.(int)^r.val.(int))
+				return NewIntConst(l.Loc, l.Val.(int)^r.Val.(int))
 			},
 		},
 	},
 	EQ: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(int) == r.val.(int))
+				return NewBoolConst(l.Loc, l.Val.(int) == r.Val.(int))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, float64(l.val.(int)) == r.val.(float64))
+				return NewBoolConst(l.Loc, float64(l.Val.(int)) == r.Val.(float64))
 			},
 		},
 		Float64: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(float64) == float64(r.val.(int)))
+				return NewBoolConst(l.Loc, l.Val.(float64) == float64(r.Val.(int)))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(float64) == r.val.(float64))
+				return NewBoolConst(l.Loc, l.Val.(float64) == r.Val.(float64))
 			},
 		},
 		Bool: {
 			Bool: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(bool) == r.val.(bool))
+				return NewBoolConst(l.Loc, l.Val.(bool) == r.Val.(bool))
 			},
 		},
 	},
 	NE: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(int) != r.val.(int))
+				return NewBoolConst(l.Loc, l.Val.(int) != r.Val.(int))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, float64(l.val.(int)) != r.val.(float64))
+				return NewBoolConst(l.Loc, float64(l.Val.(int)) != r.Val.(float64))
 			},
 		},
 		Float64: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(float64) != float64(r.val.(int)))
+				return NewBoolConst(l.Loc, l.Val.(float64) != float64(r.Val.(int)))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(float64) != r.val.(float64))
+				return NewBoolConst(l.Loc, l.Val.(float64) != r.Val.(float64))
 			},
 		},
 		Bool: {
 			Bool: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(bool) != r.val.(bool))
+				return NewBoolConst(l.Loc, l.Val.(bool) != r.Val.(bool))
 			},
 		},
 	},
 	LT: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(int) < r.val.(int))
+				return NewBoolConst(l.Loc, l.Val.(int) < r.Val.(int))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, float64(l.val.(int)) < r.val.(float64))
+				return NewBoolConst(l.Loc, float64(l.Val.(int)) < r.Val.(float64))
 			},
 		},
 		Float64: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(float64) < float64(r.val.(int)))
+				return NewBoolConst(l.Loc, l.Val.(float64) < float64(r.Val.(int)))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(float64) < r.val.(float64))
+				return NewBoolConst(l.Loc, l.Val.(float64) < r.Val.(float64))
 			},
 		},
 	},
 	LE: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(int) <= r.val.(int))
+				return NewBoolConst(l.Loc, l.Val.(int) <= r.Val.(int))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, float64(l.val.(int)) <= r.val.(float64))
+				return NewBoolConst(l.Loc, float64(l.Val.(int)) <= r.Val.(float64))
 			},
 		},
 		Float64: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(float64) <= float64(r.val.(int)))
+				return NewBoolConst(l.Loc, l.Val.(float64) <= float64(r.Val.(int)))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(float64) <= r.val.(float64))
+				return NewBoolConst(l.Loc, l.Val.(float64) <= r.Val.(float64))
 			},
 		},
 	},
 	GT: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(int) > r.val.(int))
+				return NewBoolConst(l.Loc, l.Val.(int) > r.Val.(int))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, float64(l.val.(int)) > r.val.(float64))
+				return NewBoolConst(l.Loc, float64(l.Val.(int)) > r.Val.(float64))
 			},
 		},
 		Float64: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(float64) > float64(r.val.(int)))
+				return NewBoolConst(l.Loc, l.Val.(float64) > float64(r.Val.(int)))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(float64) > r.val.(float64))
+				return NewBoolConst(l.Loc, l.Val.(float64) > r.Val.(float64))
 			},
 		},
 	},
 	GE: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(int) >= r.val.(int))
+				return NewBoolConst(l.Loc, l.Val.(int) >= r.Val.(int))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, float64(l.val.(int)) >= r.val.(float64))
+				return NewBoolConst(l.Loc, float64(l.Val.(int)) >= r.Val.(float64))
 			},
 		},
 		Float64: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(float64) >= float64(r.val.(int)))
+				return NewBoolConst(l.Loc, l.Val.(float64) >= float64(r.Val.(int)))
 			},
 			Float64: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(float64) >= r.val.(float64))
+				return NewBoolConst(l.Loc, l.Val.(float64) >= r.Val.(float64))
 			},
 		},
 	},
 	LAND: {
 		Bool: {
 			Bool: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(bool) && r.val.(bool))
+				return NewBoolConst(l.Loc, l.Val.(bool) && r.Val.(bool))
 			},
 		},
 	},
 	LOR: {
 		Bool: {
 			Bool: func(l, r *ConstExpr) *ConstExpr {
-				return NewBoolConst(l.loc, l.val.(bool) || r.val.(bool))
+				return NewBoolConst(l.Loc, l.Val.(bool) || r.Val.(bool))
 			},
 		},
 	},

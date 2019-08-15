@@ -83,15 +83,15 @@ type IType interface {
 }
 
 type BaseType struct {
-	enum TypeEnum
+	Enum TypeEnum
 }
 
 func NewBaseType(enum TypeEnum) *BaseType {
-	return &BaseType{enum: enum}
+	return &BaseType{Enum: enum}
 }
 
 func (t *BaseType) ToString() string {
-	str, ok := TypeToStr[t.enum]
+	str, ok := TypeToStr[t.Enum]
 	if ok {
 		return str
 	} else {
@@ -99,25 +99,25 @@ func (t *BaseType) ToString() string {
 	}
 }
 
-func (t *BaseType) GetTypeEnum() TypeEnum { return t.enum }
+func (t *BaseType) GetTypeEnum() TypeEnum { return t.Enum }
 
 // This method should be overridden by non-primitive type
 func (t *BaseType) IsIdentical(tp IType) bool {
-	return t.enum == tp.GetTypeEnum()
+	return t.Enum == tp.GetTypeEnum()
 }
 
 // When the AST is constructed, some type cannot be resolved at that time.
 type UnresolvedType struct {
 	BaseType
-	name string
+	Name string
 }
 
 func NewUnresolvedType(name string) *UnresolvedType {
-	return &UnresolvedType{BaseType: *NewBaseType(Unresolved), name: name}
+	return &UnresolvedType{BaseType: *NewBaseType(Unresolved), Name: name}
 }
 
 func (t *UnresolvedType) ToString() string {
-	return fmt.Sprintf("unresolved: %s", t.name)
+	return fmt.Sprintf("unresolved: %s", t.Name)
 }
 
 func (t *UnresolvedType) IsIdentical(o IType) bool {
@@ -125,36 +125,36 @@ func (t *UnresolvedType) IsIdentical(o IType) bool {
 	if !ok {
 		return false
 	}
-	return t.name == t2.name
+	return t.Name == t2.Name
 }
 
 // Type alias
 type AliasType struct {
 	BaseType
-	name  string
-	under IType
+	Name  string
+	Under IType
 }
 
 func NewAliasType(name string, under IType) *AliasType {
 	if alias, ok := under.(*AliasType); ok {
-		under = alias.under
+		under = alias.Under
 	}
-	return &AliasType{BaseType: *NewBaseType(under.GetTypeEnum()), name: name, under: under}
+	return &AliasType{BaseType: *NewBaseType(under.GetTypeEnum()), Name: name, Under: under}
 }
 
 func (t *AliasType) ToString() string {
-	return fmt.Sprintf("%s: %s", t.name, t.under.ToString())
+	return fmt.Sprintf("%s: %s", t.Name, t.Under.ToString())
 }
 
 func (t *AliasType) IsIdentical(o IType) bool {
 	if t2, ok := o.(*AliasType); ok {
 		// all alias type, and have identical underlying type
-		if t.under.IsIdentical(t2.under) {
+		if t.Under.IsIdentical(t2.Under) {
 			return true
 		}
 	} else { // the second is not alias type
 		// the second is identical to the underlying type of the first
-		if t.under.IsIdentical(o) {
+		if t.Under.IsIdentical(o) {
 			return true
 		}
 	}
@@ -194,7 +194,7 @@ var PrimTypeSize = map[TypeEnum]int{
 }
 
 func (t *PrimType) GetSize() int {
-	return PrimTypeSize[t.enum]
+	return PrimTypeSize[t.Enum]
 }
 
 type NilType struct {
@@ -212,15 +212,15 @@ func (t *NilType) IsIdentical(o IType) bool {
 
 type PtrType struct {
 	BaseType
-	ref IType
+	Ref IType
 }
 
 func NewPtrType(ref IType) *PtrType {
-	return &PtrType{BaseType: *NewBaseType(Ptr), ref: ref}
+	return &PtrType{BaseType: *NewBaseType(Ptr), Ref: ref}
 }
 
 func (t *PtrType) ToString() string {
-	return fmt.Sprintf("*%s", t.ref.ToString())
+	return fmt.Sprintf("*%s", t.Ref.ToString())
 }
 
 func (t *PtrType) IsIdentical(o IType) bool {
@@ -228,21 +228,21 @@ func (t *PtrType) IsIdentical(o IType) bool {
 		return alias.IsIdentical(t)
 	}
 	t2, ok := o.(*PtrType)
-	return ok && t.ref.IsIdentical(t2.ref)
+	return ok && t.Ref.IsIdentical(t2.Ref)
 }
 
 type ArrayType struct {
 	BaseType
-	elem IType
-	len  int
+	Elem IType
+	Len  int
 }
 
 func NewArrayType(elem IType, len int) *ArrayType {
-	return &ArrayType{BaseType: *NewBaseType(Array), elem: elem, len: len}
+	return &ArrayType{BaseType: *NewBaseType(Array), Elem: elem, Len: len}
 }
 
 func (t *ArrayType) ToString() string {
-	return fmt.Sprintf("[%d]%s", t.len, t.elem.ToString())
+	return fmt.Sprintf("[%d]%s", t.Len, t.Elem.ToString())
 }
 
 func (t *ArrayType) IsIdentical(o IType) bool {
@@ -250,20 +250,20 @@ func (t *ArrayType) IsIdentical(o IType) bool {
 		return alias.IsIdentical(t)
 	}
 	t2, ok := o.(*ArrayType)
-	return ok && t.elem.IsIdentical(t2.elem) && t.len == t2.len
+	return ok && t.Elem.IsIdentical(t2.Elem) && t.Len == t2.Len
 }
 
 type SliceType struct {
 	BaseType
-	elem IType
+	Elem IType
 }
 
 func NewSliceType(elem IType) *SliceType {
-	return &SliceType{BaseType: *NewBaseType(Slice), elem: elem}
+	return &SliceType{BaseType: *NewBaseType(Slice), Elem: elem}
 }
 
 func (t *SliceType) ToString() string {
-	return fmt.Sprintf("[]%s", t.elem.ToString())
+	return fmt.Sprintf("[]%s", t.Elem.ToString())
 }
 
 func (t *SliceType) IsIdentical(o IType) bool {
@@ -271,20 +271,20 @@ func (t *SliceType) IsIdentical(o IType) bool {
 		return alias.IsIdentical(t)
 	}
 	t2, ok := o.(*SliceType)
-	return ok && t.elem.IsIdentical(t2.elem)
+	return ok && t.Elem.IsIdentical(t2.Elem)
 }
 
 type MapType struct {
 	BaseType
-	key, val IType
+	Key, Val IType
 }
 
 func NewMapType(key, val IType) *MapType {
-	return &MapType{BaseType: *NewBaseType(Map), key: key, val: val}
+	return &MapType{BaseType: *NewBaseType(Map), Key: key, Val: val}
 }
 
 func (t *MapType) ToString() string {
-	return fmt.Sprintf("[%s]%s", t.key.ToString(), t.val.ToString())
+	return fmt.Sprintf("[%s]%s", t.Key.ToString(), t.Val.ToString())
 }
 
 func (t *MapType) IsIdentical(o IType) bool {
@@ -292,25 +292,25 @@ func (t *MapType) IsIdentical(o IType) bool {
 		return alias.IsIdentical(t)
 	}
 	t2, ok := o.(*MapType)
-	return ok && t.key.IsIdentical(t2.key) && t2.val.IsIdentical(t2.val)
+	return ok && t.Key.IsIdentical(t2.Key) && t2.Val.IsIdentical(t2.Val)
 }
 
 type StructType struct {
 	BaseType
-	field *SymbolTable
+	Field *SymbolTable
 }
 
 func NewStructType(field *SymbolTable) *StructType {
-	return &StructType{BaseType: *NewBaseType(Struct), field: field}
+	return &StructType{BaseType: *NewBaseType(Struct), Field: field}
 }
 
 func (t *StructType) ToString() string {
 	str := "struct{"
-	for i, f := range t.field.entries {
+	for i, f := range t.Field.Entries {
 		if i != 0 {
 			str += ", "
 		}
-		str += f.tp.ToString()
+		str += f.Type.ToString()
 	}
 	return str + "}"
 }
@@ -323,12 +323,12 @@ func (t *StructType) IsIdentical(o IType) bool {
 	if !ok { // not even struct type
 		return false
 	}
-	if len(t2.field.entries) != len(t2.field.entries) {
+	if len(t2.Field.Entries) != len(t2.Field.Entries) {
 		return false
 	}
-	for i, e1 := range t.field.entries {
-		e2 := t2.field.entries[i]
-		if (!e1.tp.IsIdentical(e2.tp)) || (e1.name != e2.name) {
+	for i, e1 := range t.Field.Entries {
+		e2 := t2.Field.Entries[i]
+		if (!e1.Type.IsIdentical(e2.Type)) || (e1.Name != e2.Name) {
 			return false
 		}
 	}
@@ -338,16 +338,16 @@ func (t *StructType) IsIdentical(o IType) bool {
 // Mainly used in function parameters representation, and assignment semantic analysis
 type TupleType struct {
 	BaseType
-	elem []IType
+	Elem []IType
 }
 
 func NewTupleType(elem []IType) *TupleType {
-	return &TupleType{BaseType: *NewBaseType(Tuple), elem: elem}
+	return &TupleType{BaseType: *NewBaseType(Tuple), Elem: elem}
 }
 
 func (t *TupleType) ToString() string {
 	str := "("
-	for i, e := range t.elem {
+	for i, e := range t.Elem {
 		if i != 0 {
 			str += " "
 		}
@@ -361,11 +361,11 @@ func (t *TupleType) IsIdentical(o IType) bool {
 	if !ok { // not even tuple type
 		return false
 	}
-	if len(t.elem) != len(t2.elem) { // have different number of elements
+	if len(t.Elem) != len(t2.Elem) { // have different number of elements
 		return false
 	}
-	for i := range t.elem {
-		if !t.elem[i].IsIdentical(t2.elem[i]) {
+	for i := range t.Elem {
+		if !t.Elem[i].IsIdentical(t2.Elem[i]) {
 			return false
 		}
 	}
@@ -375,18 +375,18 @@ func (t *TupleType) IsIdentical(o IType) bool {
 
 type FuncType struct {
 	BaseType
-	param, result *TupleType
-	receiver      IType // optional for methods, not explicitly assigned in constructor
+	Param, Result *TupleType
+	Receiver      IType // optional for methods, not explicitly assigned in constructor
 }
 
 func NewFunctionType(param, result []IType) *FuncType {
-	return &FuncType{BaseType: *NewBaseType(Func), param: NewTupleType(param),
-		result: NewTupleType(result), receiver: nil}
+	return &FuncType{BaseType: *NewBaseType(Func), Param: NewTupleType(param),
+		Result: NewTupleType(result), Receiver: nil}
 }
 
 func (t *FuncType) ToString() string {
-	return fmt.Sprintf("func (%s) %s %s", t.receiver.ToString(), t.param.ToString(),
-		t.result.ToString())
+	return fmt.Sprintf("func (%s) %s %s", t.Receiver.ToString(), t.Param.ToString(),
+		t.Result.ToString())
 }
 
 func (t *FuncType) IsIdentical(o IType) bool {
@@ -397,14 +397,14 @@ func (t *FuncType) IsIdentical(o IType) bool {
 	if !ok {
 		return false
 	}
-	identical := t.param.IsIdentical(t2.param) && t.result.IsIdentical(t2.result)
-	if t.receiver == nil {
-		return identical && t2.receiver == nil
+	identical := t.Param.IsIdentical(t2.Param) && t.Result.IsIdentical(t2.Result)
+	if t.Receiver == nil {
+		return identical && t2.Receiver == nil
 	} else {
-		return identical && t.receiver.IsIdentical(t2.receiver)
+		return identical && t.Receiver.IsIdentical(t2.Receiver)
 	}
 }
 
-func (t *FuncType) GetParamType() []IType { return t.param.elem }
+func (t *FuncType) GetParamType() []IType { return t.Param.Elem }
 
-func (t *FuncType) GetResultType() []IType { return t.result.elem }
+func (t *FuncType) GetResultType() []IType { return t.Result.Elem }

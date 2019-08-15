@@ -7,36 +7,36 @@ type IASTNode interface {
 }
 
 type BaseASTNode struct {
-	loc *Location
+	Loc *Location
 }
 
 func NewBaseASTNode(loc *Location) *BaseASTNode {
 	return &BaseASTNode{loc}
 }
 
-func (n *BaseASTNode) GetLocation() *Location { return n.loc }
+func (n *BaseASTNode) GetLocation() *Location { return n.Loc }
 
-func (n *BaseASTNode) LocationStr() string { return n.loc.ToString() }
+func (n *BaseASTNode) LocationStr() string { return n.Loc.ToString() }
 
 func (n *BaseASTNode) ToStringTree() string { return "()" }
 
 type ProgramNode struct {
 	BaseASTNode
-	pkg    string
-	global *FuncDecl //
-	funcs  []*FuncDecl
+	PkgName string
+	Global  *FuncDecl //
+	Funcs   []*FuncDecl
 }
 
 func NewProgramNode(pkgName string) *ProgramNode {
 	n := &ProgramNode{
-		BaseASTNode: *NewBaseASTNode(nil), pkg: pkgName,
-		global: NewFuncDecl(nil, "_global", NewFunctionType([]IType{}, []IType{}),
+		BaseASTNode: *NewBaseASTNode(nil), PkgName: pkgName,
+		Global: NewFuncDecl(nil, "_global", NewFunctionType([]IType{}, []IType{}),
 			NewGlobalScope(), nil),
-		funcs: make([]*FuncDecl, 0),
+		Funcs: make([]*FuncDecl, 0),
 	}
 	return n
 }
 
 func (n *ProgramNode) AddFuncDecl(fun *FuncDecl) {
-	n.funcs = append(n.funcs, fun)
+	n.Funcs = append(n.Funcs, fun)
 }
