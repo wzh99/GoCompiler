@@ -13,11 +13,11 @@ type FuncDecl struct {
 	Type     *FuncType
 	Scope    *Scope
 	Stmts    []IStmtNode
-	NamedRet []*SymbolEntry // for named return values
+	NamedRet []*TableEntry // for named return values
 }
 
 func NewFuncDecl(loc *Location, name string, tp *FuncType, scope *Scope,
-	namedRet []*SymbolEntry) *FuncDecl {
+	namedRet []*TableEntry) *FuncDecl {
 	d := &FuncDecl{BaseASTNode: *NewBaseASTNode(loc), Name: name, Type: tp, Scope: scope,
 		Stmts: make([]IStmtNode, 0), NamedRet: namedRet}
 	d.Scope.Func = d
@@ -38,11 +38,11 @@ func (d *FuncDecl) ToStringTree() string {
 	return str + ")"
 }
 
-func (d *FuncDecl) GenSymbol() *SymbolEntry {
+func (d *FuncDecl) GenSymbol() *TableEntry {
 	return NewSymbolEntry(d.GetLocation(), d.Name, FuncEntry, d.Type, nil)
 }
 
 // An intermediate structure when building AST
 type FuncSignature struct {
-	params, results []*SymbolEntry
+	params, results []*TableEntry
 }

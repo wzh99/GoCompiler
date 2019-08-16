@@ -234,7 +234,7 @@ func (t *PtrType) IsIdentical(o IType) bool {
 type ArrayType struct {
 	BaseType
 	Elem IType
-	Len  int
+	Len  int // -1 means its length cannot be determined temporarily
 }
 
 func NewArrayType(elem IType, len int) *ArrayType {

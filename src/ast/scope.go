@@ -26,7 +26,7 @@ func (s *Scope) AddChild(child *Scope) {
 	s.Children = append(s.Children, child)
 }
 
-func (s *Scope) AddSymbol(entry *SymbolEntry) {
+func (s *Scope) AddSymbol(entry *TableEntry) {
 	// Reject unnamed symbol
 	if len(entry.Name) == 0 {
 		panic(fmt.Errorf("%s unnamed symbol", entry.Loc.ToString()))
@@ -46,7 +46,7 @@ func (s *Scope) AddOperandId(id *IdExpr) {
 }
 
 // Look up symbol, considering nested scopes
-func (s *Scope) Lookup(name string) (entry *SymbolEntry, scope *Scope) {
+func (s *Scope) Lookup(name string) (entry *TableEntry, scope *Scope) {
 	scope = s
 	for scope != nil {
 		entry = scope.Symbols.Lookup(name)

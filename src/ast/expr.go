@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"strconv"
 )
 
 // Abstract expression interface
@@ -45,15 +46,76 @@ func NewBaseLiteralExpr(loc *Location) *BaseLiteralExpr {
 func (n *BaseLiteralExpr) IsLValue() bool { return true }
 
 // Anonymous function (lambda)
-type FuncLiteral struct {
+type FuncLit struct {
 	BaseLiteralExpr
 	Decl    *FuncDecl
 	Closure *SymbolTable
 }
 
-func NewFuncLiteral(loc *Location, decl *FuncDecl, closure *SymbolTable) *FuncLiteral {
-	return &FuncLiteral{BaseLiteralExpr: *NewBaseLiteralExpr(loc), Decl: decl, Closure: closure}
+func NewFuncLit(loc *Location, decl *FuncDecl, closure *SymbolTable) *FuncLit {
+	return &FuncLit{BaseLiteralExpr: *NewBaseLiteralExpr(loc), Decl: decl, Closure: closure}
 }
+
+func (l *FuncLit) GetValue() interface{} { return l.Decl }
+
+type LitElem struct {
+	Loc  *Location
+	Key  IExprNode
+	Type IType
+	Elem IExprNode
+}
+
+func NewLitElem(loc *Location, key IExprNode, elem IExprNode) *LitElem {
+	return &LitElem{
+		Loc:  loc,
+		Key:  key,
+		Elem: elem,
+	}
+}
+
+func (e *LitElem) IsKeyed() bool { return e.Key != nil }
+
+type ElemList struct {
+	Elem  []*LitElem
+	Keyed bool
+}
+
+func NewElemList(list []*LitElem) *ElemList {
+	if len(list) == 0 { // handle empty list
+		return &ElemList{
+			Elem:  list,
+			Keyed: false,
+		}
+	}
+	keyed := list[0].IsKeyed() // check if there are mixed keyed and unkeyed elements
+	for _, v := range list {
+		if (keyed && !v.IsKeyed()) || (!keyed && v.IsKeyed()) {
+			panic(fmt.Errorf("%s mixed keyed and unkeyed elements", v.Loc.ToString()))
+		}
+	}
+	return &ElemList{
+		Elem:  list,
+		Keyed: keyed,
+	}
+}
+
+type CompLit struct {
+	BaseLiteralExpr
+	Elem  []*LitElem
+	Keyed bool
+}
+
+func NewCompLit(loc *Location, tp IType, elem *ElemList) *CompLit {
+	l := &CompLit{
+		BaseLiteralExpr: *NewBaseLiteralExpr(loc),
+		Elem:            elem.Elem,
+		Keyed:           elem.Keyed,
+	}
+	l.Type = tp // type is assigned when constructed, but its validity needs check
+	return l
+}
+
+func (l *CompLit) GetValue() interface{} { return l.Elem }
 
 // Constant expressions (can be assigned to constant, special case of literal expression)
 type ConstExpr struct {
@@ -79,6 +141,19 @@ func NewBoolConst(loc *Location, val bool) *ConstExpr {
 	e := &ConstExpr{BaseLiteralExpr: *NewBaseLiteralExpr(loc), Val: val}
 	e.Type = NewPrimType(Bool)
 	return e
+}
+
+func (e *ConstExpr) ToStringTree() string {
+	switch e.Type.GetTypeEnum() {
+	case Int:
+		return strconv.FormatInt(int64(e.Val.(int)), 10)
+	case Float64:
+		return strconv.FormatFloat(e.Val.(float64), 'g', -1, 64)
+	case Bool:
+		return strconv.FormatBool(e.Val.(bool))
+	default:
+		return ""
+	}
 }
 
 // Zero value is the internal representation of initial value of any type.
@@ -117,7 +192,7 @@ func (c *NilValue) IsLValue() bool { return false }
 type IdExpr struct {
 	BaseExprNode
 	Name     string // should keep name for lookup in global scope
-	Symbol   *SymbolEntry
+	Symbol   *TableEntry
 	Captured bool
 }
 
@@ -129,7 +204,7 @@ var IsKeyword = map[string]bool{
 	"select": true, "struct": true, "switch": true, "type": true, "var": true,
 }
 
-func NewIdExpr(loc *Location, name string, symbol *SymbolEntry) *IdExpr {
+func NewIdExpr(loc *Location, name string, symbol *TableEntry) *IdExpr {
 	return &IdExpr{BaseExprNode: *NewBaseExprNode(loc), Name: name, Symbol: symbol}
 }
 

@@ -7,7 +7,7 @@ import (
 )
 
 // Build AST from CST. build scopes with symbol tables, and perform basic checks.
-type ASTBuilder struct {
+type Builder struct {
 	BaseGolangVisitor
 	// Global and local cursor of scope
 	global, cur *Scope
@@ -16,15 +16,15 @@ type ASTBuilder struct {
 	// Track receiver of the method next child scope belongs to
 	// Since methods and functions share a single function body AST construction procedure,
 	// the procedure itself has no idea whether it has receiver.
-	receiver *SymbolEntry
+	receiver *TableEntry
 	// Block stack
 	blocks [][]*BlockStmt // [func][block]
 }
 
-func NewASTBuilder() *ASTBuilder { return &ASTBuilder{} }
+func NewASTBuilder() *Builder { return &Builder{} }
 
 // Add statement to current function
-func (v *ASTBuilder) addStmt(stmt IStmtNode) {
+func (v *Builder) addStmt(stmt IStmtNode) {
 	if len(v.blocks) == 0 { // in global function
 		v.cur.Func.AddStmt(stmt)
 	} else if l := len(v.blocks[len(v.blocks)-1]); l == 0 { // scope of function
@@ -34,31 +34,31 @@ func (v *ASTBuilder) addStmt(stmt IStmtNode) {
 	}
 }
 
-func (v *ASTBuilder) pushFuncBlock() {
+func (v *Builder) pushFuncBlock() {
 	v.blocks = append(v.blocks, make([]*BlockStmt, 0))
 }
 
-func (v *ASTBuilder) popFuncBlock() {
+func (v *Builder) popFuncBlock() {
 	v.blocks = v.blocks[:len(v.blocks)-1]
 }
 
-func (v *ASTBuilder) getBlocksOfCurFunc() []*BlockStmt {
+func (v *Builder) getBlocksOfCurFunc() []*BlockStmt {
 	return v.blocks[len(v.blocks)-1]
 }
 
-func (v *ASTBuilder) pushBlockStmt(block *BlockStmt) {
+func (v *Builder) pushBlockStmt(block *BlockStmt) {
 	v.blocks[len(v.blocks)-1] = append(v.blocks[len(v.blocks)-1], block)
 }
 
-func (v *ASTBuilder) popBlockStmt() {
+func (v *Builder) popBlockStmt() {
 	v.blocks[len(v.blocks)-1] = v.blocks[len(v.blocks)-1][:len(v.blocks[len(v.blocks)-1])-1]
 }
 
-func (v *ASTBuilder) pushScope(scope *Scope) { v.cur = scope }
+func (v *Builder) pushScope(scope *Scope) { v.cur = scope }
 
-func (v *ASTBuilder) popScope() { v.cur = v.cur.Parent }
+func (v *Builder) popScope() { v.cur = v.cur.Parent }
 
-func (v *ASTBuilder) VisitSourceFile(ctx *SourceFileContext) interface{} {
+func (v *Builder) VisitSourceFile(ctx *SourceFileContext) interface{} {
 	// Get package name
 	pkgName := v.VisitPackageClause(ctx.PackageClause().(*PackageClauseContext)).(string)
 	// Initialize program node
@@ -75,11 +75,11 @@ func (v *ASTBuilder) VisitSourceFile(ctx *SourceFileContext) interface{} {
 	return v.prog
 }
 
-func (v *ASTBuilder) VisitPackageClause(ctx *PackageClauseContext) interface{} {
+func (v *Builder) VisitPackageClause(ctx *PackageClauseContext) interface{} {
 	return ctx.IDENTIFIER().GetText() // string
 }
 
-func (v *ASTBuilder) VisitTopLevelDecl(ctx *TopLevelDeclContext) interface{} {
+func (v *Builder) VisitTopLevelDecl(ctx *TopLevelDeclContext) interface{} {
 	if d := ctx.Declaration(); d != nil {
 		v.VisitDeclaration(d.(*DeclarationContext))
 	} else if d := ctx.FunctionDecl(); d != nil {
@@ -91,7 +91,7 @@ func (v *ASTBuilder) VisitTopLevelDecl(ctx *TopLevelDeclContext) interface{} {
 }
 
 // Constants, variables and type declarations
-func (v *ASTBuilder) VisitDeclaration(ctx *DeclarationContext) interface{} {
+func (v *Builder) VisitDeclaration(ctx *DeclarationContext) interface{} {
 	if d := ctx.ConstDecl(); d != nil {
 		v.VisitConstDecl(d.(*ConstDeclContext))
 	} else if d := ctx.VarDecl(); d != nil {
@@ -103,7 +103,7 @@ func (v *ASTBuilder) VisitDeclaration(ctx *DeclarationContext) interface{} {
 }
 
 // A specific constant declaration scope: const (... = ..., ... = ...)
-func (v *ASTBuilder) VisitConstDecl(ctx *ConstDeclContext) interface{} {
+func (v *Builder) VisitConstDecl(ctx *ConstDeclContext) interface{} {
 	for _, spec := range ctx.AllConstSpec() {
 		v.VisitConstSpec(spec.(*ConstSpecContext))
 	}
@@ -111,7 +111,7 @@ func (v *ASTBuilder) VisitConstDecl(ctx *ConstDeclContext) interface{} {
 }
 
 // One line of constant specification: id_1, id_2, ..., id_n = expr_1, expr_2, ..., expr_n
-func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
+func (v *Builder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 	// Get expression list on both sides of equation
 	rhs := v.VisitExpressionList(ctx.ExpressionList().(*ExpressionListContext)).([]IExprNode)
 	lhs := v.VisitIdentifierList(ctx.IdentifierList().(*IdentifierListContext)).([]*IdExpr)
@@ -163,7 +163,7 @@ func (v *ASTBuilder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 	return nil
 }
 
-func (v *ASTBuilder) VisitIdentifierList(ctx *IdentifierListContext) interface{} {
+func (v *Builder) VisitIdentifierList(ctx *IdentifierListContext) interface{} {
 	idList := make([]*IdExpr, 0)
 	for _, id := range ctx.AllIDENTIFIER() {
 		if IsKeyword[id.GetText()] {
@@ -176,7 +176,7 @@ func (v *ASTBuilder) VisitIdentifierList(ctx *IdentifierListContext) interface{}
 	return idList // []*IdExpr
 }
 
-func (v *ASTBuilder) VisitExpressionList(ctx *ExpressionListContext) interface{} {
+func (v *Builder) VisitExpressionList(ctx *ExpressionListContext) interface{} {
 	exprList := make([]IExprNode, 0)
 	for _, expr := range ctx.AllExpression() {
 		exprList = append(exprList, v.VisitExpression(expr.(*ExpressionContext)).(IExprNode))
@@ -184,14 +184,14 @@ func (v *ASTBuilder) VisitExpressionList(ctx *ExpressionListContext) interface{}
 	return exprList // []IExprNode
 }
 
-func (v *ASTBuilder) VisitTypeDecl(ctx *TypeDeclContext) interface{} {
+func (v *Builder) VisitTypeDecl(ctx *TypeDeclContext) interface{} {
 	for _, spec := range ctx.AllTypeSpec() {
 		v.VisitTypeSpec(spec.(*TypeSpecContext))
 	}
 	return nil
 }
 
-func (v *ASTBuilder) VisitTypeSpec(ctx *TypeSpecContext) interface{} {
+func (v *Builder) VisitTypeSpec(ctx *TypeSpecContext) interface{} {
 	name := ctx.IDENTIFIER().GetText()
 	tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
 	alias := NewAliasType(name, tp)
@@ -200,7 +200,7 @@ func (v *ASTBuilder) VisitTypeSpec(ctx *TypeSpecContext) interface{} {
 }
 
 // Top level function declarations
-func (v *ASTBuilder) VisitFunctionDecl(ctx *FunctionDeclContext) interface{} {
+func (v *Builder) VisitFunctionDecl(ctx *FunctionDeclContext) interface{} {
 	name := ctx.IDENTIFIER().GetText()
 	funcDecl := v.VisitFunction(ctx.Function().(*FunctionContext)).(*FuncDecl)
 	funcDecl.Name = name
@@ -209,12 +209,12 @@ func (v *ASTBuilder) VisitFunctionDecl(ctx *FunctionDeclContext) interface{} {
 	return nil
 }
 
-func (v *ASTBuilder) VisitFunction(ctx *FunctionContext) interface{} {
+func (v *Builder) VisitFunction(ctx *FunctionContext) interface{} {
 	// Analyze function signature
 	sig := v.VisitSignature(ctx.Signature().(*SignatureContext)).(*FuncSignature)
 	paramType := make([]IType, 0)
 	resultType := make([]IType, 0)
-	namedRet := make([]*SymbolEntry, 0)
+	namedRet := make([]*TableEntry, 0)
 	for _, p := range sig.params {
 		paramType = append(paramType, p.Type)
 	}
@@ -271,9 +271,9 @@ func (v *ASTBuilder) VisitFunction(ctx *FunctionContext) interface{} {
 	return decl // *FuncDecl
 }
 
-func (v *ASTBuilder) VisitMethodDecl(ctx *MethodDeclContext) interface{} {
+func (v *Builder) VisitMethodDecl(ctx *MethodDeclContext) interface{} {
 	name := ctx.IDENTIFIER().GetText()
-	v.receiver = v.VisitReceiver(ctx.Receiver().(*ReceiverContext)).(*SymbolEntry) // register receiver
+	v.receiver = v.VisitReceiver(ctx.Receiver().(*ReceiverContext)).(*TableEntry) // register receiver
 	funcDecl := v.VisitFunction(ctx.Function().(*FunctionContext)).(*FuncDecl)
 	funcDecl.Name = name
 	v.global.AddSymbol(funcDecl.GenSymbol())
@@ -281,8 +281,8 @@ func (v *ASTBuilder) VisitMethodDecl(ctx *MethodDeclContext) interface{} {
 	return nil
 }
 
-func (v *ASTBuilder) VisitReceiver(ctx *ReceiverContext) interface{} {
-	decl := v.VisitParameterDecl(ctx.ParameterDecl().(*ParameterDeclContext)).([]*SymbolEntry)
+func (v *Builder) VisitReceiver(ctx *ReceiverContext) interface{} {
+	decl := v.VisitParameterDecl(ctx.ParameterDecl().(*ParameterDeclContext)).([]*TableEntry)
 	if len(decl) != 1 {
 		panic(fmt.Errorf("%s expect one paramter in method receiver, have %d",
 			NewLocationFromContext(ctx).ToString(), len(decl)))
@@ -290,14 +290,14 @@ func (v *ASTBuilder) VisitReceiver(ctx *ReceiverContext) interface{} {
 	return decl[0] // *SymbolEntry
 }
 
-func (v *ASTBuilder) VisitVarDecl(ctx *VarDeclContext) interface{} {
+func (v *Builder) VisitVarDecl(ctx *VarDeclContext) interface{} {
 	for _, decl := range ctx.AllVarSpec() {
 		v.VisitVarSpec(decl.(*VarSpecContext))
 	}
 	return nil
 }
 
-func (v *ASTBuilder) VisitVarSpec(ctx *VarSpecContext) interface{} {
+func (v *Builder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 	// Get expression list
 	var exprList []IExprNode
 	if ctx.ExpressionList() != nil {
@@ -344,19 +344,19 @@ func (v *ASTBuilder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 
 // Scope should be set up before visiting block
 // This may be a function definition block, not necessarily a block statement
-func (v *ASTBuilder) VisitBlock(ctx *BlockContext) interface{} {
+func (v *Builder) VisitBlock(ctx *BlockContext) interface{} {
 	v.VisitStatementList(ctx.StatementList().(*StatementListContext))
 	return nil
 }
 
-func (v *ASTBuilder) VisitStatementList(ctx *StatementListContext) interface{} {
+func (v *Builder) VisitStatementList(ctx *StatementListContext) interface{} {
 	for _, stmt := range ctx.AllStatement() {
 		v.VisitStatement(stmt.(*StatementContext))
 	}
 	return nil
 }
 
-func (v *ASTBuilder) VisitStatement(ctx *StatementContext) interface{} {
+func (v *Builder) VisitStatement(ctx *StatementContext) interface{} {
 	if s := ctx.Declaration(); s != nil {
 		v.VisitDeclaration(s.(*DeclarationContext))
 	} else if s := ctx.SimpleStmt(); s != nil {
@@ -389,7 +389,7 @@ func (v *ASTBuilder) VisitStatement(ctx *StatementContext) interface{} {
 }
 
 // Simple statement could appear in if or for clause, so it should be returned
-func (v *ASTBuilder) VisitSimpleStmt(ctx *SimpleStmtContext) interface{} {
+func (v *Builder) VisitSimpleStmt(ctx *SimpleStmtContext) interface{} {
 	if s := ctx.ExpressionStmt(); s != nil {
 		return v.VisitExpressionStmt(s.(*ExpressionStmtContext)).(IStmtNode)
 	} else if s := ctx.IncDecStmt(); s != nil {
@@ -402,18 +402,18 @@ func (v *ASTBuilder) VisitSimpleStmt(ctx *SimpleStmtContext) interface{} {
 	return nil
 }
 
-func (v *ASTBuilder) VisitExpressionStmt(ctx *ExpressionStmtContext) interface{} {
+func (v *Builder) VisitExpressionStmt(ctx *ExpressionStmtContext) interface{} {
 	expr := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(IExprNode)
 	return expr
 }
 
-func (v *ASTBuilder) VisitIncDecStmt(ctx *IncDecStmtContext) interface{} {
+func (v *Builder) VisitIncDecStmt(ctx *IncDecStmtContext) interface{} {
 	expr := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(IExprNode)
 	inc := ctx.GetOp().GetText() == "++"
 	return NewIncDecStmt(NewLocationFromContext(ctx), expr, inc)
 }
 
-func (v *ASTBuilder) VisitAssignment(ctx *AssignmentContext) interface{} {
+func (v *Builder) VisitAssignment(ctx *AssignmentContext) interface{} {
 	var stmt IStmtNode
 	if op := ctx.GetOp(); op != nil { // assignment after operation
 		rhs := v.VisitExpression(ctx.Expression(1).(*ExpressionContext)).(IExprNode)
@@ -435,7 +435,7 @@ func (v *ASTBuilder) VisitAssignment(ctx *AssignmentContext) interface{} {
 	return stmt
 }
 
-func (v *ASTBuilder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
+func (v *Builder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
 	// Get identifier list (lhs) and expression list (rhs)
 	exprList := v.VisitExpressionList(ctx.ExpressionList().(*ExpressionListContext)).([]IExprNode)
 	idList := v.VisitIdentifierList(ctx.IdentifierList().(*IdentifierListContext)).([]*IdExpr)
@@ -475,7 +475,7 @@ func (v *ASTBuilder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
 	return stmt
 }
 
-func (v *ASTBuilder) VisitReturnStmt(ctx *ReturnStmtContext) interface{} {
+func (v *Builder) VisitReturnStmt(ctx *ReturnStmtContext) interface{} {
 	exprList := make([]IExprNode, 0)
 	if exprCtx := ctx.ExpressionList(); exprCtx != nil {
 		exprList = v.VisitExpressionList(exprCtx.(*ExpressionListContext)).([]IExprNode)
@@ -484,7 +484,7 @@ func (v *ASTBuilder) VisitReturnStmt(ctx *ReturnStmtContext) interface{} {
 	return nil
 }
 
-func (v *ASTBuilder) VisitBreakStmt(ctx *BreakStmtContext) interface{} {
+func (v *Builder) VisitBreakStmt(ctx *BreakStmtContext) interface{} {
 	blocks := v.getBlocksOfCurFunc()
 	var target IStmtNode
 FindStmt:
@@ -503,7 +503,7 @@ FindStmt:
 	return nil
 }
 
-func (v *ASTBuilder) VisitContinueStmt(ctx *ContinueStmtContext) interface{} {
+func (v *Builder) VisitContinueStmt(ctx *ContinueStmtContext) interface{} {
 	blocks := v.getBlocksOfCurFunc()
 	var target IStmtNode
 FindStmt:
@@ -522,7 +522,7 @@ FindStmt:
 	return nil
 }
 
-func (v *ASTBuilder) VisitIfStmt(ctx *IfStmtContext) interface{} {
+func (v *Builder) VisitIfStmt(ctx *IfStmtContext) interface{} {
 	// Visit if clause
 	var init IStmtNode
 	v.pushScope(NewLocalScope(v.cur)) // enter if clause scope
@@ -560,7 +560,7 @@ func (v *ASTBuilder) VisitIfStmt(ctx *IfStmtContext) interface{} {
 	return nil
 }
 
-func (v *ASTBuilder) VisitForStmt(ctx *ForStmtContext) interface{} {
+func (v *Builder) VisitForStmt(ctx *ForStmtContext) interface{} {
 	// Visit for clause
 	var init, post IStmtNode
 	var cond IExprNode
@@ -588,7 +588,7 @@ func (v *ASTBuilder) VisitForStmt(ctx *ForStmtContext) interface{} {
 	return nil
 }
 
-func (v *ASTBuilder) VisitForClause(ctx *ForClauseContext) interface{} {
+func (v *Builder) VisitForClause(ctx *ForClauseContext) interface{} {
 	var init, post IStmtNode
 	var cond IExprNode
 	if initCtx := ctx.SimpleStmt(0); initCtx != nil {
@@ -603,7 +603,7 @@ func (v *ASTBuilder) VisitForClause(ctx *ForClauseContext) interface{} {
 	return &ForClause{init: init, cond: cond, post: post}
 }
 
-func (v *ASTBuilder) VisitTp(ctx *TpContext) interface{} {
+func (v *Builder) VisitTp(ctx *TpContext) interface{} {
 	if tp := ctx.TypeName(); tp != nil {
 		return v.VisitTypeName(tp.(*TypeNameContext)).(IType)
 	} else if tp := ctx.TypeLit(); tp != nil {
@@ -614,7 +614,7 @@ func (v *ASTBuilder) VisitTp(ctx *TpContext) interface{} {
 	return nil // IType
 }
 
-func (v *ASTBuilder) VisitTypeName(ctx *TypeNameContext) interface{} {
+func (v *Builder) VisitTypeName(ctx *TypeNameContext) interface{} {
 	// Check if is primitive type
 	name := ctx.IDENTIFIER().GetText()
 	tp, ok := StrToPrimType[name]
@@ -632,7 +632,7 @@ func (v *ASTBuilder) VisitTypeName(ctx *TypeNameContext) interface{} {
 	return NewUnresolvedType(name) // cannot resolve at present
 }
 
-func (v *ASTBuilder) VisitTypeLit(ctx *TypeLitContext) interface{} {
+func (v *Builder) VisitTypeLit(ctx *TypeLitContext) interface{} {
 	if tp := ctx.ArrayType(); tp != nil {
 		return v.VisitArrayType(tp.(*ArrayTypeContext)).(IType)
 	} else if tp := ctx.SliceType(); tp != nil {
@@ -647,13 +647,13 @@ func (v *ASTBuilder) VisitTypeLit(ctx *TypeLitContext) interface{} {
 	return nil
 }
 
-func (v *ASTBuilder) VisitArrayType(ctx *ArrayTypeContext) interface{} {
+func (v *Builder) VisitArrayType(ctx *ArrayTypeContext) interface{} {
 	elem := v.VisitElementType(ctx.ElementType().(*ElementTypeContext)).(IType)
 	length := v.VisitArrayLength(ctx.ArrayLength().(*ArrayLengthContext)).(int)
 	return NewArrayType(elem, length)
 }
 
-func (v *ASTBuilder) VisitArrayLength(ctx *ArrayLengthContext) interface{} {
+func (v *Builder) VisitArrayLength(ctx *ArrayLengthContext) interface{} {
 	expr, ok := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(*ConstExpr)
 	if !ok {
 		panic(fmt.Errorf("%s array length should be a constant expression",
@@ -667,25 +667,25 @@ func (v *ASTBuilder) VisitArrayLength(ctx *ArrayLengthContext) interface{} {
 	return val
 }
 
-func (v *ASTBuilder) VisitElementType(ctx *ElementTypeContext) interface{} {
+func (v *Builder) VisitElementType(ctx *ElementTypeContext) interface{} {
 	return v.VisitTp(ctx.Tp().(*TpContext)).(IType)
 }
 
-func (v *ASTBuilder) VisitPointerType(ctx *PointerTypeContext) interface{} {
+func (v *Builder) VisitPointerType(ctx *PointerTypeContext) interface{} {
 	return NewPtrType(v.VisitTp(ctx.Tp().(*TpContext)).(IType))
 }
 
-func (v *ASTBuilder) VisitSliceType(ctx *SliceTypeContext) interface{} {
+func (v *Builder) VisitSliceType(ctx *SliceTypeContext) interface{} {
 	return NewSliceType(v.VisitElementType(ctx.ElementType().(*ElementTypeContext)).(IType))
 }
 
-func (v *ASTBuilder) VisitMapType(ctx *MapTypeContext) interface{} {
+func (v *Builder) VisitMapType(ctx *MapTypeContext) interface{} {
 	key := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
 	val := v.VisitElementType(ctx.ElementType().(*ElementTypeContext)).(IType)
 	return NewMapType(key, val)
 }
 
-func (v *ASTBuilder) VisitFunctionType(ctx *FunctionTypeContext) interface{} {
+func (v *Builder) VisitFunctionType(ctx *FunctionTypeContext) interface{} {
 	sig := v.VisitSignature(ctx.Signature().(*SignatureContext)).(*FuncSignature)
 	paramType := make([]IType, 0)
 	resultType := make([]IType, 0)
@@ -698,50 +698,50 @@ func (v *ASTBuilder) VisitFunctionType(ctx *FunctionTypeContext) interface{} {
 	return NewFunctionType(paramType, resultType) // *FunctionType
 }
 
-func (v *ASTBuilder) VisitSignature(ctx *SignatureContext) interface{} {
-	params := v.VisitParameters(ctx.Parameters().(*ParametersContext)).([]*SymbolEntry)
-	results := make([]*SymbolEntry, 0)
+func (v *Builder) VisitSignature(ctx *SignatureContext) interface{} {
+	params := v.VisitParameters(ctx.Parameters().(*ParametersContext)).([]*TableEntry)
+	results := make([]*TableEntry, 0)
 	if r := ctx.Result(); r != nil {
-		results = v.VisitResult(r.(*ResultContext)).([]*SymbolEntry)
+		results = v.VisitResult(r.(*ResultContext)).([]*TableEntry)
 	}
 	return &FuncSignature{params: params, results: results}
 }
 
-func (v *ASTBuilder) VisitResult(ctx *ResultContext) interface{} {
+func (v *Builder) VisitResult(ctx *ResultContext) interface{} {
 	if r := ctx.Tp(); r != nil {
 		tp := v.VisitTp(r.(*TpContext)).(IType)
-		return []*SymbolEntry{
+		return []*TableEntry{
 			NewSymbolEntry(NewLocationFromContext(ctx), "", VarEntry, tp, nil)}
 	} else if r := ctx.Parameters(); r != nil {
-		return v.VisitParameters(r.(*ParametersContext)).([]*SymbolEntry)
+		return v.VisitParameters(r.(*ParametersContext)).([]*TableEntry)
 	}
 	return nil // []*SymbolEntry
 }
 
-func (v *ASTBuilder) VisitParameters(ctx *ParametersContext) interface{} {
+func (v *Builder) VisitParameters(ctx *ParametersContext) interface{} {
 	if p := ctx.ParameterList(); p != nil {
-		return v.VisitParameterList(p.(*ParameterListContext)).([]*SymbolEntry)
+		return v.VisitParameterList(p.(*ParameterListContext)).([]*TableEntry)
 	} else {
-		return make([]*SymbolEntry, 0)
+		return make([]*TableEntry, 0)
 	} // []*SymbolEntry
 }
 
-func (v *ASTBuilder) VisitParameterList(ctx *ParameterListContext) interface{} {
-	list := make([]*SymbolEntry, 0)
+func (v *Builder) VisitParameterList(ctx *ParameterListContext) interface{} {
+	list := make([]*TableEntry, 0)
 	for _, d := range ctx.AllParameterDecl() {
-		list = append(list, v.VisitParameterDecl(d.(*ParameterDeclContext)).([]*SymbolEntry)...)
+		list = append(list, v.VisitParameterDecl(d.(*ParameterDeclContext)).([]*TableEntry)...)
 	}
 	return list
 }
 
-func (v *ASTBuilder) VisitParameterDecl(ctx *ParameterDeclContext) interface{} {
+func (v *Builder) VisitParameterDecl(ctx *ParameterDeclContext) interface{} {
 	tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
 	if idListCxt := ctx.IdentifierList(); idListCxt == nil {
-		return []*SymbolEntry{
+		return []*TableEntry{
 			NewSymbolEntry(NewLocationFromContext(ctx), "", VarEntry, tp, 0)}
 	} else {
 		idList := v.VisitIdentifierList(idListCxt.(*IdentifierListContext)).([]*IdExpr)
-		declList := make([]*SymbolEntry, 0)
+		declList := make([]*TableEntry, 0)
 		for _, id := range idList {
 			declList = append(declList, NewSymbolEntry(id.Loc, id.Name, VarEntry, tp, 0))
 		}
@@ -749,7 +749,7 @@ func (v *ASTBuilder) VisitParameterDecl(ctx *ParameterDeclContext) interface{} {
 	}
 }
 
-func (v *ASTBuilder) VisitOperand(ctx *OperandContext) interface{} {
+func (v *Builder) VisitOperand(ctx *OperandContext) interface{} {
 	if o := ctx.Literal(); o != nil {
 		return v.VisitLiteral(o.(*LiteralContext)).(IExprNode)
 	} else if o := ctx.OperandName(); o != nil {
@@ -760,16 +760,18 @@ func (v *ASTBuilder) VisitOperand(ctx *OperandContext) interface{} {
 	return nil // IExprNode
 }
 
-func (v *ASTBuilder) VisitLiteral(ctx *LiteralContext) interface{} {
+func (v *Builder) VisitLiteral(ctx *LiteralContext) interface{} {
 	if l := ctx.BasicLit(); l != nil {
 		return v.VisitBasicLit(l.(*BasicLitContext)).(IExprNode)
+	} else if l := ctx.CompositeLit(); l != nil {
+		return v.VisitCompositeLit(l.(*CompositeLitContext)).(IExprNode)
 	} else if l := ctx.FunctionLit(); l != nil {
 		return v.VisitFunctionLit(l.(*FunctionLitContext)).(IExprNode)
 	}
 	return nil
 }
 
-func (v *ASTBuilder) VisitBasicLit(ctx *BasicLitContext) interface{} {
+func (v *Builder) VisitBasicLit(ctx *BasicLitContext) interface{} {
 	if l := ctx.INT_LIT(); l != nil {
 		lit, _ := strconv.ParseInt(l.GetText(), 0, 0)
 		return NewIntConst(NewLocationFromTerminal(l), int(lit))
@@ -780,9 +782,12 @@ func (v *ASTBuilder) VisitBasicLit(ctx *BasicLitContext) interface{} {
 	return nil
 }
 
-func (v *ASTBuilder) VisitOperandName(ctx *OperandNameContext) interface{} {
+func (v *Builder) VisitOperandName(ctx *OperandNameContext) interface{} {
 	// Create operand identifier
 	name := ctx.IDENTIFIER().GetText()
+	if name == "nil" { // return nil value if operand is "nil"
+		return NewNilValue(NewLocationFromContext(ctx))
+	}
 	symbol, scope := v.cur.Lookup(name)
 	id := NewIdExpr(NewLocationFromContext(ctx), name, symbol)
 
@@ -793,19 +798,88 @@ func (v *ASTBuilder) VisitOperandName(ctx *OperandNameContext) interface{} {
 	return id
 }
 
-func (v *ASTBuilder) VisitStructType(ctx *StructTypeContext) interface{} {
+func (v *Builder) VisitCompositeLit(ctx *CompositeLitContext) interface{} {
+	litType := v.VisitLiteralType(ctx.LiteralType().(*LiteralTypeContext)).(IType)
+	elemList := v.VisitLiteralValue(ctx.LiteralValue().(*LiteralValueContext)).(*ElemList)
+	return NewCompLit(NewLocationFromContext(ctx), litType, elemList)
+}
+
+func (v *Builder) VisitLiteralType(ctx *LiteralTypeContext) interface{} {
+	if t := ctx.StructType(); t != nil {
+		return v.VisitStructType(t.(*StructTypeContext)).(IType)
+	} else if t := ctx.ArrayType(); t != nil {
+		return v.VisitArrayType(t.(*ArrayTypeContext)).(IType)
+	} else if t := ctx.ElementType(); t != nil {
+		tp := v.VisitElementType(t.(*ElementTypeContext)).(IType)
+		return NewArrayType(tp, -1)
+	} else if t := ctx.SliceType(); t != nil {
+		return v.VisitSliceType(t.(*SliceTypeContext)).(IType)
+	} else if t := ctx.MapType(); t != nil {
+		return v.VisitMapType(t.(*MapTypeContext)).(IType)
+	} else if t := ctx.TypeName(); t != nil {
+		return v.VisitTypeName(t.(*TypeNameContext)).(IType)
+	}
+	return nil
+}
+
+func (v *Builder) VisitStructType(ctx *StructTypeContext) interface{} {
 	table := NewSymbolTable()
 	for _, f := range ctx.AllFieldDecl() {
-		table.Add(v.VisitFieldDecl(f.(*FieldDeclContext)).([]*SymbolEntry)...)
+		table.Add(v.VisitFieldDecl(f.(*FieldDeclContext)).([]*TableEntry)...)
 	}
 	return NewStructType(table) // *StructType
 }
 
-func (v *ASTBuilder) VisitFieldDecl(ctx *FieldDeclContext) interface{} {
+func (v *Builder) VisitLiteralValue(ctx *LiteralValueContext) interface{} {
+	if e := ctx.ElementList(); e != nil {
+		return v.VisitElementList(e.(*ElementListContext)).(*ElemList)
+	} else {
+		return NewElemList(make([]*LitElem, 0))
+	}
+}
+
+func (v *Builder) VisitElementList(ctx *ElementListContext) interface{} {
+	elem := make([]*LitElem, 0)
+	for _, e := range ctx.AllKeyedElement() {
+		elem = append(elem, v.VisitKeyedElement(e.(*KeyedElementContext)).(*LitElem))
+	}
+	return NewElemList(elem)
+}
+
+func (v *Builder) VisitKeyedElement(ctx *KeyedElementContext) interface{} {
+	var key IExprNode
+	if k := ctx.Key(); k != nil {
+		key = v.VisitKey(k.(*KeyContext)).(IExprNode)
+	}
+	elem := v.VisitElement(ctx.Element().(*ElementContext)).(IExprNode)
+	return NewLitElem(NewLocationFromContext(ctx), key, elem)
+}
+
+func (v *Builder) VisitKey(ctx *KeyContext) interface{} {
+	if k := ctx.IDENTIFIER(); k != nil {
+		return NewIdExpr(NewLocationFromContext(ctx), k.GetText(), nil)
+	} else if k := ctx.Expression(); k != nil {
+		return v.VisitExpression(k.(*ExpressionContext)).(IExprNode)
+	} else if k := ctx.LiteralValue(); k != nil {
+		return v.VisitLiteralValue(k.(*LiteralValueContext)).(IExprNode)
+	}
+	return nil
+}
+
+func (v *Builder) VisitElement(ctx *ElementContext) interface{} {
+	if k := ctx.Expression(); k != nil {
+		return v.VisitExpression(k.(*ExpressionContext)).(IExprNode)
+	} else if k := ctx.LiteralValue(); k != nil {
+		return v.VisitLiteralValue(k.(*LiteralValueContext)).(IExprNode)
+	}
+	return nil
+}
+
+func (v *Builder) VisitFieldDecl(ctx *FieldDeclContext) interface{} {
 	if l := ctx.IdentifierList(); l != nil {
 		idList := v.VisitIdentifierList(l.(*IdentifierListContext)).([]*IdExpr)
 		tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
-		declList := make([]*SymbolEntry, 0)
+		declList := make([]*TableEntry, 0)
 		for _, id := range idList {
 			declList = append(declList, NewSymbolEntry(id.Loc, id.Name, VarEntry, tp, nil))
 		}
@@ -814,14 +888,14 @@ func (v *ASTBuilder) VisitFieldDecl(ctx *FieldDeclContext) interface{} {
 	return nil
 }
 
-func (v *ASTBuilder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
+func (v *Builder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 	// Get declaration from function context
 	decl := v.VisitFunction(ctx.Function().(*FunctionContext)).(*FuncDecl)
 
 	// Create lambda capture set (identifiers in different blocks may repeat)
 	// Visit scopes of declared function and its nested scopes (excluding the scopes of its nested
 	// functions), using DFS
-	closureSet := make(map[*SymbolEntry]bool, 0)
+	closureSet := make(map[*TableEntry]bool, 0)
 	stack := []*Scope{decl.Scope}
 	for len(stack) > 0 {
 		// Process operand identifiers in current scope
@@ -847,10 +921,10 @@ func (v *ASTBuilder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 		closureTable.Add(entry)
 	}
 
-	return NewFuncLiteral(NewLocationFromContext(ctx), decl, closureTable)
+	return NewFuncLit(NewLocationFromContext(ctx), decl, closureTable)
 }
 
-func (v *ASTBuilder) VisitPrimaryExpr(ctx *PrimaryExprContext) interface{} {
+func (v *Builder) VisitPrimaryExpr(ctx *PrimaryExprContext) interface{} {
 	if e := ctx.Operand(); e != nil {
 		return v.VisitOperand(e.(*OperandContext)).(IExprNode)
 	} else if e := ctx.Conversion(); e != nil {
@@ -867,11 +941,11 @@ func (v *ASTBuilder) VisitPrimaryExpr(ctx *PrimaryExprContext) interface{} {
 	return nil // IExprNode
 }
 
-func (v *ASTBuilder) VisitArguments(ctx *ArgumentsContext) interface{} {
+func (v *Builder) VisitArguments(ctx *ArgumentsContext) interface{} {
 	return v.VisitExpressionList(ctx.ExpressionList().(*ExpressionListContext)).([]IExprNode)
 }
 
-func (v *ASTBuilder) VisitExpression(ctx *ExpressionContext) interface{} {
+func (v *Builder) VisitExpression(ctx *ExpressionContext) interface{} {
 	// Forward unary expression
 	if e := ctx.UnaryExpr(); e != nil {
 		return v.VisitUnaryExpr(e.(*UnaryExprContext)).(IExprNode)
@@ -898,7 +972,7 @@ func (v *ASTBuilder) VisitExpression(ctx *ExpressionContext) interface{} {
 	return NewBinaryExpr(NewLocationFromContext(ctx), op, left, right) // IExprNode
 }
 
-func (v *ASTBuilder) VisitUnaryExpr(ctx *UnaryExprContext) interface{} {
+func (v *Builder) VisitUnaryExpr(ctx *UnaryExprContext) interface{} {
 	// Forward primary expression
 	if e := ctx.PrimaryExpr(); e != nil {
 		return v.VisitPrimaryExpr(e.(*PrimaryExprContext)).(IExprNode)

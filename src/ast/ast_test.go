@@ -11,6 +11,7 @@ const source = `
 package main
 
 func foo1() {
+	s := Foo{bar: 4, 4+5: 7}
 	a := 3
 	for i := 0; i < 4; i++ {
 		if b := i * i; b > 4 {
