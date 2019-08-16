@@ -1,6 +1,6 @@
 package ast
 
-type ASTVisitor interface {
+type IVisitor interface {
 	VisitProgram(program *ProgramNode) interface{}
 
 	VisitFuncDecl(decl *FuncDecl) interface{}
@@ -17,7 +17,8 @@ type ASTVisitor interface {
 
 	VisitExpr(expr IExprNode) interface{}
 	VisitLiteralExpr(expr ILiteralExpr) interface{}
-	VisitFuncLiteral(expr *FuncLiteral) interface{}
+	VisitFuncLit(expr *FuncLit) interface{}
+	VisitCompLit(lit *CompLit) interface{}
 	VisitConstExpr(expr *ConstExpr) interface{}
 	VisitNilValue(expr *NilValue) interface{}
 	VisitIdExpr(expr *IdExpr) interface{}
