@@ -77,18 +77,22 @@ var TypeToStr = map[TypeEnum]string{
 
 // Type interface
 type IType interface {
+	GetLocation() *Loc
 	ToString() string
 	GetTypeEnum() TypeEnum
 	IsIdentical(tp IType) bool
 }
 
 type BaseType struct {
+	Loc  *Loc
 	Enum TypeEnum
 }
 
-func NewBaseType(enum TypeEnum) *BaseType {
-	return &BaseType{Enum: enum}
+func NewBaseType(loc *Loc, enum TypeEnum) *BaseType {
+	return &BaseType{Loc: loc, Enum: enum}
 }
+
+func (t *BaseType) GetLocation() *Loc { return t.Loc }
 
 func (t *BaseType) ToString() string {
 	str, ok := TypeToStr[t.Enum]
@@ -112,8 +116,8 @@ type UnresolvedType struct {
 	Name string
 }
 
-func NewUnresolvedType(name string) *UnresolvedType {
-	return &UnresolvedType{BaseType: *NewBaseType(Unresolved), Name: name}
+func NewUnresolvedType(loc *Loc, name string) *UnresolvedType {
+	return &UnresolvedType{BaseType: *NewBaseType(loc, Unresolved), Name: name}
 }
 
 func (t *UnresolvedType) ToString() string {
@@ -135,11 +139,15 @@ type AliasType struct {
 	Under IType
 }
 
-func NewAliasType(name string, under IType) *AliasType {
+func NewAliasType(loc *Loc, name string, under IType) *AliasType {
 	if alias, ok := under.(*AliasType); ok {
 		under = alias.Under
 	}
-	return &AliasType{BaseType: *NewBaseType(under.GetTypeEnum()), Name: name, Under: under}
+	return &AliasType{
+		BaseType: *NewBaseType(loc, under.GetTypeEnum()),
+		Name:     name,
+		Under:    under,
+	}
 }
 
 func (t *AliasType) ToString() string {
@@ -174,11 +182,13 @@ var StrToPrimType = map[string]TypeEnum{
 	"string": String,
 }
 
-func NewPrimType(enum TypeEnum) *PrimType {
+func NewPrimType(loc *Loc, enum TypeEnum) *PrimType {
 	if (enum & PrimitiveType) == 0 {
 		panic("Not primitive type")
 	}
-	return &PrimType{BaseType: *NewBaseType(enum)}
+	return &PrimType{
+		BaseType: *NewBaseType(loc, enum),
+	}
 }
 
 func (t *PrimType) IsIdentical(o IType) bool {
@@ -201,8 +211,8 @@ type NilType struct {
 	BaseType
 }
 
-func NewNilType() *NilType {
-	return &NilType{BaseType: *NewBaseType(Nil)}
+func NewNilType(loc *Loc) *NilType {
+	return &NilType{BaseType: *NewBaseType(loc, Nil)}
 }
 
 func (t *NilType) IsIdentical(o IType) bool {
@@ -215,8 +225,8 @@ type PtrType struct {
 	Ref IType
 }
 
-func NewPtrType(ref IType) *PtrType {
-	return &PtrType{BaseType: *NewBaseType(Ptr), Ref: ref}
+func NewPtrType(loc *Loc, ref IType) *PtrType {
+	return &PtrType{BaseType: *NewBaseType(loc, Ptr), Ref: ref}
 }
 
 func (t *PtrType) ToString() string {
@@ -237,8 +247,12 @@ type ArrayType struct {
 	Len  int // -1 means its length cannot be determined temporarily
 }
 
-func NewArrayType(elem IType, len int) *ArrayType {
-	return &ArrayType{BaseType: *NewBaseType(Array), Elem: elem, Len: len}
+func NewArrayType(loc *Loc, elem IType, len int) *ArrayType {
+	return &ArrayType{
+		BaseType: *NewBaseType(loc, Array),
+		Elem:     elem,
+		Len:      len,
+	}
 }
 
 func (t *ArrayType) ToString() string {
@@ -258,8 +272,8 @@ type SliceType struct {
 	Elem IType
 }
 
-func NewSliceType(elem IType) *SliceType {
-	return &SliceType{BaseType: *NewBaseType(Slice), Elem: elem}
+func NewSliceType(loc *Loc, elem IType) *SliceType {
+	return &SliceType{BaseType: *NewBaseType(loc, Slice), Elem: elem}
 }
 
 func (t *SliceType) ToString() string {
@@ -279,8 +293,8 @@ type MapType struct {
 	Key, Val IType
 }
 
-func NewMapType(key, val IType) *MapType {
-	return &MapType{BaseType: *NewBaseType(Map), Key: key, Val: val}
+func NewMapType(loc *Loc, key, val IType) *MapType {
+	return &MapType{BaseType: *NewBaseType(loc, Map), Key: key, Val: val}
 }
 
 func (t *MapType) ToString() string {
@@ -300,8 +314,8 @@ type StructType struct {
 	Field *SymbolTable
 }
 
-func NewStructType(field *SymbolTable) *StructType {
-	return &StructType{BaseType: *NewBaseType(Struct), Field: field}
+func NewStructType(loc *Loc, field *SymbolTable) *StructType {
+	return &StructType{BaseType: *NewBaseType(loc, Struct), Field: field}
 }
 
 func (t *StructType) ToString() string {
@@ -342,7 +356,7 @@ type TupleType struct {
 }
 
 func NewTupleType(elem []IType) *TupleType {
-	return &TupleType{BaseType: *NewBaseType(Tuple), Elem: elem}
+	return &TupleType{BaseType: *NewBaseType(nil, Tuple), Elem: elem}
 }
 
 func (t *TupleType) ToString() string {
@@ -379,8 +393,8 @@ type FuncType struct {
 	Receiver      IType // optional for methods, not explicitly assigned in constructor
 }
 
-func NewFunctionType(param, result []IType) *FuncType {
-	return &FuncType{BaseType: *NewBaseType(Func), Param: NewTupleType(param),
+func NewFunctionType(loc *Loc, param, result []IType) *FuncType {
+	return &FuncType{BaseType: *NewBaseType(loc, Func), Param: NewTupleType(param),
 		Result: NewTupleType(result), Receiver: nil}
 }
 

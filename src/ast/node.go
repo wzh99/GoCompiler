@@ -1,22 +1,22 @@
 package ast
 
 type IASTNode interface {
-	GetLocation() *Location
-	LocationStr() string
+	GetLoc() *Loc
+	LocStr() string
 	ToStringTree() string
 }
 
 type BaseASTNode struct {
-	Loc *Location
+	Loc *Loc
 }
 
-func NewBaseASTNode(loc *Location) *BaseASTNode {
+func NewBaseASTNode(loc *Loc) *BaseASTNode {
 	return &BaseASTNode{loc}
 }
 
-func (n *BaseASTNode) GetLocation() *Location { return n.Loc }
+func (n *BaseASTNode) GetLoc() *Loc { return n.Loc }
 
-func (n *BaseASTNode) LocationStr() string { return n.Loc.ToString() }
+func (n *BaseASTNode) LocStr() string { return n.Loc.ToString() }
 
 func (n *BaseASTNode) ToStringTree() string { return "()" }
 
@@ -30,7 +30,8 @@ type ProgramNode struct {
 func NewProgramNode(pkgName string) *ProgramNode {
 	n := &ProgramNode{
 		BaseASTNode: *NewBaseASTNode(nil), PkgName: pkgName,
-		Global: NewFuncDecl(nil, "_global", NewFunctionType([]IType{}, []IType{}),
+		Global: NewFuncDecl(nil, "_global",
+			NewFunctionType(&Loc{line: 0, col: 0}, []IType{}, []IType{}),
 			NewGlobalScope(), nil),
 		Funcs: make([]*FuncDecl, 0),
 	}

@@ -6,6 +6,8 @@ func (v *BaseVisitor) VisitProgram(program *ProgramNode) interface{} { return ni
 
 func (v *BaseVisitor) VisitFuncDecl(decl *FuncDecl) interface{} { return nil }
 
+func (v *BaseVisitor) VisitScope(scope *Scope) interface{} { return nil }
+
 func (v *BaseVisitor) VisitStmt(stmt IStmtNode) interface{} { return nil }
 
 func (v *BaseVisitor) VisitBlockStmt(stmt *BlockStmt) interface{} { return nil }
@@ -43,3 +45,25 @@ func (v *BaseVisitor) VisitFuncCallExpr(expr *FuncCallExpr) interface{} { return
 func (v *BaseVisitor) VisitUnaryExpr(expr *UnaryExpr) interface{} { return nil }
 
 func (v *BaseVisitor) VisitBinaryExpr(expr *BinaryExpr) interface{} { return nil }
+
+func (v *BaseVisitor) VisitType(tp IType) interface{} { return nil }
+
+func (v *BaseVisitor) VisitUnresolvedType(tp *UnresolvedType) interface{} { return nil }
+
+func (v *BaseVisitor) VisitAliasType(tp *AliasType) interface{} { return nil }
+
+func (v *BaseVisitor) VisitPrimType(tp *PrimType) interface{} { return nil }
+
+func (v *BaseVisitor) VisitNilType(tp *NilType) interface{} { return nil }
+
+func (v *BaseVisitor) VisitPtrType(tp *PtrType) interface{} { return nil }
+
+func (v *BaseVisitor) VisitArrayType(tp *ArrayType) interface{} { return nil }
+
+func (v *BaseVisitor) VisitSliceType(tp *SliceType) interface{} { return nil }
+
+func (v *BaseVisitor) VisitMapType(tp *MapType) interface{} { return nil }
+
+func (v *BaseVisitor) VisitStructType(tp *StructType) interface{} { return nil }
+
+func (v *BaseVisitor) VisitFuncType(tp *FuncType) interface{} { return nil }

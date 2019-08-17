@@ -21,7 +21,7 @@ type BaseExprNode struct {
 }
 
 // Type of expressions will be left empty when initialized, except literals.
-func NewBaseExprNode(loc *Location) *BaseExprNode {
+func NewBaseExprNode(loc *Loc) *BaseExprNode {
 	return &BaseExprNode{BaseStmtNode: *NewBaseStmtNode(loc)}
 }
 
@@ -39,7 +39,7 @@ type BaseLiteralExpr struct {
 	BaseExprNode
 }
 
-func NewBaseLiteralExpr(loc *Location) *BaseLiteralExpr {
+func NewBaseLiteralExpr(loc *Loc) *BaseLiteralExpr {
 	return &BaseLiteralExpr{BaseExprNode: *NewBaseExprNode(loc)}
 }
 
@@ -52,20 +52,20 @@ type FuncLit struct {
 	Closure *SymbolTable
 }
 
-func NewFuncLit(loc *Location, decl *FuncDecl, closure *SymbolTable) *FuncLit {
+func NewFuncLit(loc *Loc, decl *FuncDecl, closure *SymbolTable) *FuncLit {
 	return &FuncLit{BaseLiteralExpr: *NewBaseLiteralExpr(loc), Decl: decl, Closure: closure}
 }
 
 func (l *FuncLit) GetValue() interface{} { return l.Decl }
 
 type LitElem struct {
-	Loc  *Location
+	Loc  *Loc
 	Key  IExprNode
 	Type IType
 	Elem IExprNode
 }
 
-func NewLitElem(loc *Location, key IExprNode, elem IExprNode) *LitElem {
+func NewLitElem(loc *Loc, key IExprNode, elem IExprNode) *LitElem {
 	return &LitElem{
 		Loc:  loc,
 		Key:  key,
@@ -105,7 +105,7 @@ type CompLit struct {
 	Keyed bool
 }
 
-func NewCompLit(loc *Location, tp IType, elem *ElemList) *CompLit {
+func NewCompLit(loc *Loc, tp IType, elem *ElemList) *CompLit {
 	l := &CompLit{
 		BaseLiteralExpr: *NewBaseLiteralExpr(loc),
 		Elem:            elem.Elem,
@@ -125,21 +125,21 @@ type ConstExpr struct {
 
 func (e *ConstExpr) GetValue() interface{} { return e.Val }
 
-func NewIntConst(loc *Location, val int) *ConstExpr {
+func NewIntConst(loc *Loc, val int) *ConstExpr {
 	e := &ConstExpr{BaseLiteralExpr: *NewBaseLiteralExpr(loc), Val: val}
-	e.Type = NewPrimType(Int)
+	e.Type = NewPrimType(loc, Int)
 	return e
 }
 
-func NewFloatConst(loc *Location, val float64) *ConstExpr {
+func NewFloatConst(loc *Loc, val float64) *ConstExpr {
 	e := &ConstExpr{BaseLiteralExpr: *NewBaseLiteralExpr(loc), Val: val}
-	e.Type = NewPrimType(Float64)
+	e.Type = NewPrimType(loc, Float64)
 	return e
 }
 
-func NewBoolConst(loc *Location, val bool) *ConstExpr {
+func NewBoolConst(loc *Loc, val bool) *ConstExpr {
 	e := &ConstExpr{BaseLiteralExpr: *NewBaseLiteralExpr(loc), Val: val}
-	e.Type = NewPrimType(Bool)
+	e.Type = NewPrimType(loc, Bool)
 	return e
 }
 
@@ -176,9 +176,9 @@ type NilValue struct {
 	BaseLiteralExpr
 }
 
-func NewNilValue(loc *Location) *NilValue {
+func NewNilValue(loc *Loc) *NilValue {
 	n := &NilValue{BaseLiteralExpr: *NewBaseLiteralExpr(loc)}
-	n.Type = NewNilType()
+	n.Type = NewNilType(loc)
 	return n
 }
 
@@ -204,7 +204,7 @@ var IsKeyword = map[string]bool{
 	"select": true, "struct": true, "switch": true, "type": true, "var": true,
 }
 
-func NewIdExpr(loc *Location, name string, symbol *TableEntry) *IdExpr {
+func NewIdExpr(loc *Loc, name string, symbol *TableEntry) *IdExpr {
 	return &IdExpr{BaseExprNode: *NewBaseExprNode(loc), Name: name, Symbol: symbol}
 }
 
@@ -219,7 +219,7 @@ type FuncCallExpr struct {
 	Args []IExprNode
 }
 
-func NewFuncCallExpr(loc *Location, fun IExprNode, args []IExprNode) *FuncCallExpr {
+func NewFuncCallExpr(loc *Loc, fun IExprNode, args []IExprNode) *FuncCallExpr {
 	return &FuncCallExpr{BaseExprNode: *NewBaseExprNode(loc), Func: fun, Args: args}
 }
 
@@ -265,7 +265,7 @@ func init() {
 	}
 }
 
-func NewUnaryExpr(loc *Location, op UnaryOp, expr IExprNode) *UnaryExpr {
+func NewUnaryExpr(loc *Loc, op UnaryOp, expr IExprNode) *UnaryExpr {
 	return &UnaryExpr{BaseExprNode: *NewBaseExprNode(loc), Op: op, Expr: expr}
 }
 
@@ -314,7 +314,7 @@ type BinaryExpr struct {
 	Left, Right IExprNode
 }
 
-func NewBinaryExpr(loc *Location, op BinaryOp, left, right IExprNode) *BinaryExpr {
+func NewBinaryExpr(loc *Loc, op BinaryOp, left, right IExprNode) *BinaryExpr {
 	// result type of binary expression is determined during semantic analysis
 	return &BinaryExpr{BaseExprNode: *NewBaseExprNode(loc), Op: op, Left: left, Right: right}
 }

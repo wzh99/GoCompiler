@@ -5,26 +5,26 @@ import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 )
 
-type Location struct {
+type Loc struct {
 	line, col int
 }
 
-func NewLocationFromToken(token antlr.Token) *Location {
-	return &Location{line: token.GetLine(), col: token.GetColumn()}
+func NewLocFromToken(token antlr.Token) *Loc {
+	return &Loc{line: token.GetLine(), col: token.GetColumn()}
 }
 
-func NewLocationFromContext(ctx antlr.ParserRuleContext) *Location {
-	return NewLocationFromToken(ctx.GetStart())
+func NewLocFromContext(ctx antlr.ParserRuleContext) *Loc {
+	return NewLocFromToken(ctx.GetStart())
 }
 
-func NewLocationFromTerminal(node antlr.TerminalNode) *Location {
-	return NewLocationFromToken(node.GetSymbol())
+func NewLocFromTerminal(node antlr.TerminalNode) *Loc {
+	return NewLocFromToken(node.GetSymbol())
 }
 
-func (l *Location) GetLine() int { return l.line }
+func (l *Loc) GetLine() int { return l.line }
 
-func (l *Location) GetColumn() int { return l.col }
+func (l *Loc) GetColumn() int { return l.col }
 
-func (l *Location) ToString() string {
+func (l *Loc) ToString() string {
 	return fmt.Sprintf("line %d, column %d", l.line, l.col)
 }

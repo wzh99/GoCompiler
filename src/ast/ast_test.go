@@ -11,7 +11,7 @@ const source = `
 package main
 
 func foo1() {
-	s := Foo{bar: 4, 4+5: 7}
+	var f Foo
 	a := 3
 	for i := 0; i < 4; i++ {
 		if b := i * i; b > 4 {
@@ -22,6 +22,12 @@ func foo1() {
 		continue
 	}
 }
+
+type Foo struct {
+	b Bar
+}
+
+type Bar int
 `
 
 func TestASTBuild(t *testing.T) {
@@ -33,5 +39,6 @@ func TestASTBuild(t *testing.T) {
 	fmt.Println(tree.ToStringTree(nil, parser))
 	visitor := NewASTBuilder()
 	ast := visitor.VisitSourceFile(tree.(*SourceFileContext)).(*ProgramNode)
-	ast.ToStringTree()
+	sema := NewSemaChecker()
+	sema.VisitProgram(ast)
 }

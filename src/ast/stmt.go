@@ -10,7 +10,7 @@ type BaseStmtNode struct {
 	BaseASTNode
 }
 
-func NewBaseStmtNode(loc *Location) *BaseStmtNode {
+func NewBaseStmtNode(loc *Loc) *BaseStmtNode {
 	return &BaseStmtNode{BaseASTNode: *NewBaseASTNode(loc)}
 }
 
@@ -22,7 +22,7 @@ type BlockStmt struct {
 	Ctrl IStmtNode
 }
 
-func NewBlockStmt(loc *Location, scope *Scope) *BlockStmt {
+func NewBlockStmt(loc *Loc, scope *Scope) *BlockStmt {
 	return &BlockStmt{BaseASTNode: *NewBaseASTNode(loc), Scope: scope}
 }
 
@@ -45,7 +45,7 @@ type AssignStmt struct {
 	Init bool
 }
 
-func NewAssignStmt(loc *Location, lhs, rhs []IExprNode) *AssignStmt {
+func NewAssignStmt(loc *Loc, lhs, rhs []IExprNode) *AssignStmt {
 	return &AssignStmt{
 		BaseASTNode: *NewBaseASTNode(loc),
 		Lhs:         lhs,
@@ -54,7 +54,7 @@ func NewAssignStmt(loc *Location, lhs, rhs []IExprNode) *AssignStmt {
 	}
 }
 
-func NewInitStmt(loc *Location, lhs, rhs []IExprNode) *AssignStmt {
+func NewInitStmt(loc *Loc, lhs, rhs []IExprNode) *AssignStmt {
 	return &AssignStmt{
 		BaseASTNode: *NewBaseASTNode(loc),
 		Lhs:         lhs,
@@ -87,7 +87,7 @@ type IncDecStmt struct {
 	Inc  bool // true: ++, false: --
 }
 
-func NewIncDecStmt(loc *Location, expr IExprNode, inc bool) *IncDecStmt {
+func NewIncDecStmt(loc *Loc, expr IExprNode, inc bool) *IncDecStmt {
 	return &IncDecStmt{
 		BaseASTNode: *NewBaseASTNode(loc),
 		Expr:        expr,
@@ -110,7 +110,7 @@ type ReturnStmt struct {
 	Expr []IExprNode
 }
 
-func NewReturnStmt(loc *Location, expr []IExprNode) *ReturnStmt {
+func NewReturnStmt(loc *Loc, expr []IExprNode) *ReturnStmt {
 	return &ReturnStmt{
 		BaseASTNode: *NewBaseASTNode(loc),
 		Expr:        expr,
@@ -139,7 +139,7 @@ type ForClauseStmt struct {
 	Block *BlockStmt
 }
 
-func NewForClauseStmt(loc *Location, init IStmtNode, cond IExprNode, post IStmtNode,
+func NewForClauseStmt(loc *Loc, init IStmtNode, cond IExprNode, post IStmtNode,
 	block *BlockStmt) *ForClauseStmt {
 	s := &ForClauseStmt{
 		BaseASTNode: *NewBaseASTNode(loc),
@@ -170,7 +170,7 @@ type BreakStmt struct {
 	Target IStmtNode
 }
 
-func NewBreakStmt(loc *Location, target IStmtNode) *BreakStmt {
+func NewBreakStmt(loc *Loc, target IStmtNode) *BreakStmt {
 	return &BreakStmt{
 		BaseASTNode: *NewBaseASTNode(loc),
 		Target:      target,
@@ -178,7 +178,7 @@ func NewBreakStmt(loc *Location, target IStmtNode) *BreakStmt {
 }
 
 func (s *BreakStmt) ToStringTree() string {
-	return fmt.Sprintf("(break %s)", s.Target.LocationStr())
+	return fmt.Sprintf("(break %s)", s.Target.LocStr())
 }
 
 type ContinueStmt struct {
@@ -186,7 +186,7 @@ type ContinueStmt struct {
 	Target IStmtNode
 }
 
-func NewContinueStmt(loc *Location, target IStmtNode) *ContinueStmt {
+func NewContinueStmt(loc *Loc, target IStmtNode) *ContinueStmt {
 	return &ContinueStmt{
 		BaseASTNode: *NewBaseASTNode(loc),
 		Target:      target,
@@ -194,7 +194,7 @@ func NewContinueStmt(loc *Location, target IStmtNode) *ContinueStmt {
 }
 
 func (s *ContinueStmt) ToStringTree() string {
-	return fmt.Sprintf("(continue %s)", s.Target.LocationStr())
+	return fmt.Sprintf("(continue %s)", s.Target.LocStr())
 }
 
 type IfStmt struct {
@@ -205,7 +205,7 @@ type IfStmt struct {
 	Else  IStmtNode // optional
 }
 
-func NewIfStmt(loc *Location, init IStmtNode, cond IExprNode, block *BlockStmt,
+func NewIfStmt(loc *Loc, init IStmtNode, cond IExprNode, block *BlockStmt,
 	els IStmtNode) *IfStmt {
 	return &IfStmt{
 		BaseASTNode: *NewBaseASTNode(loc),

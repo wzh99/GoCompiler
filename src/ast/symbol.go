@@ -10,14 +10,14 @@ const (
 )
 
 type TableEntry struct {
-	Loc  *Location
+	Loc  *Loc
 	Name string
 	Flag EntryFlag
 	Type IType       // if nil, the type of current symbol is unknown
 	Val  interface{} // reserved for constant expression
 }
 
-func NewSymbolEntry(loc *Location, name string, flag EntryFlag, tp IType,
+func NewSymbolEntry(loc *Loc, name string, flag EntryFlag, tp IType,
 	val interface{}) *TableEntry {
 	return &TableEntry{Loc: loc, Name: name, Flag: flag, Type: tp, Val: val}
 }

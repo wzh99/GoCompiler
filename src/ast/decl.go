@@ -16,7 +16,7 @@ type FuncDecl struct {
 	NamedRet []*TableEntry // for named return values
 }
 
-func NewFuncDecl(loc *Location, name string, tp *FuncType, scope *Scope,
+func NewFuncDecl(loc *Loc, name string, tp *FuncType, scope *Scope,
 	namedRet []*TableEntry) *FuncDecl {
 	d := &FuncDecl{BaseASTNode: *NewBaseASTNode(loc), Name: name, Type: tp, Scope: scope,
 		Stmts: make([]IStmtNode, 0), NamedRet: namedRet}
@@ -31,7 +31,7 @@ func (d *FuncDecl) AddStmt(stmt IStmtNode) {
 }
 
 func (d *FuncDecl) ToStringTree() string {
-	str := "(funcDecl"
+	str := "(" + d.Name
 	for _, s := range d.Stmts {
 		str += " " + s.ToStringTree()
 	}
@@ -39,7 +39,7 @@ func (d *FuncDecl) ToStringTree() string {
 }
 
 func (d *FuncDecl) GenSymbol() *TableEntry {
-	return NewSymbolEntry(d.GetLocation(), d.Name, FuncEntry, d.Type, nil)
+	return NewSymbolEntry(d.GetLoc(), d.Name, FuncEntry, d.Type, nil)
 }
 
 // An intermediate structure when building AST

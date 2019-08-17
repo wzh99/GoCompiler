@@ -4,6 +4,7 @@ type IVisitor interface {
 	VisitProgram(program *ProgramNode) interface{}
 
 	VisitFuncDecl(decl *FuncDecl) interface{}
+	VisitScope(scope *Scope) interface{}
 
 	VisitStmt(stmt IStmtNode) interface{}
 	VisitBlockStmt(stmt *BlockStmt) interface{}
@@ -18,11 +19,23 @@ type IVisitor interface {
 	VisitExpr(expr IExprNode) interface{}
 	VisitLiteralExpr(expr ILiteralExpr) interface{}
 	VisitFuncLit(expr *FuncLit) interface{}
-	VisitCompLit(lit *CompLit) interface{}
+	VisitCompLit(expr *CompLit) interface{}
 	VisitConstExpr(expr *ConstExpr) interface{}
 	VisitNilValue(expr *NilValue) interface{}
 	VisitIdExpr(expr *IdExpr) interface{}
 	VisitFuncCallExpr(expr *FuncCallExpr) interface{}
 	VisitUnaryExpr(expr *UnaryExpr) interface{}
 	VisitBinaryExpr(expr *BinaryExpr) interface{}
+
+	VisitType(tp IType) interface{}
+	VisitUnresolvedType(tp *UnresolvedType) interface{}
+	VisitAliasType(tp *AliasType) interface{}
+	VisitPrimType(tp *PrimType) interface{}
+	VisitNilType(tp *NilType) interface{}
+	VisitPtrType(tp *PtrType) interface{}
+	VisitArrayType(tp *ArrayType) interface{}
+	VisitSliceType(tp *SliceType) interface{}
+	VisitMapType(tp *MapType) interface{}
+	VisitStructType(tp *StructType) interface{}
+	VisitFuncType(tp *FuncType) interface{}
 }

@@ -3,12 +3,14 @@ package ast
 import "fmt"
 
 type Scope struct {
-	Parent    *Scope
-	Children  []*Scope
-	Symbols   *SymbolTable
-	OperandId map[*IdExpr]bool // all operand identifiers mentioned in statements
-	Global    bool
-	Func      *FuncDecl // point back to the function this scope belongs to
+	Parent   *Scope
+	Children []*Scope
+	Symbols  *SymbolTable
+	Global   bool
+	// point back to the function this scope belongs to
+	Func *FuncDecl
+	// all operand identifiers mentioned in statements, which helps closure construction
+	operandId map[*IdExpr]bool
 }
 
 func NewGlobalScope() *Scope {
@@ -39,10 +41,10 @@ func (s *Scope) AddSymbol(entry *TableEntry) {
 }
 
 func (s *Scope) AddOperandId(id *IdExpr) {
-	if s.OperandId == nil {
-		s.OperandId = make(map[*IdExpr]bool)
+	if s.operandId == nil {
+		s.operandId = make(map[*IdExpr]bool)
 	}
-	s.OperandId[id] = true
+	s.operandId[id] = true
 }
 
 // Look up symbol, considering nested scopes

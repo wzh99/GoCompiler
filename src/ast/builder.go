@@ -14,7 +14,7 @@ type Builder struct {
 	// Point to the program being constructed
 	prog *ProgramNode
 	// Track receiver of the method next child scope belongs to
-	// Since methods and functions share a single function body AST construction procedure,
+	// Since methods and functions share a single function body construction procedure,
 	// the procedure itself has no idea whether it has receiver.
 	receiver *TableEntry
 	// Block stack
@@ -34,11 +34,11 @@ func (v *Builder) addStmt(stmt IStmtNode) {
 	}
 }
 
-func (v *Builder) pushFuncBlock() {
+func (v *Builder) pushFunc() {
 	v.blocks = append(v.blocks, make([]*BlockStmt, 0))
 }
 
-func (v *Builder) popFuncBlock() {
+func (v *Builder) popFunc() {
 	v.blocks = v.blocks[:len(v.blocks)-1]
 }
 
@@ -46,11 +46,11 @@ func (v *Builder) getBlocksOfCurFunc() []*BlockStmt {
 	return v.blocks[len(v.blocks)-1]
 }
 
-func (v *Builder) pushBlockStmt(block *BlockStmt) {
+func (v *Builder) pushBlock(block *BlockStmt) {
 	v.blocks[len(v.blocks)-1] = append(v.blocks[len(v.blocks)-1], block)
 }
 
-func (v *Builder) popBlockStmt() {
+func (v *Builder) popBlock() {
 	v.blocks[len(v.blocks)-1] = v.blocks[len(v.blocks)-1][:len(v.blocks[len(v.blocks)-1])-1]
 }
 
@@ -120,18 +120,18 @@ func (v *Builder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 	// Ensure same length
 	if len(lhs) != len(rhs) {
 		panic(fmt.Errorf("%s assignment count mismatch: #%d = #%d",
-			NewLocationFromContext(ctx).ToString(), len(lhs), len(rhs)))
+			NewLocFromContext(ctx).ToString(), len(lhs), len(rhs)))
 	}
 	// lhs symbols haven't been defined before
 	for _, id := range lhs {
 		if v.cur.CheckDefined(id.Name) { // redefined symbol
-			panic(fmt.Errorf("%s redefined symbol: %s", id.LocationStr(), id.Name))
+			panic(fmt.Errorf("%s redefined symbol: %s", id.LocStr(), id.Name))
 		}
 	}
 	// rhs symbols are all constant expressions
 	for _, expr := range rhs {
 		if _, ok := expr.(*ConstExpr); !ok {
-			panic(fmt.Errorf("%s not constant expression", expr.LocationStr()))
+			panic(fmt.Errorf("%s not constant expression", expr.LocStr()))
 		}
 	}
 
@@ -143,7 +143,7 @@ func (v *Builder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 	for i := range lhs {
 		tp := rhs[i].GetType() // rhs must be constant expression, its type must be clear then
 		val := rhs[i].(*ConstExpr).Val
-		loc := lhs[i].GetLocation()
+		loc := lhs[i].GetLoc()
 
 		// Check if need conversion in compile time
 		if specTp != nil && !specTp.IsIdentical(tp) {
@@ -168,9 +168,9 @@ func (v *Builder) VisitIdentifierList(ctx *IdentifierListContext) interface{} {
 	for _, id := range ctx.AllIDENTIFIER() {
 		if IsKeyword[id.GetText()] {
 			panic(fmt.Errorf("%s cannot use keyword as identifier: %s",
-				NewLocationFromTerminal(id).ToString(), id.GetText()))
+				NewLocFromTerminal(id).ToString(), id.GetText()))
 		}
-		idList = append(idList, NewIdExpr(NewLocationFromToken(id.GetSymbol()), id.GetText(),
+		idList = append(idList, NewIdExpr(NewLocFromToken(id.GetSymbol()), id.GetText(),
 			nil))
 	}
 	return idList // []*IdExpr
@@ -194,8 +194,8 @@ func (v *Builder) VisitTypeDecl(ctx *TypeDeclContext) interface{} {
 func (v *Builder) VisitTypeSpec(ctx *TypeSpecContext) interface{} {
 	name := ctx.IDENTIFIER().GetText()
 	tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
-	alias := NewAliasType(name, tp)
-	v.cur.AddSymbol(NewSymbolEntry(NewLocationFromContext(ctx), name, TypeEntry, alias, nil))
+	alias := NewAliasType(NewLocFromContext(ctx), name, tp)
+	v.cur.AddSymbol(NewSymbolEntry(NewLocFromContext(ctx), name, TypeEntry, alias, nil))
 	return nil
 }
 
@@ -228,16 +228,17 @@ func (v *Builder) VisitFunction(ctx *FunctionContext) interface{} {
 	// Panic if mixed named and unnamed parameters
 	if len(namedRet) > 0 && len(namedRet) != len(resultType) {
 		panic(fmt.Errorf("%s function has both named and unnamed parameters",
-			NewLocationFromContext(ctx).ToString()))
+			NewLocFromContext(ctx).ToString()))
 	}
 
 	// Initialize function declaration node
-	decl := NewFuncDecl(NewLocationFromContext(ctx), "", NewFunctionType(paramType, resultType),
+	decl := NewFuncDecl(NewLocFromContext(ctx), "",
+		NewFunctionType(NewLocFromContext(ctx), paramType, resultType),
 		NewLocalScope(v.cur), namedRet)
 	if v.receiver != nil { // add receiver to function type if it is a method
 		decl.Type.Receiver = v.receiver.Type
 	}
-	v.pushFuncBlock()
+	v.pushFunc()
 	v.pushScope(decl.Scope) // move scope cursor deeper
 
 	// Add named parameter and return value symbols to the function scope
@@ -260,12 +261,12 @@ func (v *Builder) VisitFunction(ctx *FunctionContext) interface{} {
 			lhs = append(lhs, NewIdExpr(r.Loc, r.Name, r))
 			rhs = append(rhs, NewZeroValue())
 		}
-		v.addStmt(NewAssignStmt(NewLocationFromContext(ctx), lhs, rhs))
+		v.addStmt(NewAssignStmt(NewLocFromContext(ctx), lhs, rhs))
 	}
 
 	// Build statement AST nodes
 	v.VisitBlock(ctx.Block().(*BlockContext)) // statements are added during visit
-	v.popFuncBlock()
+	v.popFunc()
 	v.popScope() // move cursor back
 
 	return decl // *FuncDecl
@@ -285,7 +286,7 @@ func (v *Builder) VisitReceiver(ctx *ReceiverContext) interface{} {
 	decl := v.VisitParameterDecl(ctx.ParameterDecl().(*ParameterDeclContext)).([]*TableEntry)
 	if len(decl) != 1 {
 		panic(fmt.Errorf("%s expect one paramter in method receiver, have %d",
-			NewLocationFromContext(ctx).ToString(), len(decl)))
+			NewLocFromContext(ctx).ToString(), len(decl)))
 	}
 	return decl[0] // *SymbolEntry
 }
@@ -318,14 +319,14 @@ func (v *Builder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 	// to a function that return multiple values. We cannot tell whether there is any error.
 	if len(exprList) > 1 && len(exprList) != len(idList) {
 		panic(fmt.Errorf("%s assignment count mismatch %d = %d",
-			NewLocationFromContext(ctx).ToString(), len(idList), len(exprList)))
+			NewLocFromContext(ctx).ToString(), len(idList), len(exprList)))
 	}
 
 	// Add variables to symbol table
 	lhs := make([]IExprNode, 0)
 	for _, id := range idList {
 		// type maybe unknown at this time
-		id.Symbol = NewSymbolEntry(id.GetLocation(), id.Name, VarEntry, specType, nil)
+		id.Symbol = NewSymbolEntry(id.GetLoc(), id.Name, VarEntry, specType, nil)
 		v.cur.AddSymbol(id.Symbol)
 		lhs = append(lhs, id)
 	}
@@ -337,7 +338,7 @@ func (v *Builder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 			exprList[i] = NewZeroValue()
 		}
 	}
-	v.addStmt(NewInitStmt(NewLocationFromContext(ctx), lhs, exprList))
+	v.addStmt(NewInitStmt(NewLocFromContext(ctx), lhs, exprList))
 
 	return nil
 }
@@ -372,13 +373,13 @@ func (v *Builder) VisitStatement(ctx *StatementContext) interface{} {
 		// Create new scope for block statements
 		v.pushScope(NewLocalScope(v.cur))
 		// Create block statement and push block onto stack
-		block := NewBlockStmt(NewLocationFromContext(ctx), v.cur)
+		block := NewBlockStmt(NewLocFromContext(ctx), v.cur)
 		v.addStmt(block)
-		v.pushBlockStmt(block)
+		v.pushBlock(block)
 		// Visit block
 		v.VisitBlock(s.(*BlockContext))
 		// Restore parent scope and block
-		v.popBlockStmt()
+		v.popBlock()
 		v.popScope()
 	} else if s := ctx.IfStmt(); s != nil {
 		v.VisitIfStmt(s.(*IfStmtContext))
@@ -410,7 +411,7 @@ func (v *Builder) VisitExpressionStmt(ctx *ExpressionStmtContext) interface{} {
 func (v *Builder) VisitIncDecStmt(ctx *IncDecStmtContext) interface{} {
 	expr := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(IExprNode)
 	inc := ctx.GetOp().GetText() == "++"
-	return NewIncDecStmt(NewLocationFromContext(ctx), expr, inc)
+	return NewIncDecStmt(NewLocFromContext(ctx), expr, inc)
 }
 
 func (v *Builder) VisitAssignment(ctx *AssignmentContext) interface{} {
@@ -418,9 +419,9 @@ func (v *Builder) VisitAssignment(ctx *AssignmentContext) interface{} {
 	if op := ctx.GetOp(); op != nil { // assignment after operation
 		rhs := v.VisitExpression(ctx.Expression(1).(*ExpressionContext)).(IExprNode)
 		lhs := v.VisitExpression(ctx.Expression(0).(*ExpressionContext)).(IExprNode)
-		opExpr := NewBinaryExpr(NewLocationFromContext(ctx), BinaryOpStrToEnum[op.GetText()],
+		opExpr := NewBinaryExpr(NewLocFromContext(ctx), BinaryOpStrToEnum[op.GetText()],
 			lhs, rhs)
-		stmt = NewAssignStmt(NewLocationFromContext(ctx), []IExprNode{lhs}, []IExprNode{opExpr})
+		stmt = NewAssignStmt(NewLocFromContext(ctx), []IExprNode{lhs}, []IExprNode{opExpr})
 
 	} else { // only assignment, but can assign multiple values
 		rhs := v.VisitExpressionList(ctx.ExpressionList(1).(*ExpressionListContext)).([]IExprNode)
@@ -428,9 +429,9 @@ func (v *Builder) VisitAssignment(ctx *AssignmentContext) interface{} {
 		// Check length of expressions on both sides, similar to variable specification
 		if len(rhs) > 1 && len(lhs) != len(rhs) {
 			panic(fmt.Errorf("%s assignment count mismatch %d = %d",
-				NewLocationFromContext(ctx).ToString(), len(lhs), len(rhs)))
+				NewLocFromContext(ctx).ToString(), len(lhs), len(rhs)))
 		}
-		stmt = NewAssignStmt(NewLocationFromContext(ctx), lhs, rhs)
+		stmt = NewAssignStmt(NewLocFromContext(ctx), lhs, rhs)
 	}
 	return stmt
 }
@@ -443,7 +444,7 @@ func (v *Builder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
 	// Check if numbers of expressions on both sides match
 	if len(exprList) > 1 && len(idList) != len(exprList) {
 		panic(fmt.Errorf("%s assignment count mismatch %d = %d",
-			NewLocationFromContext(ctx).ToString(), len(idList), len(exprList)))
+			NewLocFromContext(ctx).ToString(), len(idList), len(exprList)))
 	}
 
 	// Add undefined identifier to symbol table (some can be defined at current scope)
@@ -467,11 +468,11 @@ func (v *Builder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
 	// Report error if no new variables are declared
 	if nNew == 0 {
 		panic(fmt.Errorf("%s no new variables are declared",
-			NewLocationFromContext(ctx).ToString()))
+			NewLocFromContext(ctx).ToString()))
 	}
 
 	// Add statement to current function
-	stmt := NewInitStmt(NewLocationFromContext(ctx), lhs, exprList)
+	stmt := NewInitStmt(NewLocFromContext(ctx), lhs, exprList)
 	return stmt
 }
 
@@ -480,7 +481,7 @@ func (v *Builder) VisitReturnStmt(ctx *ReturnStmtContext) interface{} {
 	if exprCtx := ctx.ExpressionList(); exprCtx != nil {
 		exprList = v.VisitExpressionList(exprCtx.(*ExpressionListContext)).([]IExprNode)
 	}
-	v.addStmt(NewReturnStmt(NewLocationFromContext(ctx), exprList))
+	v.addStmt(NewReturnStmt(NewLocFromContext(ctx), exprList))
 	return nil
 }
 
@@ -495,7 +496,7 @@ FindStmt:
 			break FindStmt
 		}
 	}
-	loc := NewLocationFromContext(ctx)
+	loc := NewLocFromContext(ctx)
 	if target == nil {
 		panic(fmt.Errorf("%s cannot find break target", loc.ToString()))
 	}
@@ -514,7 +515,7 @@ FindStmt:
 			break FindStmt
 		}
 	}
-	loc := NewLocationFromContext(ctx)
+	loc := NewLocFromContext(ctx)
 	if target == nil {
 		panic(fmt.Errorf("%s cannot find continue target", loc.ToString()))
 	}
@@ -534,10 +535,10 @@ func (v *Builder) VisitIfStmt(ctx *IfStmtContext) interface{} {
 	// Visit if block
 	v.pushScope(NewLocalScope(v.cur)) // enter if block scope
 	blockCtx := ctx.Block(0).(*BlockContext)
-	blockStmt := NewBlockStmt(NewLocationFromContext(blockCtx), v.cur)
-	v.pushBlockStmt(blockStmt)
+	blockStmt := NewBlockStmt(NewLocFromContext(blockCtx), v.cur)
+	v.pushBlock(blockStmt)
 	v.VisitBlock(blockCtx)
-	v.popBlockStmt()
+	v.popBlock()
 	v.popScope() // exit block scope
 
 	// Visit else case
@@ -546,17 +547,17 @@ func (v *Builder) VisitIfStmt(ctx *IfStmtContext) interface{} {
 		els = v.VisitIfStmt(s.(*IfStmtContext)).(*IfStmt)
 	} else if s := ctx.Block(1); s != nil {
 		v.pushScope(NewLocalScope(v.cur)) // enter else block scope
-		block := NewBlockStmt(NewLocationFromContext(ctx), v.cur)
-		v.pushBlockStmt(block)
+		block := NewBlockStmt(NewLocFromContext(ctx), v.cur)
+		v.pushBlock(block)
 		els = block
 		v.VisitBlock(s.(*BlockContext))
-		v.popBlockStmt()
+		v.popBlock()
 		v.popScope() // exit else block scope
 	}
 
 	// Finish if statement
 	v.popScope() // exit if clause scope
-	v.addStmt(NewIfStmt(NewLocationFromContext(ctx), init, cond, blockStmt, els))
+	v.addStmt(NewIfStmt(NewLocFromContext(ctx), init, cond, blockStmt, els))
 	return nil
 }
 
@@ -575,13 +576,13 @@ func (v *Builder) VisitForStmt(ctx *ForStmtContext) interface{} {
 	// Visit block
 	v.pushScope(NewLocalScope(v.cur)) // enter block scope
 	blockCtx := ctx.Block().(*BlockContext)
-	blockStmt := NewBlockStmt(NewLocationFromContext(blockCtx), v.cur)
+	blockStmt := NewBlockStmt(NewLocFromContext(blockCtx), v.cur)
 	// A for block may contain break statement. To ensure this for statement is found,
 	// its node must be added before block is visited
-	v.addStmt(NewForClauseStmt(NewLocationFromContext(ctx), init, cond, post, blockStmt))
-	v.pushBlockStmt(blockStmt)
+	v.addStmt(NewForClauseStmt(NewLocFromContext(ctx), init, cond, post, blockStmt))
+	v.pushBlock(blockStmt)
 	v.VisitBlock(blockCtx)
-	v.popBlockStmt()
+	v.popBlock()
 	v.popScope() // exit block scope
 	v.popScope() // exit initialization scope
 
@@ -619,7 +620,7 @@ func (v *Builder) VisitTypeName(ctx *TypeNameContext) interface{} {
 	name := ctx.IDENTIFIER().GetText()
 	tp, ok := StrToPrimType[name]
 	if ok {
-		return NewPrimType(tp)
+		return NewPrimType(NewLocFromContext(ctx), tp)
 	}
 
 	// Try to resolve type symbol
@@ -629,7 +630,7 @@ func (v *Builder) VisitTypeName(ctx *TypeNameContext) interface{} {
 		return symbol.Type
 	}
 
-	return NewUnresolvedType(name) // cannot resolve at present
+	return NewUnresolvedType(NewLocFromContext(ctx), name) // cannot resolve at present
 }
 
 func (v *Builder) VisitTypeLit(ctx *TypeLitContext) interface{} {
@@ -650,19 +651,19 @@ func (v *Builder) VisitTypeLit(ctx *TypeLitContext) interface{} {
 func (v *Builder) VisitArrayType(ctx *ArrayTypeContext) interface{} {
 	elem := v.VisitElementType(ctx.ElementType().(*ElementTypeContext)).(IType)
 	length := v.VisitArrayLength(ctx.ArrayLength().(*ArrayLengthContext)).(int)
-	return NewArrayType(elem, length)
+	return NewArrayType(NewLocFromContext(ctx), elem, length)
 }
 
 func (v *Builder) VisitArrayLength(ctx *ArrayLengthContext) interface{} {
 	expr, ok := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(*ConstExpr)
 	if !ok {
 		panic(fmt.Errorf("%s array length should be a constant expression",
-			NewLocationFromContext(ctx).ToString()))
+			NewLocFromContext(ctx).ToString()))
 	}
 	val, ok := expr.Val.(int)
 	if !ok {
 		panic(fmt.Errorf("%s array length should be a constant integer",
-			NewLocationFromContext(ctx).ToString()))
+			NewLocFromContext(ctx).ToString()))
 	}
 	return val
 }
@@ -672,17 +673,18 @@ func (v *Builder) VisitElementType(ctx *ElementTypeContext) interface{} {
 }
 
 func (v *Builder) VisitPointerType(ctx *PointerTypeContext) interface{} {
-	return NewPtrType(v.VisitTp(ctx.Tp().(*TpContext)).(IType))
+	return NewPtrType(NewLocFromContext(ctx), v.VisitTp(ctx.Tp().(*TpContext)).(IType))
 }
 
 func (v *Builder) VisitSliceType(ctx *SliceTypeContext) interface{} {
-	return NewSliceType(v.VisitElementType(ctx.ElementType().(*ElementTypeContext)).(IType))
+	return NewSliceType(NewLocFromContext(ctx),
+		v.VisitElementType(ctx.ElementType().(*ElementTypeContext)).(IType))
 }
 
 func (v *Builder) VisitMapType(ctx *MapTypeContext) interface{} {
 	key := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
 	val := v.VisitElementType(ctx.ElementType().(*ElementTypeContext)).(IType)
-	return NewMapType(key, val)
+	return NewMapType(NewLocFromContext(ctx), key, val)
 }
 
 func (v *Builder) VisitFunctionType(ctx *FunctionTypeContext) interface{} {
@@ -695,7 +697,7 @@ func (v *Builder) VisitFunctionType(ctx *FunctionTypeContext) interface{} {
 	for _, r := range sig.results {
 		resultType = append(resultType, r.Type)
 	}
-	return NewFunctionType(paramType, resultType) // *FunctionType
+	return NewFunctionType(NewLocFromContext(ctx), paramType, resultType)
 }
 
 func (v *Builder) VisitSignature(ctx *SignatureContext) interface{} {
@@ -711,7 +713,7 @@ func (v *Builder) VisitResult(ctx *ResultContext) interface{} {
 	if r := ctx.Tp(); r != nil {
 		tp := v.VisitTp(r.(*TpContext)).(IType)
 		return []*TableEntry{
-			NewSymbolEntry(NewLocationFromContext(ctx), "", VarEntry, tp, nil)}
+			NewSymbolEntry(NewLocFromContext(ctx), "", VarEntry, tp, nil)}
 	} else if r := ctx.Parameters(); r != nil {
 		return v.VisitParameters(r.(*ParametersContext)).([]*TableEntry)
 	}
@@ -738,7 +740,7 @@ func (v *Builder) VisitParameterDecl(ctx *ParameterDeclContext) interface{} {
 	tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
 	if idListCxt := ctx.IdentifierList(); idListCxt == nil {
 		return []*TableEntry{
-			NewSymbolEntry(NewLocationFromContext(ctx), "", VarEntry, tp, 0)}
+			NewSymbolEntry(NewLocFromContext(ctx), "", VarEntry, tp, 0)}
 	} else {
 		idList := v.VisitIdentifierList(idListCxt.(*IdentifierListContext)).([]*IdExpr)
 		declList := make([]*TableEntry, 0)
@@ -774,10 +776,10 @@ func (v *Builder) VisitLiteral(ctx *LiteralContext) interface{} {
 func (v *Builder) VisitBasicLit(ctx *BasicLitContext) interface{} {
 	if l := ctx.INT_LIT(); l != nil {
 		lit, _ := strconv.ParseInt(l.GetText(), 0, 0)
-		return NewIntConst(NewLocationFromTerminal(l), int(lit))
+		return NewIntConst(NewLocFromTerminal(l), int(lit))
 	} else if l = ctx.FLOAT_LIT(); l != nil {
 		lit, _ := strconv.ParseFloat(l.GetText(), 64)
-		return NewFloatConst(NewLocationFromTerminal(l), lit)
+		return NewFloatConst(NewLocFromTerminal(l), lit)
 	}
 	return nil
 }
@@ -786,10 +788,10 @@ func (v *Builder) VisitOperandName(ctx *OperandNameContext) interface{} {
 	// Create operand identifier
 	name := ctx.IDENTIFIER().GetText()
 	if name == "nil" { // return nil value if operand is "nil"
-		return NewNilValue(NewLocationFromContext(ctx))
+		return NewNilValue(NewLocFromContext(ctx))
 	}
 	symbol, scope := v.cur.Lookup(name)
-	id := NewIdExpr(NewLocationFromContext(ctx), name, symbol)
+	id := NewIdExpr(NewLocFromContext(ctx), name, symbol)
 
 	// Decide if it should be captured
 	id.Captured = scope != nil && !scope.Global && scope.Func != v.cur.Func
@@ -801,7 +803,7 @@ func (v *Builder) VisitOperandName(ctx *OperandNameContext) interface{} {
 func (v *Builder) VisitCompositeLit(ctx *CompositeLitContext) interface{} {
 	litType := v.VisitLiteralType(ctx.LiteralType().(*LiteralTypeContext)).(IType)
 	elemList := v.VisitLiteralValue(ctx.LiteralValue().(*LiteralValueContext)).(*ElemList)
-	return NewCompLit(NewLocationFromContext(ctx), litType, elemList)
+	return NewCompLit(NewLocFromContext(ctx), litType, elemList)
 }
 
 func (v *Builder) VisitLiteralType(ctx *LiteralTypeContext) interface{} {
@@ -811,7 +813,7 @@ func (v *Builder) VisitLiteralType(ctx *LiteralTypeContext) interface{} {
 		return v.VisitArrayType(t.(*ArrayTypeContext)).(IType)
 	} else if t := ctx.ElementType(); t != nil {
 		tp := v.VisitElementType(t.(*ElementTypeContext)).(IType)
-		return NewArrayType(tp, -1)
+		return NewArrayType(NewLocFromContext(ctx), tp, -1)
 	} else if t := ctx.SliceType(); t != nil {
 		return v.VisitSliceType(t.(*SliceTypeContext)).(IType)
 	} else if t := ctx.MapType(); t != nil {
@@ -827,7 +829,7 @@ func (v *Builder) VisitStructType(ctx *StructTypeContext) interface{} {
 	for _, f := range ctx.AllFieldDecl() {
 		table.Add(v.VisitFieldDecl(f.(*FieldDeclContext)).([]*TableEntry)...)
 	}
-	return NewStructType(table) // *StructType
+	return NewStructType(NewLocFromContext(ctx), table) // *StructType
 }
 
 func (v *Builder) VisitLiteralValue(ctx *LiteralValueContext) interface{} {
@@ -852,12 +854,12 @@ func (v *Builder) VisitKeyedElement(ctx *KeyedElementContext) interface{} {
 		key = v.VisitKey(k.(*KeyContext)).(IExprNode)
 	}
 	elem := v.VisitElement(ctx.Element().(*ElementContext)).(IExprNode)
-	return NewLitElem(NewLocationFromContext(ctx), key, elem)
+	return NewLitElem(NewLocFromContext(ctx), key, elem)
 }
 
 func (v *Builder) VisitKey(ctx *KeyContext) interface{} {
 	if k := ctx.IDENTIFIER(); k != nil {
-		return NewIdExpr(NewLocationFromContext(ctx), k.GetText(), nil)
+		return NewIdExpr(NewLocFromContext(ctx), k.GetText(), nil)
 	} else if k := ctx.Expression(); k != nil {
 		return v.VisitExpression(k.(*ExpressionContext)).(IExprNode)
 	} else if k := ctx.LiteralValue(); k != nil {
@@ -901,7 +903,7 @@ func (v *Builder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 		// Process operand identifiers in current scope
 		top := stack[len(stack)-1]
 		stack = stack[:len(stack)-1] // pop an element from stack
-		for id := range top.OperandId {
+		for id := range top.operandId {
 			if id.Captured {
 				closureSet[id.Symbol] = true
 			}
@@ -921,7 +923,7 @@ func (v *Builder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 		closureTable.Add(entry)
 	}
 
-	return NewFuncLit(NewLocationFromContext(ctx), decl, closureTable)
+	return NewFuncLit(NewLocFromContext(ctx), decl, closureTable)
 }
 
 func (v *Builder) VisitPrimaryExpr(ctx *PrimaryExprContext) interface{} {
@@ -935,7 +937,7 @@ func (v *Builder) VisitPrimaryExpr(ctx *PrimaryExprContext) interface{} {
 	prim := v.VisitPrimaryExpr(ctx.PrimaryExpr().(*PrimaryExprContext)).(IExprNode)
 	if e := ctx.Arguments(); e != nil {
 		args := v.VisitArguments(e.(*ArgumentsContext)).([]IExprNode)
-		return NewFuncCallExpr(NewLocationFromContext(ctx), prim, args)
+		return NewFuncCallExpr(NewLocFromContext(ctx), prim, args)
 	}
 
 	return nil // IExprNode
@@ -965,11 +967,11 @@ func (v *Builder) VisitExpression(ctx *ExpressionContext) interface{} {
 			return fun(lConst, rConst)
 		} else {
 			panic(fmt.Errorf("%s cannot evaluate constant expression",
-				NewLocationFromContext(ctx).ToString()))
+				NewLocFromContext(ctx).ToString()))
 		}
 	}
 
-	return NewBinaryExpr(NewLocationFromContext(ctx), op, left, right) // IExprNode
+	return NewBinaryExpr(NewLocFromContext(ctx), op, left, right) // IExprNode
 }
 
 func (v *Builder) VisitUnaryExpr(ctx *UnaryExprContext) interface{} {
@@ -989,9 +991,9 @@ func (v *Builder) VisitUnaryExpr(ctx *UnaryExprContext) interface{} {
 			return fun(pConst)
 		} else {
 			panic(fmt.Errorf("%s cannot evaluate constant expression",
-				NewLocationFromContext(ctx).ToString()))
+				NewLocFromContext(ctx).ToString()))
 		}
 	}
 
-	return NewUnaryExpr(NewLocationFromContext(ctx), op, prim) // IExprNode
+	return NewUnaryExpr(NewLocFromContext(ctx), op, prim) // IExprNode
 }
