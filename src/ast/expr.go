@@ -9,7 +9,6 @@ import (
 type IExprNode interface {
 	IStmtNode
 	GetType() IType
-	SetType(tp IType)
 	IsLValue() bool
 }
 
@@ -162,31 +161,17 @@ type ZeroValue struct {
 	BaseExprNode
 }
 
-func NewZeroValue() *ZeroValue { return &ZeroValue{} }
+func NewZeroValue(loc *Loc) *ZeroValue {
+	z := &ZeroValue{}
+	z.Type = NewNilType(loc)
+	return z
+}
 
 func (c *ZeroValue) ToStringTree() string { return "0" }
 
 func (c *ZeroValue) GetValue() interface{} { return nil }
 
 func (c *ZeroValue) IsLValue() bool { return false }
-
-// nil is a predeclared identifier representing the zero value for a pointer, channel, func,
-// interface, map, or slice type. It can be declared as a literal
-type NilValue struct {
-	BaseLiteralExpr
-}
-
-func NewNilValue(loc *Loc) *NilValue {
-	n := &NilValue{BaseLiteralExpr: *NewBaseLiteralExpr(loc)}
-	n.Type = NewNilType(loc)
-	return n
-}
-
-func (c *NilValue) ToStringTree() string { return "nil" }
-
-func (c *NilValue) GetValue() interface{} { return nil }
-
-func (c *NilValue) IsLValue() bool { return false }
 
 // Identifier expression
 type IdExpr struct {

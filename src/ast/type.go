@@ -75,6 +75,8 @@ var TypeToStr = map[TypeEnum]string{
 	Channel: "channel", Nil: "nil",
 }
 
+func (e TypeEnum) Match(m TypeEnum) bool { return (e & m) != 0 }
+
 // Type interface
 type IType interface {
 	GetLocation() *Loc
@@ -199,8 +201,10 @@ func (t *PrimType) IsIdentical(o IType) bool {
 }
 
 var PrimTypeSize = map[TypeEnum]int{
-	Bool: 1, Int8: 1, Int16: 2, Int32: 4, Int64: 8, Uint8: 1, Uint16: 2, Uint32: 4, Uint64: 8,
-	Int: 8, Uint: 8, Uintptr: 8, Byte: 1, Rune: 4, Float32: 4, Float64: 8, Complex64: 8, Complex128: 16,
+	Bool: 1, Int8: 1, Int16: 2, Int32: 4, Int64: 8,
+	Uint8: 1, Uint16: 2, Uint32: 4, Uint64: 8,
+	Int: 8, Uint: 8, Uintptr: 8, Byte: 1, Rune: 4, Float32: 4, Float64: 8,
+	Complex64: 8, Complex128: 16,
 }
 
 func (t *PrimType) GetSize() int {

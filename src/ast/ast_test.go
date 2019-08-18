@@ -12,7 +12,7 @@ package main
 
 func foo1() {
 	var f Foo
-	a := 3
+	a := 3 + g
 	for i := 0; i < 4; i++ {
 		if b := i * i; b > 4 {
 			a += b
@@ -28,6 +28,8 @@ type Foo struct {
 }
 
 type Bar int
+
+const g = 4
 `
 
 func TestASTBuild(t *testing.T) {

@@ -18,7 +18,7 @@ type BlockStmt struct {
 	BaseASTNode
 	Scope *Scope
 	Stmts []IStmtNode
-	// Optional, track the breakable statement that creates this block
+	// Optional, track the statement that creates this block
 	Ctrl IStmtNode
 }
 

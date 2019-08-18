@@ -21,7 +21,6 @@ type IVisitor interface {
 	VisitFuncLit(expr *FuncLit) interface{}
 	VisitCompLit(expr *CompLit) interface{}
 	VisitConstExpr(expr *ConstExpr) interface{}
-	VisitNilValue(expr *NilValue) interface{}
 	VisitIdExpr(expr *IdExpr) interface{}
 	VisitFuncCallExpr(expr *FuncCallExpr) interface{}
 	VisitUnaryExpr(expr *UnaryExpr) interface{}

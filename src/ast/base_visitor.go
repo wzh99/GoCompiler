@@ -36,8 +36,6 @@ func (v *BaseVisitor) VisitCompLit(lit *CompLit) interface{} { return nil }
 
 func (v *BaseVisitor) VisitConstExpr(expr *ConstExpr) interface{} { return nil }
 
-func (v *BaseVisitor) VisitNilValue(expr *NilValue) interface{} { return nil }
-
 func (v *BaseVisitor) VisitIdExpr(expr *IdExpr) interface{} { return nil }
 
 func (v *BaseVisitor) VisitFuncCallExpr(expr *FuncCallExpr) interface{} { return nil }

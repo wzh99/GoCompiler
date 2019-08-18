@@ -259,7 +259,7 @@ func (v *Builder) VisitFunction(ctx *FunctionContext) interface{} {
 		for _, r := range namedRet {
 			decl.Scope.AddSymbol(r)
 			lhs = append(lhs, NewIdExpr(r.Loc, r.Name, r))
-			rhs = append(rhs, NewZeroValue())
+			rhs = append(rhs, NewZeroValue(r.Loc))
 		}
 		v.addStmt(NewAssignStmt(NewLocFromContext(ctx), lhs, rhs))
 	}
@@ -335,7 +335,7 @@ func (v *Builder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 	if exprList == nil { // all declared variables should be assigned zero value
 		exprList = make([]IExprNode, len(idList))
 		for i := range exprList {
-			exprList[i] = NewZeroValue()
+			exprList[i] = NewZeroValue(NewLocFromContext(ctx))
 		}
 	}
 	v.addStmt(NewInitStmt(NewLocFromContext(ctx), lhs, exprList))
@@ -427,10 +427,6 @@ func (v *Builder) VisitAssignment(ctx *AssignmentContext) interface{} {
 		rhs := v.VisitExpressionList(ctx.ExpressionList(1).(*ExpressionListContext)).([]IExprNode)
 		lhs := v.VisitExpressionList(ctx.ExpressionList(0).(*ExpressionListContext)).([]IExprNode)
 		// Check length of expressions on both sides, similar to variable specification
-		if len(rhs) > 1 && len(lhs) != len(rhs) {
-			panic(fmt.Errorf("%s assignment count mismatch %d = %d",
-				NewLocFromContext(ctx).ToString(), len(lhs), len(rhs)))
-		}
 		stmt = NewAssignStmt(NewLocFromContext(ctx), lhs, rhs)
 	}
 	return stmt
@@ -788,9 +784,9 @@ func (v *Builder) VisitOperandName(ctx *OperandNameContext) interface{} {
 	// Create operand identifier
 	name := ctx.IDENTIFIER().GetText()
 	if name == "nil" { // return nil value if operand is "nil"
-		return NewNilValue(NewLocFromContext(ctx))
+		return NewZeroValue(NewLocFromContext(ctx))
 	}
-	symbol, scope := v.cur.Lookup(name)
+	symbol, scope := v.cur.Lookup(name) // can be nil then
 	id := NewIdExpr(NewLocFromContext(ctx), name, symbol)
 
 	// Decide if it should be captured
@@ -983,17 +979,6 @@ func (v *Builder) VisitUnaryExpr(ctx *UnaryExprContext) interface{} {
 	// Deal with unary expression
 	op := UnaryOpStrToEnum[ctx.GetOp().GetText()]
 	prim := v.VisitUnaryExpr(ctx.UnaryExpr().(*UnaryExprContext)).(IExprNode)
-
-	// Evaluate constant expression
-	if pConst, ok := prim.(*ConstExpr); ok {
-		fun := unaryConstExpr[op][pConst.Type.GetTypeEnum()]
-		if fun != nil {
-			return fun(pConst)
-		} else {
-			panic(fmt.Errorf("%s cannot evaluate constant expression",
-				NewLocFromContext(ctx).ToString()))
-		}
-	}
 
 	return NewUnaryExpr(NewLocFromContext(ctx), op, prim) // IExprNode
 }
