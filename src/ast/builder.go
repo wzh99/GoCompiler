@@ -954,19 +954,6 @@ func (v *Builder) VisitExpression(ctx *ExpressionContext) interface{} {
 	left := v.VisitExpression(ctx.Expression(0).(*ExpressionContext)).(IExprNode)
 	right := v.VisitExpression(ctx.Expression(1).(*ExpressionContext)).(IExprNode)
 
-	// Evaluate constant expression
-	lConst, lok := left.(*ConstExpr)
-	rConst, rok := right.(*ConstExpr)
-	if lok && rok {
-		fun := binaryConstExpr[op][lConst.Type.GetTypeEnum()][rConst.Type.GetTypeEnum()]
-		if fun != nil {
-			return fun(lConst, rConst)
-		} else {
-			panic(fmt.Errorf("%s cannot evaluate constant expression",
-				NewLocFromContext(ctx).ToString()))
-		}
-	}
-
 	return NewBinaryExpr(NewLocFromContext(ctx), op, left, right) // IExprNode
 }
 

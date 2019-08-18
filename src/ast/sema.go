@@ -61,42 +61,50 @@ func (c *SemaChecker) VisitBlockStmt(stmt *BlockStmt) interface{} {
 
 func (c *SemaChecker) VisitAssignStmt(stmt *AssignStmt) interface{} {
 	// Visit expressions on rhs and lhs
-	rhs := make([]IType, 0)
+	rhsType := make([]IType, 0)
 	for i := range stmt.Rhs {
 		c.mayChange(&stmt.Rhs[i])
-		rhs = append(rhs, stmt.Rhs[i].GetType())
+		rhsType = append(rhsType, stmt.Rhs[i].GetType())
 	}
-	lhs := make([]IType, 0)
+	lhsType := make([]IType, 0)
 	for i := range stmt.Lhs {
 		c.mayChange(&stmt.Lhs[i])
-		lhs = append(lhs, stmt.Lhs[i].GetType())
+		lhsType = append(lhsType, stmt.Lhs[i].GetType())
 	}
 
 	// Consider multi-valued function
-	if len(lhs) != len(rhs) { // maybe a multi-valued function
-		if len(rhs) > 1 { // too may value on rhs
+	if len(lhsType) != len(rhsType) { // maybe a multi-valued function
+		if len(rhsType) > 1 { // too may value on rhs
 			panic(fmt.Errorf("%s assignment count mismatch %d = %d",
-				stmt.LocStr(), len(lhs), len(rhs)))
+				stmt.LocStr(), len(lhsType), len(rhsType)))
 		}
 
 		tuple, ok := stmt.Rhs[0].GetType().(*TupleType)
 		if !ok { // not function result
 			panic(fmt.Errorf("%s assignment count mismatch %d = 1",
-				stmt.LocStr(), len(lhs)))
+				stmt.LocStr(), len(lhsType)))
 		}
 
-		if len(lhs) != len(tuple.Elem) {
+		if len(lhsType) != len(tuple.Elem) {
 			panic(fmt.Errorf("%s function result assignment count mismatch %d = %d",
-				stmt.LocStr(), len(lhs), len(tuple.Elem)))
+				stmt.LocStr(), len(lhsType), len(tuple.Elem)))
 		}
-		rhs = tuple.Elem
+		rhsType = tuple.Elem
 	}
 
-	// Check type conformance
-	for i := range lhs {
-		if !lhs[i].IsIdentical(rhs[i]) && rhs[i].GetTypeEnum() != Nil {
+	// Update type in symbol entry or check type conformance
+	for i, leftExpr := range stmt.Lhs {
+		if stmt.Init {
+			id := leftExpr.(*IdExpr)                                  // lhs must be identifier
+			if lhsType[i] == nil && rhsType[i].GetTypeEnum() != Nil { // lhs type not determined
+				id.Symbol.Type = rhsType[i]
+				id.Type = rhsType[i]
+				continue
+			}
+		}
+		if !lhsType[i].IsIdentical(rhsType[i]) && rhsType[i].GetTypeEnum() != Nil {
 			panic(fmt.Errorf("%s type mismatch %s = %s", stmt.LocStr(),
-				lhs[i].ToString(), rhs[i].ToString()))
+				lhsType[i].ToString(), rhsType[i].ToString()))
 		}
 	}
 
@@ -125,28 +133,34 @@ func (c *SemaChecker) VisitExpr(expr IExprNode) interface{} {
 }
 
 func (c *SemaChecker) VisitIdExpr(expr *IdExpr) interface{} {
-	if expr.Symbol != nil {
-		return nil
-	}
-	expr.Symbol, _ = c.global.Lookup(expr.Name)
+	// Resolve symbol in global scope
 	if expr.Symbol == nil {
-		panic(fmt.Errorf("%s symbol undefined: %s", expr.LocStr(), expr.Name))
+		expr.Symbol, _ = c.global.Lookup(expr.Name)
+		if expr.Symbol == nil {
+			panic(fmt.Errorf("%s symbol undefined: %s", expr.LocStr(), expr.Name))
+		}
 	}
+
+	// Use symbol entry type to mark identifier type
+	expr.Type = expr.Symbol.Type
+
+	// Replace with constant expression node, if possible
 	if expr.Symbol.Flag == ConstEntry {
 		switch expr.Symbol.Val.(type) {
 		case bool:
-			NewBoolConst(expr.Loc, expr.Symbol.Val.(bool))
+			return NewBoolConst(expr.Loc, expr.Symbol.Val.(bool))
 		case int:
-			NewIntConst(expr.Loc, expr.Symbol.Val.(int))
+			return NewIntConst(expr.Loc, expr.Symbol.Val.(int))
 		case float64:
-			NewFloatConst(expr.Loc, expr.Symbol.Val.(float64))
+			return NewFloatConst(expr.Loc, expr.Symbol.Val.(float64))
 		}
 	}
+
 	return nil
 }
 
 func (c *SemaChecker) VisitUnaryExpr(e *UnaryExpr) interface{} {
-	// Visit and may change expression
+	// Visit subexpression
 	c.mayChange(&e.Expr)
 
 	// Evaluate constant expression
@@ -189,6 +203,69 @@ func (c *SemaChecker) VisitUnaryExpr(e *UnaryExpr) interface{} {
 				e.Expr.GetType().ToString()))
 		}
 		e.Type = e.Expr.GetType().(*PtrType).Ref
+	}
+
+	return nil
+}
+
+func (c *SemaChecker) VisitBinaryExpr(expr *BinaryExpr) interface{} {
+	// Visit subexpressions
+	c.mayChange(&expr.Left)
+	c.mayChange(&expr.Right)
+
+	// Evaluate constant expression
+	lConst, lok := expr.Left.(*ConstExpr)
+	rConst, rok := expr.Right.(*ConstExpr)
+	if lok && rok {
+		fun := binaryConstExpr[expr.Op][lConst.Type.GetTypeEnum()][rConst.Type.GetTypeEnum()]
+		if fun != nil {
+			return fun(lConst, rConst)
+		} else {
+			panic(fmt.Errorf("%s cannot evaluate constant expression", expr.LocStr()))
+		}
+	}
+
+	// Check type
+	err := fmt.Errorf("%s binary operator %s undefined on type %s and %s",
+		expr.LocStr(), BinaryOpStr[expr.Op], expr.Left.GetType().ToString(),
+		expr.Right.GetType().ToString())
+	if expr.Op&(LSH|RSH) == 0 && !expr.Left.GetType().IsIdentical(expr.Right.GetType()) {
+		panic(err) // binary operations (except LSH and RSH), should be on two operands of same type
+	}
+	lType := expr.Left.GetType()
+	lTypeEnum := lType.GetTypeEnum()
+	switch expr.Op {
+	case ADD:
+		if !lTypeEnum.Match(PrimitiveType) {
+			panic(err)
+		}
+		expr.Type = lType
+	case SUB, MUL, DIV:
+		if !lTypeEnum.Match(PrimitiveType &^ String) {
+			panic(err)
+		}
+		expr.Type = lType
+	case MOD, AAND, AOR, XOR:
+		if !lTypeEnum.Match(IntegerType) {
+			panic(err)
+		}
+		expr.Type = lType
+	case LSH, RSH:
+		rTypeEnum := exprTypeEnum(expr.Right)
+		if !lTypeEnum.Match(IntegerType) || !rTypeEnum.Match(UnsignedType) {
+			panic(err)
+		}
+		expr.Type = lType
+	case EQ, NE, LT, LE, GT, GE:
+		if !lTypeEnum.Match(PrimitiveType) {
+			panic(err)
+		}
+		expr.Type = NewPrimType(expr.Loc, Bool)
+	case LAND, LOR:
+		if !lTypeEnum.Match(Bool) {
+			panic(err)
+		}
+		expr.Type = lType
 	}
 
 	return nil
