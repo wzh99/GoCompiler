@@ -48,6 +48,14 @@ func (c *SemaChecker) VisitStmt(stmt IStmtNode) interface{} {
 		c.VisitBlockStmt(stmt.(*BlockStmt))
 	case *AssignStmt:
 		c.VisitAssignStmt(stmt.(*AssignStmt))
+	case *IncDecStmt:
+		c.VisitIncDecStmt(stmt.(*IncDecStmt))
+	case *ReturnStmt:
+		c.VisitReturnStmt(stmt.(*ReturnStmt))
+	case *ForClauseStmt:
+		c.VisitForClauseStmt(stmt.(*ForClauseStmt))
+	case *IfStmt:
+		c.VisitIfStmt(stmt.(*IfStmt))
 	}
 	return nil
 }
@@ -75,39 +83,62 @@ func (c *SemaChecker) VisitAssignStmt(stmt *AssignStmt) interface{} {
 	// Consider multi-valued function
 	if len(lhsType) != len(rhsType) { // maybe a multi-valued function
 		if len(rhsType) > 1 { // too may value on rhs
-			panic(fmt.Errorf("%s assignment count mismatch %d = %d",
-				stmt.LocStr(), len(lhsType), len(rhsType)))
+			panic(NewSemaError(stmt.Loc,
+				fmt.Sprintf("assignment count mismatch %d = %d", len(lhsType), len(rhsType)),
+			))
 		}
 
 		tuple, ok := stmt.Rhs[0].GetType().(*TupleType)
 		if !ok { // not function result
-			panic(fmt.Errorf("%s assignment count mismatch %d = 1",
-				stmt.LocStr(), len(lhsType)))
+			panic(NewSemaError(stmt.Loc,
+				fmt.Sprintf("assignment count mismatch %d = 1", len(lhsType))))
 		}
 
 		if len(lhsType) != len(tuple.Elem) {
-			panic(fmt.Errorf("%s function result assignment count mismatch %d = %d",
-				stmt.LocStr(), len(lhsType), len(tuple.Elem)))
+			panic(NewSemaError(stmt.Loc,
+				fmt.Sprintf("function result assignment count mismatch %d = %d",
+					len(lhsType), len(tuple.Elem)),
+			))
 		}
 		rhsType = tuple.Elem
 	}
 
 	// Update type in symbol entry or check type conformance
 	for i, leftExpr := range stmt.Lhs {
+		if rhsType[i].GetTypeEnum() == Nil {
+			continue // initialize with zero value, cannot do check or inference
+		}
 		if stmt.Init {
-			id := leftExpr.(*IdExpr)                                  // lhs must be identifier
-			if lhsType[i] == nil && rhsType[i].GetTypeEnum() != Nil { // lhs type not determined
+			id := leftExpr.(*IdExpr) // lhs must be identifier
+			if lhsType[i] == nil {   // lhs type not determined
 				id.Symbol.Type = rhsType[i]
 				id.Type = rhsType[i]
 				continue
 			}
 		}
-		if !lhsType[i].IsIdentical(rhsType[i]) && rhsType[i].GetTypeEnum() != Nil {
-			panic(fmt.Errorf("%s type mismatch %s = %s", stmt.LocStr(),
-				lhsType[i].ToString(), rhsType[i].ToString()))
+		if !lhsType[i].IsIdentical(rhsType[i]) {
+			panic(NewSemaError(stmt.Loc,
+				fmt.Sprintf("type mismatch %s = %s", lhsType[i].ToString(),
+					rhsType[i].ToString()),
+			))
 		}
 	}
 
+	return nil
+}
+
+func (c *SemaChecker) VisitIncDecStmt(stmt *IncDecStmt) interface{} {
+	c.VisitExpr(stmt.Expr)
+	if !exprTypeEnum(stmt.Expr).Match(IntegerType) {
+		panic(NewSemaError(stmt.Loc,
+			"cannot increment or decrement non-integer type",
+		))
+	}
+	if !stmt.Expr.IsLValue() {
+		panic(NewSemaError(stmt.Loc,
+			"cannot increment or decrement rvalue",
+		))
+	}
 	return nil
 }
 
@@ -137,7 +168,9 @@ func (c *SemaChecker) VisitIdExpr(expr *IdExpr) interface{} {
 	if expr.Symbol == nil {
 		expr.Symbol, _ = c.global.Lookup(expr.Name)
 		if expr.Symbol == nil {
-			panic(fmt.Errorf("%s symbol undefined: %s", expr.LocStr(), expr.Name))
+			panic(NewSemaError(expr.Loc,
+				fmt.Sprintf("symbol undefined: %s", expr.Name),
+			))
 		}
 	}
 
@@ -169,13 +202,15 @@ func (c *SemaChecker) VisitUnaryExpr(e *UnaryExpr) interface{} {
 		if fun != nil {
 			return fun(constExpr)
 		} else {
-			panic(fmt.Errorf("%s cannot evaluate constant expression", e.LocStr()))
+			panic(NewSemaError(e.Loc,
+				"cannot evaluate constant expression",
+			))
 		}
 	}
 
 	// Check type
-	err := fmt.Errorf("%s unary operator %s undefined on type %s", e.LocStr(),
-		UnaryOpStr[e.Op], e.Type.ToString())
+	err := NewSemaError(e.Loc, fmt.Sprintf(" unary operator %s undefined on type %s",
+		UnaryOpStr[e.Op], e.Type.ToString()))
 	switch e.Op {
 	case POS, NEG:
 		if !exprTypeEnum(e.Expr).Match(PrimitiveType &^ String) {
@@ -194,13 +229,17 @@ func (c *SemaChecker) VisitUnaryExpr(e *UnaryExpr) interface{} {
 		e.Type = e.Expr.GetType()
 	case REF:
 		if !e.Expr.IsLValue() {
-			panic(fmt.Errorf("%s cannot reference rvalue", e.LocStr()))
+			panic(NewSemaError(e.Loc,
+				"cannot reference rvalue",
+			))
 		}
 		e.Type = NewPtrType(e.Loc, e.Expr.GetType())
 	case DEREF:
 		if !exprTypeEnum(e.Expr).Match(Ptr) {
-			panic(fmt.Errorf("%s cannot dereference non-pointer type: %s", e.LocStr(),
-				e.Expr.GetType().ToString()))
+			panic(NewSemaError(e.Loc,
+				fmt.Sprintf("cannot dereference non-pointer type: %s",
+					e.Expr.GetType().ToString()),
+			))
 		}
 		e.Type = e.Expr.GetType().(*PtrType).Ref
 	}
@@ -221,14 +260,16 @@ func (c *SemaChecker) VisitBinaryExpr(expr *BinaryExpr) interface{} {
 		if fun != nil {
 			return fun(lConst, rConst)
 		} else {
-			panic(fmt.Errorf("%s cannot evaluate constant expression", expr.LocStr()))
+			panic(NewSemaError(expr.Loc, "cannot evaluate constant expression"))
 		}
 	}
 
 	// Check type
-	err := fmt.Errorf("%s binary operator %s undefined on type %s and %s",
-		expr.LocStr(), BinaryOpStr[expr.Op], expr.Left.GetType().ToString(),
-		expr.Right.GetType().ToString())
+	err := NewSemaError(expr.Loc,
+		fmt.Sprintf("binary operator %s undefined on type %s and %s",
+			BinaryOpStr[expr.Op], expr.Left.GetType().ToString(),
+			expr.Right.GetType().ToString(),
+		))
 	if expr.Op&(LSH|RSH) == 0 && !expr.Left.GetType().IsIdentical(expr.Right.GetType()) {
 		panic(err) // binary operations (except LSH and RSH), should be on two operands of same type
 	}
@@ -346,9 +387,9 @@ func (c *SemaChecker) resolveType(tp *IType) {
 		name := (*tp).(*UnresolvedType).Name
 		entry, _ := c.global.Lookup(name)
 		if entry == nil {
-			panic(fmt.Errorf("undefined symbol: %s", name))
+			panic(fmt.Errorf("%s undefined symbol: %s", (*tp).GetLoc().ToString(), name))
 		} else if entry.Flag != TypeEntry {
-			panic(fmt.Errorf("not a type: %s", name))
+			panic(fmt.Errorf("%s not a type: %s", (*tp).GetLoc().ToString(), name))
 		}
 		*tp = entry.Type
 	}

@@ -423,7 +423,7 @@ var binaryConstExpr = map[BinaryOp]map[TypeEnum]map[TypeEnum]func(l, r *ConstExp
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
 				if r.Val.(int) < 0 {
-					panic(fmt.Errorf("%s shift amount cannot be negative", r.LocStr()))
+					panic(NewSemaError(r.Loc, "shift amount cannot be negative"))
 				}
 				return NewIntConst(l.Loc, l.Val.(int)<<uint(r.Val.(int)))
 			},
@@ -433,7 +433,7 @@ var binaryConstExpr = map[BinaryOp]map[TypeEnum]map[TypeEnum]func(l, r *ConstExp
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
 				if r.Val.(int) < 0 {
-					panic(fmt.Errorf("%s shift amount cannot be negative", r.LocStr()))
+					panic(NewSemaError(r.Loc, "shift amount cannot be negative"))
 				}
 				return NewIntConst(l.Loc, l.Val.(int)>>uint(r.Val.(int)))
 			},

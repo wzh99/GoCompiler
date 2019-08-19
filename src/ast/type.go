@@ -79,7 +79,7 @@ func (e TypeEnum) Match(m TypeEnum) bool { return (e & m) != 0 }
 
 // Type interface
 type IType interface {
-	GetLocation() *Loc
+	GetLoc() *Loc
 	ToString() string
 	GetTypeEnum() TypeEnum
 	IsIdentical(tp IType) bool
@@ -94,7 +94,7 @@ func NewBaseType(loc *Loc, enum TypeEnum) *BaseType {
 	return &BaseType{Loc: loc, Enum: enum}
 }
 
-func (t *BaseType) GetLocation() *Loc { return t.Loc }
+func (t *BaseType) GetLoc() *Loc { return t.Loc }
 
 func (t *BaseType) ToString() string {
 	str, ok := TypeToStr[t.Enum]

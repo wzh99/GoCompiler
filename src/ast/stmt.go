@@ -178,7 +178,7 @@ func NewBreakStmt(loc *Loc, target IStmtNode) *BreakStmt {
 }
 
 func (s *BreakStmt) ToStringTree() string {
-	return fmt.Sprintf("(break %s)", s.Target.LocStr())
+	return fmt.Sprintf("(break %s)", s.Target.GetLoc().ToString())
 }
 
 type ContinueStmt struct {
@@ -194,7 +194,7 @@ func NewContinueStmt(loc *Loc, target IStmtNode) *ContinueStmt {
 }
 
 func (s *ContinueStmt) ToStringTree() string {
-	return fmt.Sprintf("(continue %s)", s.Target.LocStr())
+	return fmt.Sprintf("(continue %s)", s.Target.GetLoc().ToString())
 }
 
 type IfStmt struct {

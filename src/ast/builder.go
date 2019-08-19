@@ -119,19 +119,27 @@ func (v *Builder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 	// Validate expressions
 	// Ensure same length
 	if len(lhs) != len(rhs) {
-		panic(fmt.Errorf("%s assignment count mismatch: #%d = #%d",
-			NewLocFromContext(ctx).ToString(), len(lhs), len(rhs)))
+		panic(NewSemaError(
+			NewLocFromContext(ctx),
+			fmt.Sprintf("assignment count mismatch: #%d = #%d", len(lhs), len(rhs)),
+		))
 	}
 	// lhs symbols haven't been defined before
 	for _, id := range lhs {
 		if v.cur.CheckDefined(id.Name) { // redefined symbol
-			panic(fmt.Errorf("%s redefined symbol: %s", id.LocStr(), id.Name))
+			panic(NewSemaError(
+				NewLocFromContext(ctx),
+				fmt.Sprintf("redefined symbol: %s", id.Name),
+			))
 		}
 	}
 	// rhs symbols are all constant expressions
 	for _, expr := range rhs {
 		if _, ok := expr.(*ConstExpr); !ok {
-			panic(fmt.Errorf("%s not constant expression", expr.LocStr()))
+			panic(NewSemaError(
+				NewLocFromContext(ctx),
+				"not constant expression",
+			))
 		}
 	}
 
@@ -149,8 +157,11 @@ func (v *Builder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 		if specTp != nil && !specTp.IsIdentical(tp) {
 			convert := constTypeConvert[tp.GetTypeEnum()][specTp.GetTypeEnum()]
 			if convert == nil {
-				panic(fmt.Errorf("%s cannot convert from %s to %s", loc.ToString(),
-					TypeToStr[tp.GetTypeEnum()], TypeToStr[specTp.GetTypeEnum()]))
+				panic(NewSemaError(
+					loc,
+					fmt.Sprintf("cannot convert from %s to %s",
+						TypeToStr[tp.GetTypeEnum()], TypeToStr[specTp.GetTypeEnum()]),
+				))
 			}
 			val = convert(val)
 			tp = specTp
@@ -167,8 +178,10 @@ func (v *Builder) VisitIdentifierList(ctx *IdentifierListContext) interface{} {
 	idList := make([]*IdExpr, 0)
 	for _, id := range ctx.AllIDENTIFIER() {
 		if IsKeyword[id.GetText()] {
-			panic(fmt.Errorf("%s cannot use keyword as identifier: %s",
-				NewLocFromTerminal(id).ToString(), id.GetText()))
+			panic(NewSemaError(
+				NewLocFromTerminal(id),
+				fmt.Sprintf("cannot use keyword as identifier: %s", id.GetText()),
+			))
 		}
 		idList = append(idList, NewIdExpr(NewLocFromToken(id.GetSymbol()), id.GetText(),
 			nil))
@@ -227,12 +240,14 @@ func (v *Builder) VisitFunction(ctx *FunctionContext) interface{} {
 
 	// Panic if mixed named and unnamed parameters
 	if len(namedRet) > 0 && len(namedRet) != len(resultType) {
-		panic(fmt.Errorf("%s function has both named and unnamed parameters",
-			NewLocFromContext(ctx).ToString()))
+		panic(NewSemaError(
+			NewLocFromContext(ctx),
+			"mixed named and unnamed parameters",
+		))
 	}
 
 	// Initialize function declaration node
-	decl := NewFuncDecl(NewLocFromContext(ctx), "",
+	decl := NewFuncDecl(NewLocFromContext(ctx), "", // name should be assigned later
 		NewFunctionType(NewLocFromContext(ctx), paramType, resultType),
 		NewLocalScope(v.cur), namedRet)
 	if v.receiver != nil { // add receiver to function type if it is a method
@@ -241,7 +256,7 @@ func (v *Builder) VisitFunction(ctx *FunctionContext) interface{} {
 	v.pushFunc()
 	v.pushScope(decl.Scope) // move scope cursor deeper
 
-	// Add named parameter and return value symbols to the function scope
+	// Add named parameters and return value symbols to the function scope
 	if v.receiver != nil { // add receiver to the method scope
 		decl.Scope.AddSymbol(v.receiver)
 		v.receiver = nil // receiver should no longer be recorded
@@ -274,7 +289,7 @@ func (v *Builder) VisitFunction(ctx *FunctionContext) interface{} {
 
 func (v *Builder) VisitMethodDecl(ctx *MethodDeclContext) interface{} {
 	name := ctx.IDENTIFIER().GetText()
-	v.receiver = v.VisitReceiver(ctx.Receiver().(*ReceiverContext)).(*TableEntry) // register receiver
+	v.receiver = v.VisitReceiver(ctx.Receiver().(*ReceiverContext)).(*TableEntry) // record receiver
 	funcDecl := v.VisitFunction(ctx.Function().(*FunctionContext)).(*FuncDecl)
 	funcDecl.Name = name
 	v.global.AddSymbol(funcDecl.GenSymbol())
@@ -285,8 +300,10 @@ func (v *Builder) VisitMethodDecl(ctx *MethodDeclContext) interface{} {
 func (v *Builder) VisitReceiver(ctx *ReceiverContext) interface{} {
 	decl := v.VisitParameterDecl(ctx.ParameterDecl().(*ParameterDeclContext)).([]*TableEntry)
 	if len(decl) != 1 {
-		panic(fmt.Errorf("%s expect one paramter in method receiver, have %d",
-			NewLocFromContext(ctx).ToString(), len(decl)))
+		panic(NewSemaError(
+			NewLocFromContext(ctx),
+			fmt.Sprintf("expect one paramter in method receiver, have %d", len(decl)),
+		))
 	}
 	return decl[0] // *SymbolEntry
 }
@@ -318,8 +335,10 @@ func (v *Builder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 	// If len(exprList) == 1 and len(idList) > 1, the right hand expression could be a call
 	// to a function that return multiple values. We cannot tell whether there is any error.
 	if len(exprList) > 1 && len(exprList) != len(idList) {
-		panic(fmt.Errorf("%s assignment count mismatch %d = %d",
-			NewLocFromContext(ctx).ToString(), len(idList), len(exprList)))
+		panic(NewSemaError(
+			NewLocFromContext(ctx),
+			fmt.Sprintf("assignment count mismatch %d = %d", len(idList), len(exprList)),
+		))
 	}
 
 	// Add variables to symbol table
@@ -439,8 +458,9 @@ func (v *Builder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
 
 	// Check if numbers of expressions on both sides match
 	if len(exprList) > 1 && len(idList) != len(exprList) {
-		panic(fmt.Errorf("%s assignment count mismatch %d = %d",
-			NewLocFromContext(ctx).ToString(), len(idList), len(exprList)))
+		panic(NewSemaError(NewLocFromContext(ctx),
+			fmt.Sprintf("assignment count mismatch %d = %d", len(idList), len(exprList)),
+		))
 	}
 
 	// Add undefined identifier to symbol table (some can be defined at current scope)
@@ -463,8 +483,10 @@ func (v *Builder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
 
 	// Report error if no new variables are declared
 	if nNew == 0 {
-		panic(fmt.Errorf("%s no new variables are declared",
-			NewLocFromContext(ctx).ToString()))
+		panic(NewSemaError(
+			NewLocFromContext(ctx),
+			fmt.Sprintf("no new variables are declared"),
+		))
 	}
 
 	// Add statement to current function
@@ -494,7 +516,7 @@ FindStmt:
 	}
 	loc := NewLocFromContext(ctx)
 	if target == nil {
-		panic(fmt.Errorf("%s cannot find break target", loc.ToString()))
+		panic(NewSemaError(loc, "cannot find break target"))
 	}
 	v.addStmt(NewBreakStmt(loc, target))
 	return nil
@@ -513,7 +535,7 @@ FindStmt:
 	}
 	loc := NewLocFromContext(ctx)
 	if target == nil {
-		panic(fmt.Errorf("%s cannot find continue target", loc.ToString()))
+		panic(NewSemaError(loc, "cannot find continue target"))
 	}
 	v.addStmt(NewContinueStmt(loc, target))
 	return nil
@@ -653,13 +675,17 @@ func (v *Builder) VisitArrayType(ctx *ArrayTypeContext) interface{} {
 func (v *Builder) VisitArrayLength(ctx *ArrayLengthContext) interface{} {
 	expr, ok := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(*ConstExpr)
 	if !ok {
-		panic(fmt.Errorf("%s array length should be a constant expression",
-			NewLocFromContext(ctx).ToString()))
+		panic(NewSemaError(
+			NewLocFromContext(ctx),
+			"array length should be a constant expression",
+		))
 	}
 	val, ok := expr.Val.(int)
 	if !ok {
-		panic(fmt.Errorf("%s array length should be a constant integer",
-			NewLocFromContext(ctx).ToString()))
+		panic(NewSemaError(
+			NewLocFromContext(ctx),
+			"array length should be a constant integer",
+		))
 	}
 	return val
 }
