@@ -58,17 +58,17 @@ func NewFuncLit(loc *Loc, decl *FuncDecl, closure *SymbolTable) *FuncLit {
 func (l *FuncLit) GetValue() interface{} { return l.Decl }
 
 type LitElem struct {
-	Loc  *Loc
-	Key  IExprNode
-	Type IType
-	Elem IExprNode
+	Loc    *Loc
+	Key    IExprNode
+	Val    IExprNode
+	Symbol *TableEntry // record corresponding struct symbol table entry
 }
 
-func NewLitElem(loc *Loc, key IExprNode, elem IExprNode) *LitElem {
+func NewLitElem(loc *Loc, key IExprNode, val IExprNode) *LitElem {
 	return &LitElem{
-		Loc:  loc,
-		Key:  key,
-		Elem: elem,
+		Loc: loc,
+		Key: key,
+		Val: val,
 	}
 }
 
@@ -79,19 +79,7 @@ type ElemList struct {
 	Keyed bool
 }
 
-func NewElemList(list []*LitElem) *ElemList {
-	if len(list) == 0 { // handle empty list
-		return &ElemList{
-			Elem:  list,
-			Keyed: false,
-		}
-	}
-	keyed := list[0].IsKeyed() // check if there are mixed keyed and unkeyed elements
-	for _, v := range list {
-		if (keyed && !v.IsKeyed()) || (!keyed && v.IsKeyed()) {
-			panic(fmt.Errorf("%s mixed keyed and unkeyed elements", v.Loc.ToString()))
-		}
-	}
+func NewElemList(list []*LitElem, keyed bool) *ElemList {
 	return &ElemList{
 		Elem:  list,
 		Keyed: keyed,
@@ -422,9 +410,6 @@ var binaryConstExpr = map[BinaryOp]map[TypeEnum]map[TypeEnum]func(l, r *ConstExp
 	LSH: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				if r.Val.(int) < 0 {
-					panic(NewSemaError(r.Loc, "shift amount cannot be negative"))
-				}
 				return NewIntConst(l.Loc, l.Val.(int)<<uint(r.Val.(int)))
 			},
 		},
@@ -432,9 +417,6 @@ var binaryConstExpr = map[BinaryOp]map[TypeEnum]map[TypeEnum]func(l, r *ConstExp
 	RSH: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
-				if r.Val.(int) < 0 {
-					panic(NewSemaError(r.Loc, "shift amount cannot be negative"))
-				}
 				return NewIntConst(l.Loc, l.Val.(int)>>uint(r.Val.(int)))
 			},
 		},

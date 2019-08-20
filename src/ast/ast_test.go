@@ -10,8 +10,8 @@ import (
 const source = `
 package main
 
-func foo1() {
-	var f Foo
+func foo1() (d int) {
+	f := Foo{b: g}
 	a := 3 + g
 	for i := 0; i < 4; i++ {
 		if b := i * i; b > 4 {
@@ -21,6 +21,7 @@ func foo1() {
 		}
 		continue
 	}
+	return a
 }
 
 type Foo struct {

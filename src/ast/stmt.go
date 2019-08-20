@@ -108,12 +108,14 @@ func (s *IncDecStmt) ToStringTree() string {
 type ReturnStmt struct {
 	BaseASTNode
 	Expr []IExprNode
+	Func *FuncDecl
 }
 
-func NewReturnStmt(loc *Loc, expr []IExprNode) *ReturnStmt {
+func NewReturnStmt(loc *Loc, expr []IExprNode, decl *FuncDecl) *ReturnStmt {
 	return &ReturnStmt{
 		BaseASTNode: *NewBaseASTNode(loc),
 		Expr:        expr,
+		Func:        decl,
 	}
 }
 

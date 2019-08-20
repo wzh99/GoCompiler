@@ -142,11 +142,96 @@ func (c *SemaChecker) VisitIncDecStmt(stmt *IncDecStmt) interface{} {
 	return nil
 }
 
-func (c *SemaChecker) mayChange(expr *IExprNode) {
-	newNode, changed := c.VisitExpr(*expr).(IExprNode)
-	if changed {
-		*expr = newNode
+func (c *SemaChecker) VisitReturnStmt(stmt *ReturnStmt) interface{} {
+	// Deal with return statements with no value
+	if len(stmt.Expr) == 0 {
+		if len(stmt.Func.Type.Result.Elem) == 0 { // this function has no returns
+			return nil // no need to check
+		}
+		if len(stmt.Func.NamedRet) > 0 { // return values are named
+			return nil // ok to have no return expressions
+		}
+		panic(NewSemaError(stmt.Loc, "empty return value"))
 	}
+
+	// Check number of return values
+	retType := stmt.Func.Type.Result.Elem
+	exprType := make([]IType, 0)
+	if len(retType) != len(stmt.Expr) {
+		if len(stmt.Expr) != 1 { // definitely mismatch
+			panic(NewSemaError(stmt.Loc,
+				fmt.Sprintf("return value number mismatch, need %d, have %d",
+					len(retType), len(exprType)),
+			))
+		}
+		tupleType, ok := stmt.Expr[0].GetType().(*TupleType)
+		if !ok { // not function call, also mismatch
+			panic(NewSemaError(stmt.Loc,
+				fmt.Sprintf("return value number mismatch, need %d, have 1", len(retType)),
+			))
+		}
+		exprType = tupleType.Elem
+		if len(exprType) != 1 { // definitely mismatch
+			panic(NewSemaError(stmt.Loc,
+				fmt.Sprintf("return value number mismatch, need %d, have %d",
+					len(retType), len(exprType)),
+			))
+		}
+		goto CheckType
+	}
+
+	// Check type conformance
+	for i := range stmt.Expr {
+		c.mayChange(&stmt.Expr[i])
+		exprType = append(exprType, stmt.Expr[i].GetType())
+	}
+CheckType:
+	for i := range retType {
+		if !retType[i].IsIdentical(exprType[i]) {
+			panic(NewSemaError(stmt.Expr[i].GetLoc(),
+				fmt.Sprintf("type mismatch, need %s, have %s", retType[i].ToString(),
+					exprType[i].ToString()),
+			))
+		}
+	}
+
+	return nil
+}
+
+func (c *SemaChecker) VisitForClauseStmt(stmt *ForClauseStmt) interface{} {
+	if stmt.Init != nil {
+		c.VisitStmt(stmt.Init)
+	}
+	if stmt.Cond != nil {
+		c.mayChange(&stmt.Cond)
+		if exprTypeEnum(stmt.Cond) != Bool {
+			panic(NewSemaError(stmt.Cond.GetLoc(),
+				fmt.Sprintf("invalid type of for clause condition expression"),
+			))
+		}
+	}
+	if stmt.Post != nil {
+		c.VisitStmt(stmt.Post)
+	}
+	c.VisitBlockStmt(stmt.Block)
+	return nil
+}
+
+func (c *SemaChecker) VisitIfStmt(stmt *IfStmt) interface{} {
+	if stmt.Init != nil {
+		c.VisitStmt(stmt.Init)
+	}
+	c.mayChange(&stmt.Cond)
+	if exprTypeEnum(stmt.Cond) != Bool {
+		panic(NewSemaError(stmt.Cond.GetLoc(),
+			fmt.Sprintf("invalid type of if clause condition expression"),
+		))
+	}
+	c.VisitBlockStmt(stmt.Block)
+	if stmt.Else != nil {
+		c.VisitStmt(stmt.Else)
+	}
+	return nil
 }
 
 func (c *SemaChecker) VisitExpr(expr IExprNode) interface{} {
@@ -160,6 +245,113 @@ func (c *SemaChecker) VisitExpr(expr IExprNode) interface{} {
 	case *BinaryExpr:
 		return c.VisitBinaryExpr(expr.(*BinaryExpr))
 	}
+	return nil
+}
+
+func (c *SemaChecker) VisitLiteralExpr(expr ILiteralExpr) interface{} {
+	switch expr.(type) {
+	case *FuncLit:
+		c.VisitFuncLit(expr.(*FuncLit))
+	case *CompLit:
+		c.VisitCompLit(expr.(*CompLit))
+	}
+	return nil
+}
+
+func (c *SemaChecker) VisitFuncLit(expr *FuncLit) interface{} {
+	c.VisitFuncDecl(expr.Decl)
+	return nil
+}
+
+func (c *SemaChecker) VisitCompLit(expr *CompLit) interface{} {
+	c.resolveType(&expr.Type)
+	litType := expr.Type
+	if alias, ok := expr.Type.(*AliasType); ok {
+		litType = alias.Under
+	}
+	switch litType.GetTypeEnum() {
+	case Struct:
+		structType := litType.(*StructType)
+		for i := range expr.Elem {
+			// Update value expression, key should not be visited
+			c.mayChange(&expr.Elem[i].Val)
+			elem := expr.Elem[i]
+
+			// Check semantic according to whether elements are keyed
+			if expr.Keyed {
+				// Check if element key is an identifier
+				id, ok := elem.Key.(*IdExpr)
+				if !ok {
+					panic(NewSemaError(elem.Key.GetLoc(), "key is not identifier"))
+				}
+				// Check if this identifier has corresponding member in struct
+				entry := structType.Field.Lookup(id.Name)
+				if entry == nil {
+					panic(NewSemaError(elem.Key.GetLoc(),
+						fmt.Sprintf("member not found for key %s", id.Name),
+					))
+				}
+				// Check if element value is valid
+				if !entry.Type.IsIdentical(elem.Val.GetType()) {
+					panic(NewSemaError(elem.Val.GetLoc(),
+						fmt.Sprintf("invalid value type for key %s", entry.Name),
+					))
+				}
+				elem.Symbol = entry
+
+			} else {
+				// Check if more values are needed are provided
+				if i >= len(structType.Field.Entries) {
+					panic(NewSemaError(elem.Key.GetLoc(), "too many values"))
+				}
+				// Check type conformance
+				target := structType.Field.Entries[i]
+				if !elem.Val.GetType().IsIdentical(target.Type) {
+					panic(NewSemaError(elem.Val.GetLoc(),
+						fmt.Sprintf("invalid value type for key %s", target.Name),
+					))
+				}
+				elem.Symbol = target
+			}
+		}
+
+	case Array:
+		arrayType := litType.(*ArrayType)
+		for i := range expr.Elem {
+			c.mayChange(&expr.Elem[i].Key)
+			c.mayChange(&expr.Elem[i].Val)
+			elem := expr.Elem[i]
+
+			if expr.Keyed {
+				// Check if element key is a constant integer
+				constExpr, ok := elem.Key.(*ConstExpr)
+				if !ok {
+					panic(NewSemaError(elem.Key.GetLoc(),
+						"array index is not a constant expression",
+					))
+				}
+				index, ok := constExpr.Val.(int)
+				if !ok {
+					panic(NewSemaError(constExpr.Loc, "array index is not an integer"))
+				}
+				// Check if index is out of bound
+				if index >= arrayType.Len {
+					panic(NewSemaError(constExpr.Loc, "array index out of bound"))
+				}
+
+			} else {
+				if i >= arrayType.Len {
+					panic(NewSemaError(elem.Key.GetLoc(), "too many values"))
+				}
+			}
+
+			// Check value type
+			if !elem.Val.GetType().IsIdentical(arrayType.Elem) {
+				panic(NewSemaError(elem.Val.GetLoc(), "invalid value type"))
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -270,8 +462,8 @@ func (c *SemaChecker) VisitBinaryExpr(expr *BinaryExpr) interface{} {
 			BinaryOpStr[expr.Op], expr.Left.GetType().ToString(),
 			expr.Right.GetType().ToString(),
 		))
-	if expr.Op&(LSH|RSH) == 0 && !expr.Left.GetType().IsIdentical(expr.Right.GetType()) {
-		panic(err) // binary operations (except LSH and RSH), should be on two operands of same type
+	if !expr.Left.GetType().IsIdentical(expr.Right.GetType()) {
+		panic(err) // binary operations should be on two operands of same type
 	}
 	lType := expr.Left.GetType()
 	lTypeEnum := lType.GetTypeEnum()
@@ -286,14 +478,8 @@ func (c *SemaChecker) VisitBinaryExpr(expr *BinaryExpr) interface{} {
 			panic(err)
 		}
 		expr.Type = lType
-	case MOD, AAND, AOR, XOR:
+	case MOD, AAND, AOR, XOR, LSH, RSH:
 		if !lTypeEnum.Match(IntegerType) {
-			panic(err)
-		}
-		expr.Type = lType
-	case LSH, RSH:
-		rTypeEnum := exprTypeEnum(expr.Right)
-		if !lTypeEnum.Match(IntegerType) || !rTypeEnum.Match(UnsignedType) {
 			panic(err)
 		}
 		expr.Type = lType
@@ -314,6 +500,13 @@ func (c *SemaChecker) VisitBinaryExpr(expr *BinaryExpr) interface{} {
 
 func exprTypeEnum(expr IExprNode) TypeEnum {
 	return expr.GetType().GetTypeEnum()
+}
+
+func (c *SemaChecker) mayChange(expr *IExprNode) {
+	newNode, changed := c.VisitExpr(*expr).(IExprNode)
+	if changed {
+		*expr = newNode
+	}
 }
 
 func (c *SemaChecker) VisitType(tp IType) interface{} {
@@ -345,7 +538,21 @@ func (c *SemaChecker) VisitPtrType(tp *PtrType) interface{} {
 }
 
 func (c *SemaChecker) VisitArrayType(tp *ArrayType) interface{} {
+	// Check element type
 	c.resolveType(&tp.Elem)
+
+	// Check array length
+	c.mayChange(&tp.lenExpr)
+	constExpr, ok := tp.lenExpr.(*ConstExpr)
+	if !ok {
+		panic(NewSemaError(tp.lenExpr.GetLoc(), "array length should be a constant expression"))
+	}
+	length, ok := constExpr.Val.(int)
+	if !ok {
+		panic(NewSemaError(tp.lenExpr.GetLoc(), "array length should be an integer"))
+	}
+	tp.Len = length
+
 	return nil
 }
 
@@ -383,13 +590,13 @@ func (c *SemaChecker) VisitFuncType(tp *FuncType) interface{} {
 
 // Resolve type in the global scope, and further resolve its component type
 func (c *SemaChecker) resolveType(tp *IType) {
-	if _, unres := (*tp).(*UnresolvedType); unres {
+	if _, ok := (*tp).(*UnresolvedType); ok {
 		name := (*tp).(*UnresolvedType).Name
 		entry, _ := c.global.Lookup(name)
 		if entry == nil {
-			panic(fmt.Errorf("%s undefined symbol: %s", (*tp).GetLoc().ToString(), name))
+			panic(NewSemaError((*tp).GetLoc(), fmt.Sprintf("undefined symbol: %s", name)))
 		} else if entry.Flag != TypeEntry {
-			panic(fmt.Errorf("%s not a type: %s", (*tp).GetLoc().ToString(), name))
+			panic(NewSemaError((*tp).GetLoc(), fmt.Sprintf("not a type: %s", name)))
 		}
 		*tp = entry.Type
 	}

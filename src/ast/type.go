@@ -153,7 +153,7 @@ func NewAliasType(loc *Loc, name string, under IType) *AliasType {
 }
 
 func (t *AliasType) ToString() string {
-	return fmt.Sprintf("%s: %s", t.Name, t.Under.ToString())
+	return fmt.Sprintf("%s", t.Name)
 }
 
 func (t *AliasType) IsIdentical(o IType) bool {
@@ -247,20 +247,21 @@ func (t *PtrType) IsIdentical(o IType) bool {
 
 type ArrayType struct {
 	BaseType
-	Elem IType
-	Len  int // -1 means its length cannot be determined temporarily
+	Elem    IType
+	Len     int
+	lenExpr IExprNode // may be a constant expression
 }
 
-func NewArrayType(loc *Loc, elem IType, len int) *ArrayType {
+func NewArrayType(loc *Loc, elem IType, lenExpr IExprNode) *ArrayType {
 	return &ArrayType{
 		BaseType: *NewBaseType(loc, Array),
 		Elem:     elem,
-		Len:      len,
+		lenExpr:  lenExpr,
 	}
 }
 
 func (t *ArrayType) ToString() string {
-	return fmt.Sprintf("[%d]%s", t.Len, t.Elem.ToString())
+	return fmt.Sprintf("[%d]%s", t.lenExpr, t.Elem.ToString())
 }
 
 func (t *ArrayType) IsIdentical(o IType) bool {
@@ -268,7 +269,7 @@ func (t *ArrayType) IsIdentical(o IType) bool {
 		return alias.IsIdentical(t)
 	}
 	t2, ok := o.(*ArrayType)
-	return ok && t.Elem.IsIdentical(t2.Elem) && t.Len == t2.Len
+	return ok && t.Elem.IsIdentical(t2.Elem) && t.lenExpr == t2.lenExpr
 }
 
 type SliceType struct {

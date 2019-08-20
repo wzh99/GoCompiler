@@ -499,7 +499,7 @@ func (v *Builder) VisitReturnStmt(ctx *ReturnStmtContext) interface{} {
 	if exprCtx := ctx.ExpressionList(); exprCtx != nil {
 		exprList = v.VisitExpressionList(exprCtx.(*ExpressionListContext)).([]IExprNode)
 	}
-	v.addStmt(NewReturnStmt(NewLocFromContext(ctx), exprList))
+	v.addStmt(NewReturnStmt(NewLocFromContext(ctx), exprList, v.cur.Func))
 	return nil
 }
 
@@ -668,26 +668,12 @@ func (v *Builder) VisitTypeLit(ctx *TypeLitContext) interface{} {
 
 func (v *Builder) VisitArrayType(ctx *ArrayTypeContext) interface{} {
 	elem := v.VisitElementType(ctx.ElementType().(*ElementTypeContext)).(IType)
-	length := v.VisitArrayLength(ctx.ArrayLength().(*ArrayLengthContext)).(int)
-	return NewArrayType(NewLocFromContext(ctx), elem, length)
+	lenExpr := v.VisitArrayLength(ctx.ArrayLength().(*ArrayLengthContext)).(IExprNode)
+	return NewArrayType(NewLocFromContext(ctx), elem, lenExpr)
 }
 
 func (v *Builder) VisitArrayLength(ctx *ArrayLengthContext) interface{} {
-	expr, ok := v.VisitExpression(ctx.Expression().(*ExpressionContext)).(*ConstExpr)
-	if !ok {
-		panic(NewSemaError(
-			NewLocFromContext(ctx),
-			"array length should be a constant expression",
-		))
-	}
-	val, ok := expr.Val.(int)
-	if !ok {
-		panic(NewSemaError(
-			NewLocFromContext(ctx),
-			"array length should be a constant integer",
-		))
-	}
-	return val
+	return v.VisitExpression(ctx.Expression().(*ExpressionContext)).(*ConstExpr)
 }
 
 func (v *Builder) VisitElementType(ctx *ElementTypeContext) interface{} {
@@ -833,9 +819,6 @@ func (v *Builder) VisitLiteralType(ctx *LiteralTypeContext) interface{} {
 		return v.VisitStructType(t.(*StructTypeContext)).(IType)
 	} else if t := ctx.ArrayType(); t != nil {
 		return v.VisitArrayType(t.(*ArrayTypeContext)).(IType)
-	} else if t := ctx.ElementType(); t != nil {
-		tp := v.VisitElementType(t.(*ElementTypeContext)).(IType)
-		return NewArrayType(NewLocFromContext(ctx), tp, -1)
 	} else if t := ctx.SliceType(); t != nil {
 		return v.VisitSliceType(t.(*SliceTypeContext)).(IType)
 	} else if t := ctx.MapType(); t != nil {
@@ -858,7 +841,7 @@ func (v *Builder) VisitLiteralValue(ctx *LiteralValueContext) interface{} {
 	if e := ctx.ElementList(); e != nil {
 		return v.VisitElementList(e.(*ElementListContext)).(*ElemList)
 	} else {
-		return NewElemList(make([]*LitElem, 0))
+		return NewElemList(make([]*LitElem, 0), false)
 	}
 }
 
@@ -867,7 +850,13 @@ func (v *Builder) VisitElementList(ctx *ElementListContext) interface{} {
 	for _, e := range ctx.AllKeyedElement() {
 		elem = append(elem, v.VisitKeyedElement(e.(*KeyedElementContext)).(*LitElem))
 	}
-	return NewElemList(elem)
+	keyed := elem[0].IsKeyed() // check if there are mixed keyed and unkeyed elements
+	for _, v := range elem {
+		if (keyed && !v.IsKeyed()) || (!keyed && v.IsKeyed()) {
+			panic(NewSemaError(v.Loc, "%s mixed keyed and unkeyed elements"))
+		}
+	}
+	return NewElemList(elem, keyed)
 }
 
 func (v *Builder) VisitKeyedElement(ctx *KeyedElementContext) interface{} {
@@ -881,7 +870,7 @@ func (v *Builder) VisitKeyedElement(ctx *KeyedElementContext) interface{} {
 
 func (v *Builder) VisitKey(ctx *KeyContext) interface{} {
 	if k := ctx.IDENTIFIER(); k != nil {
-		return NewIdExpr(NewLocFromContext(ctx), k.GetText(), nil)
+		return NewIdExpr(NewLocFromTerminal(k), k.GetText(), nil)
 	} else if k := ctx.Expression(); k != nil {
 		return v.VisitExpression(k.(*ExpressionContext)).(IExprNode)
 	} else if k := ctx.LiteralValue(); k != nil {
