@@ -949,9 +949,16 @@ func (v *Builder) VisitPrimaryExpr(ctx *PrimaryExprContext) interface{} {
 	if e := ctx.Arguments(); e != nil {
 		args := v.VisitArguments(e.(*ArgumentsContext)).([]IExprNode)
 		return NewFuncCallExpr(NewLocFromContext(ctx), prim, args)
+	} else if e := ctx.Index(); e != nil {
+		index := v.VisitIndex(e.(*IndexContext)).(IExprNode)
+		return NewIndexExpr(NewLocFromContext(ctx), prim, index)
 	}
 
 	return nil // IExprNode
+}
+
+func (v *Builder) VisitIndex(ctx *IndexContext) interface{} {
+	return v.VisitExpression(ctx.Expression().(*ExpressionContext))
 }
 
 func (v *Builder) VisitArguments(ctx *ArgumentsContext) interface{} {

@@ -148,7 +148,7 @@ func (c *SemaChecker) VisitReturnStmt(stmt *ReturnStmt) interface{} {
 
 	// Check number of return values
 	exprType := make([]IType, 0)
-	for i, _ := range stmt.Expr {
+	for i := range stmt.Expr {
 		c.mayChange(&stmt.Expr[i])
 		exprType = append(exprType, stmt.Expr[i].GetType())
 	}
@@ -400,6 +400,22 @@ func (c *SemaChecker) VisitFuncCallExpr(expr *FuncCallExpr) interface{} {
 	// Mark return type
 	expr.Type = funcType.Result
 
+	return nil
+}
+
+func (c *SemaChecker) VisitIndexExpr(expr *IndexExpr) interface{} {
+	if !exprTypeEnum(expr.Array).Match(Array | Slice) {
+		panic(NewSemaError(expr.Array.GetLoc(), "cannot be indexed"))
+	}
+	if !exprTypeEnum(expr.Index).Match(IntegerType) {
+		panic(NewSemaError(expr.Index.GetLoc(), "index is not an integer"))
+	}
+	switch exprTypeEnum(expr.Array) {
+	case Array:
+		expr.Type = expr.Array.GetType().(*ArrayType).Elem
+	case Slice:
+		expr.Type = expr.Array.GetType().(*SliceType).Elem
+	}
 	return nil
 }
 

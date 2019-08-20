@@ -193,7 +193,11 @@ type FuncCallExpr struct {
 }
 
 func NewFuncCallExpr(loc *Loc, fun IExprNode, args []IExprNode) *FuncCallExpr {
-	return &FuncCallExpr{BaseExprNode: *NewBaseExprNode(loc), Func: fun, Args: args}
+	return &FuncCallExpr{
+		BaseExprNode: *NewBaseExprNode(loc),
+		Func:         fun,
+		Args:         args,
+	}
 }
 
 func (e *FuncCallExpr) ToStringTree() string {
@@ -208,6 +212,26 @@ func (e *FuncCallExpr) ToStringTree() string {
 }
 
 func (e *FuncCallExpr) IsLValue() bool { return false }
+
+type IndexExpr struct {
+	BaseExprNode
+	Array IExprNode // array type and slice type are all acceptable
+	Index IExprNode
+}
+
+func NewIndexExpr(loc *Loc, array IExprNode, index IExprNode) *IndexExpr {
+	return &IndexExpr{
+		BaseExprNode: *NewBaseExprNode(loc),
+		Array:        array,
+		Index:        index,
+	}
+}
+
+func (e *IndexExpr) ToStringTree() string {
+	return fmt.Sprintf("(%s[%s])", e.Array.ToStringTree(), e.Index.ToStringTree())
+}
+
+func (e *IndexExpr) IsLValue() bool { return true } // a[0] = c
 
 type UnaryExpr struct {
 	BaseExprNode
@@ -242,7 +266,13 @@ func NewUnaryExpr(loc *Loc, op UnaryOp, expr IExprNode) *UnaryExpr {
 	return &UnaryExpr{BaseExprNode: *NewBaseExprNode(loc), Op: op, Expr: expr}
 }
 
-func (e *UnaryExpr) IsLValue() bool { return false }
+func (e *UnaryExpr) IsLValue() bool {
+	if e.Op == DEREF {
+		return true // *a = v
+	} else {
+		return false
+	}
+}
 
 type BinaryOp int
 

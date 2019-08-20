@@ -23,6 +23,7 @@ type IVisitor interface {
 	VisitConstExpr(expr *ConstExpr) interface{}
 	VisitIdExpr(expr *IdExpr) interface{}
 	VisitFuncCallExpr(expr *FuncCallExpr) interface{}
+	VisitIndexExpr(expr *IndexExpr) interface{}
 	VisitUnaryExpr(expr *UnaryExpr) interface{}
 	VisitBinaryExpr(expr *BinaryExpr) interface{}
 
