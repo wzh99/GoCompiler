@@ -380,14 +380,6 @@ func (v *BaseGolangVisitor) VisitArguments(ctx *ArgumentsContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
-func (v *BaseGolangVisitor) VisitMethodExpr(ctx *MethodExprContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BaseGolangVisitor) VisitReceiverType(ctx *ReceiverTypeContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 func (v *BaseGolangVisitor) VisitExpression(ctx *ExpressionContext) interface{} {
 	return v.VisitChildren(ctx)
 }

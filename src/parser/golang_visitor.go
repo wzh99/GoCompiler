@@ -287,12 +287,6 @@ type GolangVisitor interface {
 	// Visit a parse tree produced by GolangParser#arguments.
 	VisitArguments(ctx *ArgumentsContext) interface{}
 
-	// Visit a parse tree produced by GolangParser#methodExpr.
-	VisitMethodExpr(ctx *MethodExprContext) interface{}
-
-	// Visit a parse tree produced by GolangParser#receiverType.
-	VisitReceiverType(ctx *ReceiverTypeContext) interface{}
-
 	// Visit a parse tree produced by GolangParser#expression.
 	VisitExpression(ctx *ExpressionContext) interface{}
 

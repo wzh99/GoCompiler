@@ -451,7 +451,6 @@ parameterDecl
 operand
     : literal
     | operandName
-    | methodExpr
     | '(' expression ')'
     ;
 
@@ -597,7 +596,7 @@ arguments
 
 //MethodExpr    = ReceiverType "." MethodName .
 //ReceiverType  = TypeName | "(" "*" TypeName ")" | "(" ReceiverType ")" .
-methodExpr
+/*methodExpr
     : receiverType '.' IDENTIFIER
     ;
 
@@ -605,7 +604,7 @@ receiverType
     : typeName
     | '(' '*' typeName ')'
     | '(' receiverType ')'
-    ;
+    ;*/
 
 //Expression = UnaryExpr | Expression binary_op Expression .
 //UnaryExpr  = PrimaryExpr | unary_op UnaryExpr .

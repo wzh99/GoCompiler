@@ -81,26 +81,18 @@ func (c *SemaChecker) VisitAssignStmt(stmt *AssignStmt) interface{} {
 	}
 
 	// Consider multi-valued function
-	if len(lhsType) != len(rhsType) { // maybe a multi-valued function
-		if len(rhsType) > 1 { // too may value on rhs
-			panic(NewSemaError(stmt.Loc,
-				fmt.Sprintf("assignment count mismatch %d = %d", len(lhsType), len(rhsType)),
-			))
-		}
-
-		tuple, ok := stmt.Rhs[0].GetType().(*TupleType)
-		if !ok { // not function result
-			panic(NewSemaError(stmt.Loc,
-				fmt.Sprintf("assignment count mismatch %d = 1", len(lhsType))))
-		}
-
-		if len(lhsType) != len(tuple.Elem) {
-			panic(NewSemaError(stmt.Loc,
-				fmt.Sprintf("function result assignment count mismatch %d = %d",
-					len(lhsType), len(tuple.Elem)),
+	if tuple, ok := stmt.Rhs[0].GetType().(*TupleType); ok {
+		if len(rhsType) != 1 { // other expressions than function call appears
+			panic(NewSemaError(stmt.Lhs[0].GetLoc(),
+				fmt.Sprintf("other expressions than function call appear on the right hand side"),
 			))
 		}
 		rhsType = tuple.Elem
+	}
+	if len(lhsType) != len(rhsType) {
+		panic(NewSemaError(stmt.Loc,
+			fmt.Sprintf("assignment count mismatch: %d = %d", len(lhsType), len(rhsType)),
+		))
 	}
 
 	// Update type in symbol entry or check type conformance
@@ -118,7 +110,7 @@ func (c *SemaChecker) VisitAssignStmt(stmt *AssignStmt) interface{} {
 		}
 		if !lhsType[i].IsIdentical(rhsType[i]) {
 			panic(NewSemaError(stmt.Loc,
-				fmt.Sprintf("type mismatch %s = %s", lhsType[i].ToString(),
+				fmt.Sprintf("type mismatch: %s = %s", lhsType[i].ToString(),
 					rhsType[i].ToString()),
 			))
 		}
@@ -155,37 +147,29 @@ func (c *SemaChecker) VisitReturnStmt(stmt *ReturnStmt) interface{} {
 	}
 
 	// Check number of return values
-	retType := stmt.Func.Type.Result.Elem
 	exprType := make([]IType, 0)
-	if len(retType) != len(stmt.Expr) {
-		if len(stmt.Expr) != 1 { // definitely mismatch
-			panic(NewSemaError(stmt.Loc,
-				fmt.Sprintf("return value number mismatch, need %d, have %d",
-					len(retType), len(exprType)),
-			))
-		}
-		tupleType, ok := stmt.Expr[0].GetType().(*TupleType)
-		if !ok { // not function call, also mismatch
-			panic(NewSemaError(stmt.Loc,
-				fmt.Sprintf("return value number mismatch, need %d, have 1", len(retType)),
-			))
-		}
-		exprType = tupleType.Elem
-		if len(exprType) != 1 { // definitely mismatch
-			panic(NewSemaError(stmt.Loc,
-				fmt.Sprintf("return value number mismatch, need %d, have %d",
-					len(retType), len(exprType)),
-			))
-		}
-		goto CheckType
-	}
-
-	// Check type conformance
-	for i := range stmt.Expr {
+	for i, _ := range stmt.Expr {
 		c.mayChange(&stmt.Expr[i])
 		exprType = append(exprType, stmt.Expr[i].GetType())
 	}
-CheckType:
+	retType := stmt.Func.Type.Result.Elem
+
+	if tuple, ok := exprType[0].(*TupleType); ok {
+		if len(exprType) != 1 { // other expressions than function call appears
+			panic(NewSemaError(stmt.Expr[0].GetLoc(),
+				fmt.Sprintf("other expressions than function call appear on the right hand side"),
+			))
+		}
+		exprType = tuple.Elem
+	}
+	if len(exprType) != len(retType) {
+		panic(NewSemaError(stmt.Loc,
+			fmt.Sprintf("assignment count mismatch, need %d, have %d", len(retType),
+				len(exprType)),
+		))
+	}
+
+	// Check type conformance
 	for i := range retType {
 		if !retType[i].IsIdentical(exprType[i]) {
 			panic(NewSemaError(stmt.Expr[i].GetLoc(),
@@ -240,6 +224,8 @@ func (c *SemaChecker) VisitExpr(expr IExprNode) interface{} {
 		return c.VisitLiteralExpr(expr.(ILiteralExpr))
 	case *IdExpr:
 		return c.VisitIdExpr(expr.(*IdExpr))
+	case *FuncCallExpr:
+		return c.VisitFuncCallExpr(expr.(*FuncCallExpr))
 	case *UnaryExpr:
 		return c.VisitUnaryExpr(expr.(*UnaryExpr))
 	case *BinaryExpr:
@@ -308,7 +294,7 @@ func (c *SemaChecker) VisitCompLit(expr *CompLit) interface{} {
 				target := structType.Field.Entries[i]
 				if !elem.Val.GetType().IsIdentical(target.Type) {
 					panic(NewSemaError(elem.Val.GetLoc(),
-						fmt.Sprintf("invalid value type for key %s", target.Name),
+						fmt.Sprintf("invalid type for key %s", target.Name),
 					))
 				}
 				elem.Symbol = target
@@ -347,9 +333,10 @@ func (c *SemaChecker) VisitCompLit(expr *CompLit) interface{} {
 
 			// Check value type
 			if !elem.Val.GetType().IsIdentical(arrayType.Elem) {
-				panic(NewSemaError(elem.Val.GetLoc(), "invalid value type"))
+				panic(NewSemaError(elem.Val.GetLoc(), "invalid type"))
 			}
 		}
+
 	}
 
 	return nil
@@ -380,6 +367,38 @@ func (c *SemaChecker) VisitIdExpr(expr *IdExpr) interface{} {
 			return NewFloatConst(expr.Loc, expr.Symbol.Val.(float64))
 		}
 	}
+
+	return nil
+}
+
+func (c *SemaChecker) VisitFuncCallExpr(expr *FuncCallExpr) interface{} {
+	// Check if called expression is really a callable
+	c.VisitExpr(expr.Func)
+	if exprTypeEnum(expr.Func) != Func {
+		panic(NewSemaError(expr.Loc, "expression is not callable"))
+	}
+
+	// Check if argument length match parameter length
+	funcType := expr.Func.GetType().(*FuncType)
+	paramType := funcType.Param.Elem
+	if len(paramType) != len(expr.Args) {
+		panic(NewSemaError(expr.Loc,
+			fmt.Sprintf("argument count mismatch, want %d, have %d", len(paramType),
+				len(expr.Args)),
+		))
+	}
+
+	// Check if every argument type match parameter type
+	for i := range expr.Args {
+		c.mayChange(&expr.Args[i])
+		arg := expr.Args[i]
+		if !arg.GetType().IsIdentical(paramType[i]) {
+			panic(NewSemaError(arg.GetLoc(), "invalid argument type"))
+		}
+	}
+
+	// Mark return type
+	expr.Type = funcType.Result
 
 	return nil
 }
