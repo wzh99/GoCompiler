@@ -16,7 +16,7 @@ type Builder struct {
 	// Track receiver of the method next child scope belongs to
 	// Since methods and functions share a single function body construction procedure,
 	// the procedure itself has no idea whether it has receiver.
-	receiver *TableEntry
+	receiver *Symbol
 	// Block stack
 	blocks [][]*BlockStmt // [func][block]
 }
@@ -168,7 +168,7 @@ func (v *Builder) VisitConstSpec(ctx *ConstSpecContext) interface{} {
 		}
 
 		// Add to symbol table of current scope
-		v.cur.AddSymbol(NewSymbolEntry(loc, lhs[i].Name, ConstEntry, tp, val))
+		v.cur.AddSymbol(NewSymbol(loc, lhs[i].Name, ConstEntry, tp, val))
 	}
 
 	return nil
@@ -208,7 +208,7 @@ func (v *Builder) VisitTypeSpec(ctx *TypeSpecContext) interface{} {
 	name := ctx.IDENTIFIER().GetText()
 	tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
 	alias := NewAliasType(NewLocFromContext(ctx), name, tp)
-	v.cur.AddSymbol(NewSymbolEntry(NewLocFromContext(ctx), name, TypeEntry, alias, nil))
+	v.cur.AddSymbol(NewSymbol(NewLocFromContext(ctx), name, TypeEntry, alias, nil))
 	return nil
 }
 
@@ -227,7 +227,7 @@ func (v *Builder) VisitFunction(ctx *FunctionContext) interface{} {
 	sig := v.VisitSignature(ctx.Signature().(*SignatureContext)).(*FuncSignature)
 	paramType := make([]IType, 0)
 	resultType := make([]IType, 0)
-	namedRet := make([]*TableEntry, 0)
+	namedRet := make([]*Symbol, 0)
 	for _, p := range sig.params {
 		paramType = append(paramType, p.Type)
 	}
@@ -289,7 +289,7 @@ func (v *Builder) VisitFunction(ctx *FunctionContext) interface{} {
 
 func (v *Builder) VisitMethodDecl(ctx *MethodDeclContext) interface{} {
 	name := ctx.IDENTIFIER().GetText()
-	v.receiver = v.VisitReceiver(ctx.Receiver().(*ReceiverContext)).(*TableEntry) // record receiver
+	v.receiver = v.VisitReceiver(ctx.Receiver().(*ReceiverContext)).(*Symbol) // record receiver
 	funcDecl := v.VisitFunction(ctx.Function().(*FunctionContext)).(*FuncDecl)
 	funcDecl.Name = name
 	v.global.AddSymbol(funcDecl.GenSymbol())
@@ -298,7 +298,7 @@ func (v *Builder) VisitMethodDecl(ctx *MethodDeclContext) interface{} {
 }
 
 func (v *Builder) VisitReceiver(ctx *ReceiverContext) interface{} {
-	decl := v.VisitParameterDecl(ctx.ParameterDecl().(*ParameterDeclContext)).([]*TableEntry)
+	decl := v.VisitParameterDecl(ctx.ParameterDecl().(*ParameterDeclContext)).([]*Symbol)
 	if len(decl) != 1 {
 		panic(NewSemaError(
 			NewLocFromContext(ctx),
@@ -345,7 +345,7 @@ func (v *Builder) VisitVarSpec(ctx *VarSpecContext) interface{} {
 	lhs := make([]IExprNode, 0)
 	for _, id := range idList {
 		// type maybe unknown at this time
-		id.Symbol = NewSymbolEntry(id.GetLoc(), id.Name, VarEntry, specType, nil)
+		id.Symbol = NewSymbol(id.GetLoc(), id.Name, VarEntry, specType, nil)
 		v.cur.AddSymbol(id.Symbol)
 		lhs = append(lhs, id)
 	}
@@ -474,7 +474,7 @@ func (v *Builder) VisitShortVarDecl(ctx *ShortVarDeclContext) interface{} {
 			}
 			id.Symbol = symbol
 		} else {
-			id.Symbol = NewSymbolEntry(id.Loc, id.Name, VarEntry, nil, nil)
+			id.Symbol = NewSymbol(id.Loc, id.Name, VarEntry, nil, nil)
 			v.cur.AddSymbol(id.Symbol)
 			nNew++
 		}
@@ -709,10 +709,10 @@ func (v *Builder) VisitFunctionType(ctx *FunctionTypeContext) interface{} {
 }
 
 func (v *Builder) VisitSignature(ctx *SignatureContext) interface{} {
-	params := v.VisitParameters(ctx.Parameters().(*ParametersContext)).([]*TableEntry)
-	results := make([]*TableEntry, 0)
+	params := v.VisitParameters(ctx.Parameters().(*ParametersContext)).([]*Symbol)
+	results := make([]*Symbol, 0)
 	if r := ctx.Result(); r != nil {
-		results = v.VisitResult(r.(*ResultContext)).([]*TableEntry)
+		results = v.VisitResult(r.(*ResultContext)).([]*Symbol)
 	}
 	return &FuncSignature{params: params, results: results}
 }
@@ -720,26 +720,26 @@ func (v *Builder) VisitSignature(ctx *SignatureContext) interface{} {
 func (v *Builder) VisitResult(ctx *ResultContext) interface{} {
 	if r := ctx.Tp(); r != nil {
 		tp := v.VisitTp(r.(*TpContext)).(IType)
-		return []*TableEntry{
-			NewSymbolEntry(NewLocFromContext(ctx), "", VarEntry, tp, nil)}
+		return []*Symbol{
+			NewSymbol(NewLocFromContext(ctx), "", VarEntry, tp, nil)}
 	} else if r := ctx.Parameters(); r != nil {
-		return v.VisitParameters(r.(*ParametersContext)).([]*TableEntry)
+		return v.VisitParameters(r.(*ParametersContext)).([]*Symbol)
 	}
 	return nil // []*SymbolEntry
 }
 
 func (v *Builder) VisitParameters(ctx *ParametersContext) interface{} {
 	if p := ctx.ParameterList(); p != nil {
-		return v.VisitParameterList(p.(*ParameterListContext)).([]*TableEntry)
+		return v.VisitParameterList(p.(*ParameterListContext)).([]*Symbol)
 	} else {
-		return make([]*TableEntry, 0)
+		return make([]*Symbol, 0)
 	} // []*SymbolEntry
 }
 
 func (v *Builder) VisitParameterList(ctx *ParameterListContext) interface{} {
-	list := make([]*TableEntry, 0)
+	list := make([]*Symbol, 0)
 	for _, d := range ctx.AllParameterDecl() {
-		list = append(list, v.VisitParameterDecl(d.(*ParameterDeclContext)).([]*TableEntry)...)
+		list = append(list, v.VisitParameterDecl(d.(*ParameterDeclContext)).([]*Symbol)...)
 	}
 	return list
 }
@@ -747,13 +747,13 @@ func (v *Builder) VisitParameterList(ctx *ParameterListContext) interface{} {
 func (v *Builder) VisitParameterDecl(ctx *ParameterDeclContext) interface{} {
 	tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
 	if idListCxt := ctx.IdentifierList(); idListCxt == nil {
-		return []*TableEntry{
-			NewSymbolEntry(NewLocFromContext(ctx), "", VarEntry, tp, 0)}
+		return []*Symbol{
+			NewSymbol(NewLocFromContext(ctx), "", VarEntry, tp, 0)}
 	} else {
 		idList := v.VisitIdentifierList(idListCxt.(*IdentifierListContext)).([]*IdExpr)
-		declList := make([]*TableEntry, 0)
+		declList := make([]*Symbol, 0)
 		for _, id := range idList {
-			declList = append(declList, NewSymbolEntry(id.Loc, id.Name, VarEntry, tp, 0))
+			declList = append(declList, NewSymbol(id.Loc, id.Name, VarEntry, tp, 0))
 		}
 		return declList // []*SymbolEntry
 	}
@@ -832,7 +832,7 @@ func (v *Builder) VisitLiteralType(ctx *LiteralTypeContext) interface{} {
 func (v *Builder) VisitStructType(ctx *StructTypeContext) interface{} {
 	table := NewSymbolTable()
 	for _, f := range ctx.AllFieldDecl() {
-		table.Add(v.VisitFieldDecl(f.(*FieldDeclContext)).([]*TableEntry)...)
+		table.Add(v.VisitFieldDecl(f.(*FieldDeclContext)).([]*Symbol)...)
 	}
 	return NewStructType(NewLocFromContext(ctx), table) // *StructType
 }
@@ -892,9 +892,9 @@ func (v *Builder) VisitFieldDecl(ctx *FieldDeclContext) interface{} {
 	if l := ctx.IdentifierList(); l != nil {
 		idList := v.VisitIdentifierList(l.(*IdentifierListContext)).([]*IdExpr)
 		tp := v.VisitTp(ctx.Tp().(*TpContext)).(IType)
-		declList := make([]*TableEntry, 0)
+		declList := make([]*Symbol, 0)
 		for _, id := range idList {
-			declList = append(declList, NewSymbolEntry(id.Loc, id.Name, VarEntry, tp, nil))
+			declList = append(declList, NewSymbol(id.Loc, id.Name, VarEntry, tp, nil))
 		}
 		return declList // []*SymbolEntry
 	}
@@ -908,7 +908,7 @@ func (v *Builder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 	// Create lambda capture set (identifiers in different blocks may repeat)
 	// Visit scopes of declared function and its nested scopes (excluding the scopes of its nested
 	// functions), using DFS
-	closureSet := make(map[*TableEntry]bool, 0)
+	closureSet := make(map[*Symbol]bool, 0)
 	stack := []*Scope{decl.Scope}
 	for len(stack) > 0 {
 		// Process operand identifiers in current scope
@@ -949,12 +949,21 @@ func (v *Builder) VisitPrimaryExpr(ctx *PrimaryExprContext) interface{} {
 	if e := ctx.Arguments(); e != nil {
 		args := v.VisitArguments(e.(*ArgumentsContext)).([]IExprNode)
 		return NewFuncCallExpr(NewLocFromContext(ctx), prim, args)
-	} else if e := ctx.Index(); e != nil {
+	} else if e := ctx.Selector(); e != nil {
+		selector := v.VisitSelector(e.(*SelectorContext)).(*IdExpr)
+		return NewSelectExpr(NewLocFromContext(ctx), prim, selector)
+	}
+	if e := ctx.Index(); e != nil {
 		index := v.VisitIndex(e.(*IndexContext)).(IExprNode)
 		return NewIndexExpr(NewLocFromContext(ctx), prim, index)
 	}
 
 	return nil // IExprNode
+}
+
+func (v *Builder) VisitSelector(ctx *SelectorContext) interface{} {
+	id := ctx.IDENTIFIER()
+	return NewIdExpr(NewLocFromTerminal(id), id.GetText(), nil)
 }
 
 func (v *Builder) VisitIndex(ctx *IndexContext) interface{} {

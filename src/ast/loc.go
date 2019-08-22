@@ -26,5 +26,5 @@ func (l *Loc) GetLine() int { return l.line }
 func (l *Loc) GetColumn() int { return l.col }
 
 func (l *Loc) ToString() string {
-	return fmt.Sprintf("line %d, column %d", l.line, l.col)
+	return fmt.Sprintf("%d:%d", l.line, l.col)
 }

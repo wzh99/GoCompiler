@@ -40,6 +40,8 @@ func (v *BaseVisitor) VisitIdExpr(expr *IdExpr) interface{} { return nil }
 
 func (v *BaseVisitor) VisitFuncCallExpr(expr *FuncCallExpr) interface{} { return nil }
 
+func (v *BaseVisitor) VisitSelectExpr(expr *SelectExpr) interface{} { return nil }
+
 func (v *BaseVisitor) VisitIndexExpr(expr *IndexExpr) interface{} { return nil }
 
 func (v *BaseVisitor) VisitUnaryExpr(expr *UnaryExpr) interface{} { return nil }

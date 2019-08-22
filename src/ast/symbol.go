@@ -9,7 +9,7 @@ const (
 	TypeEntry
 )
 
-type TableEntry struct {
+type Symbol struct {
 	Loc  *Loc
 	Name string
 	Flag EntryFlag
@@ -17,33 +17,38 @@ type TableEntry struct {
 	Val  interface{} // reserved for constant expression
 }
 
-func NewSymbolEntry(loc *Loc, name string, flag EntryFlag, tp IType,
-	val interface{}) *TableEntry {
-	return &TableEntry{Loc: loc, Name: name, Flag: flag, Type: tp, Val: val}
+func NewSymbol(loc *Loc, name string, flag EntryFlag, tp IType, val interface{}) *Symbol {
+	return &Symbol{
+		Loc:  loc,
+		Name: name,
+		Flag: flag,
+		Type: tp,
+		Val:  val,
+	}
 }
 
-func (e *TableEntry) IsNamed() bool { return len(e.Name) > 0 }
+func (e *Symbol) IsNamed() bool { return len(e.Name) > 0 }
 
-func (e *TableEntry) TypeUnknown() bool { return e.Type == nil }
+func (e *Symbol) TypeUnknown() bool { return e.Type == nil }
 
 type SymbolTable struct {
-	Entries []*TableEntry          // for ordered access
-	Table   map[string]*TableEntry // for lookup
+	Entries []*Symbol          // for ordered access
+	table   map[string]*Symbol // for lookup
 }
 
 func NewSymbolTable() *SymbolTable {
-	return &SymbolTable{Entries: make([]*TableEntry, 0), Table: make(map[string]*TableEntry)}
+	return &SymbolTable{Entries: make([]*Symbol, 0), table: make(map[string]*Symbol)}
 }
 
 // This method does not check the validity of entry.
 // The check is done in Scope.AddEntry()
-func (t *SymbolTable) Add(entries ...*TableEntry) {
+func (t *SymbolTable) Add(entries ...*Symbol) {
 	for _, e := range entries {
 		t.Entries = append(t.Entries, e)
-		t.Table[e.Name] = e
+		t.table[e.Name] = e
 	}
 }
 
-func (t *SymbolTable) Lookup(name string) *TableEntry {
-	return t.Table[name]
+func (t *SymbolTable) Lookup(name string) *Symbol {
+	return t.table[name]
 }

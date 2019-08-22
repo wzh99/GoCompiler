@@ -61,7 +61,7 @@ type LitElem struct {
 	Loc    *Loc
 	Key    IExprNode
 	Val    IExprNode
-	Symbol *TableEntry // record corresponding struct symbol table entry
+	Symbol *Symbol // record corresponding struct symbol table entry
 }
 
 func NewLitElem(loc *Loc, key IExprNode, val IExprNode) *LitElem {
@@ -165,7 +165,7 @@ func (c *ZeroValue) IsLValue() bool { return false }
 type IdExpr struct {
 	BaseExprNode
 	Name     string // should keep name for lookup in global scope
-	Symbol   *TableEntry
+	Symbol   *Symbol
 	Captured bool
 }
 
@@ -177,7 +177,7 @@ var IsKeyword = map[string]bool{
 	"select": true, "struct": true, "switch": true, "type": true, "var": true,
 }
 
-func NewIdExpr(loc *Loc, name string, symbol *TableEntry) *IdExpr {
+func NewIdExpr(loc *Loc, name string, symbol *Symbol) *IdExpr {
 	return &IdExpr{BaseExprNode: *NewBaseExprNode(loc), Name: name, Symbol: symbol}
 }
 
@@ -212,6 +212,26 @@ func (e *FuncCallExpr) ToStringTree() string {
 }
 
 func (e *FuncCallExpr) IsLValue() bool { return false }
+
+type SelectExpr struct {
+	BaseExprNode
+	Target IExprNode
+	Member *IdExpr
+}
+
+func NewSelectExpr(loc *Loc, target IExprNode, member *IdExpr) *SelectExpr {
+	return &SelectExpr{
+		BaseExprNode: *NewBaseExprNode(loc),
+		Target:       target,
+		Member:       member,
+	}
+}
+
+func (e *SelectExpr) ToStringTree() string {
+	return fmt.Sprintf("(. %s %s)", e.Target.ToStringTree(), e.Member.ToStringTree())
+}
+
+func (e *SelectExpr) IsLValue() bool { return true }
 
 type IndexExpr struct {
 	BaseExprNode

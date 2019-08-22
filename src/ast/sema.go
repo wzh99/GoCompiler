@@ -337,6 +337,9 @@ func (c *SemaChecker) VisitCompLit(expr *CompLit) interface{} {
 			}
 		}
 
+	default:
+		panic(NewSemaError(litType.GetLoc(), "cannot construct with composite literal"))
+
 	}
 
 	return nil
@@ -399,6 +402,34 @@ func (c *SemaChecker) VisitFuncCallExpr(expr *FuncCallExpr) interface{} {
 
 	// Mark return type
 	expr.Type = funcType.Result
+
+	return nil
+}
+
+func (c *SemaChecker) VisitSelectExpr(expr *SelectExpr) interface{} {
+	c.VisitExpr(expr.Target)
+	switch exprTypeEnum(expr.Target) {
+	case Struct:
+		// Get struct field
+		structType := expr.Type
+		if alias, ok := structType.(*AliasType); ok {
+			structType = alias.Under
+		}
+		field := structType.(*StructType).Field
+		name := expr.Member.Name
+
+		// Look up identifier name in struct field
+		entry := field.Lookup(name)
+		if entry == nil {
+			panic(NewSemaError(expr.Member.Loc,
+				fmt.Sprintf("member %s not found in %s", name, structType.ToString()),
+			))
+		}
+		expr.Type = entry.Type
+
+	default:
+		panic(NewSemaError(expr.Target.GetLoc(), "type is not selectable"))
+	}
 
 	return nil
 }
