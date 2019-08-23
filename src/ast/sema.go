@@ -77,6 +77,9 @@ func (c *SemaChecker) VisitAssignStmt(stmt *AssignStmt) interface{} {
 	lhsType := make([]IType, 0)
 	for i := range stmt.Lhs {
 		c.mayChange(&stmt.Lhs[i])
+		if !stmt.Lhs[i].IsLValue() {
+			panic(NewSemaError(stmt.Lhs[i].GetLoc(), "not a lvalue"))
+		}
 		lhsType = append(lhsType, stmt.Lhs[i].GetType())
 	}
 
@@ -544,7 +547,7 @@ func (c *SemaChecker) VisitBinaryExpr(expr *BinaryExpr) interface{} {
 			panic(err)
 		}
 		expr.Type = lType
-	case MOD, AAND, AOR, XOR, LSH, RSH:
+	case MOD, AAND, AOR, XOR, SHL, SHR:
 		if !lTypeEnum.Match(IntegerType) {
 			panic(err)
 		}

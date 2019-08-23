@@ -1,10 +1,5 @@
 package ast
 
-import (
-	"fmt"
-	"strconv"
-)
-
 // Abstract expression interface
 type IExprNode interface {
 	IStmtNode
@@ -130,19 +125,6 @@ func NewBoolConst(loc *Loc, val bool) *ConstExpr {
 	return e
 }
 
-func (e *ConstExpr) ToStringTree() string {
-	switch e.Type.GetTypeEnum() {
-	case Int:
-		return strconv.FormatInt(int64(e.Val.(int)), 10)
-	case Float64:
-		return strconv.FormatFloat(e.Val.(float64), 'g', -1, 64)
-	case Bool:
-		return strconv.FormatBool(e.Val.(bool))
-	default:
-		return ""
-	}
-}
-
 // Zero value is the internal representation of initial value of any type.
 // It cannot be declared as a literal like nil.
 type ZeroValue struct {
@@ -200,17 +182,6 @@ func NewFuncCallExpr(loc *Loc, fun IExprNode, args []IExprNode) *FuncCallExpr {
 	}
 }
 
-func (e *FuncCallExpr) ToStringTree() string {
-	str := fmt.Sprintf("(call %s (", e.Func.ToStringTree())
-	for i, arg := range e.Args {
-		if i != 0 {
-			str += " "
-		}
-		str += arg.ToStringTree()
-	}
-	return str + "))"
-}
-
 func (e *FuncCallExpr) IsLValue() bool { return false }
 
 type SelectExpr struct {
@@ -225,10 +196,6 @@ func NewSelectExpr(loc *Loc, target IExprNode, member *IdExpr) *SelectExpr {
 		Target:       target,
 		Member:       member,
 	}
-}
-
-func (e *SelectExpr) ToStringTree() string {
-	return fmt.Sprintf("(. %s %s)", e.Target.ToStringTree(), e.Member.ToStringTree())
 }
 
 func (e *SelectExpr) IsLValue() bool { return true }
@@ -247,10 +214,6 @@ func NewIndexExpr(loc *Loc, array IExprNode, index IExprNode) *IndexExpr {
 	}
 }
 
-func (e *IndexExpr) ToStringTree() string {
-	return fmt.Sprintf("(%s[%s])", e.Array.ToStringTree(), e.Index.ToStringTree())
-}
-
 func (e *IndexExpr) IsLValue() bool { return true } // a[0] = c
 
 type UnaryExpr struct {
@@ -262,7 +225,7 @@ type UnaryExpr struct {
 type UnaryOp int
 
 const (
-	POS UnaryOp = iota
+	POS UnaryOp = 1 << iota
 	NEG
 	NOT
 	INV
@@ -297,11 +260,11 @@ func (e *UnaryExpr) IsLValue() bool {
 type BinaryOp int
 
 const (
-	MUL BinaryOp = iota
+	MUL BinaryOp = 1 << iota
 	DIV
 	MOD
-	LSH // left shift
-	RSH
+	SHL // left shift
+	SHR
 	AAND // arithmetic AND
 	ADD
 	SUB
@@ -318,7 +281,7 @@ const (
 )
 
 var BinaryOpStr = map[BinaryOp]string{
-	MUL: "*", DIV: "/", MOD: "%", LSH: "<<", RSH: ">>", AAND: "&",
+	MUL: "*", DIV: "/", MOD: "%", SHL: "<<", SHR: ">>", AAND: "&",
 	ADD: "+", SUB: "-", AOR: "|", XOR: "^", EQ: "==", NE: "!=",
 	LT: "<", LE: "<=", GT: ">", GE: ">=", LAND: "&&", LOR: "||",
 }
@@ -340,11 +303,6 @@ type BinaryExpr struct {
 func NewBinaryExpr(loc *Loc, op BinaryOp, left, right IExprNode) *BinaryExpr {
 	// result type of binary expression is determined during semantic analysis
 	return &BinaryExpr{BaseExprNode: *NewBaseExprNode(loc), Op: op, Left: left, Right: right}
-}
-
-func (e *BinaryExpr) ToStringTree() string {
-	return fmt.Sprintf("(%s %s %s)", BinaryOpStr[e.Op], e.Left.ToStringTree(),
-		e.Right.ToStringTree())
 }
 
 func (e *BinaryExpr) IsLValue() bool { return false }
@@ -457,14 +415,14 @@ var binaryConstExpr = map[BinaryOp]map[TypeEnum]map[TypeEnum]func(l, r *ConstExp
 			},
 		},
 	},
-	LSH: {
+	SHL: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
 				return NewIntConst(l.Loc, l.Val.(int)<<uint(r.Val.(int)))
 			},
 		},
 	},
-	RSH: {
+	SHR: {
 		Int: {
 			Int: func(l, r *ConstExpr) *ConstExpr {
 				return NewIntConst(l.Loc, l.Val.(int)>>uint(r.Val.(int)))

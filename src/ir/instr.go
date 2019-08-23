@@ -10,6 +10,7 @@ type IInstr interface {
 	GetBasicBlock() *BasicBlock
 }
 
+// Instruction iterator
 type InstrIter struct {
 	Cur IInstr
 	BB  *BasicBlock
@@ -18,7 +19,7 @@ type InstrIter struct {
 // Constructed from a existing instruction
 func NewInstrIter(instr IInstr) *InstrIter {
 	if instr == nil {
-		panic(fmt.Errorf("cannot construct iterator from a nil instruction"))
+		panic(NewIRError("cannot construct iterator from a nil instruction"))
 	}
 	return &InstrIter{
 		Cur: instr,
@@ -44,6 +45,7 @@ func (i *InstrIter) HasNext() bool { return i.Cur.GetNext() != nil }
 
 func (i *InstrIter) HasPrev() bool { return i.Cur.GetPrev() != nil }
 
+// Insert instruction before current instruction, and point to that one.
 func (i *InstrIter) InsertBefore(instr IInstr) {
 	prev := i.Cur.GetPrev()
 	cur := i.Cur
@@ -66,8 +68,11 @@ func (i *InstrIter) InsertBefore(instr IInstr) {
 	cur.SetPrev(instr)
 	// instr <-> cur
 	instr.SetNext(cur)
+	// point to the added instruction
+	i.Cur = instr
 }
 
+// // Insert instruction after current instruction, and point to that one.
 func (i *InstrIter) InsertAfter(instr IInstr) {
 	next := i.Cur.GetNext()
 	cur := i.Cur
@@ -90,6 +95,8 @@ func (i *InstrIter) InsertAfter(instr IInstr) {
 	cur.SetNext(instr)
 	// cur <-> instr
 	instr.SetPrev(cur)
+	// point to added instruction
+	i.Cur = instr
 }
 
 func (i *InstrIter) Remove() {
@@ -107,6 +114,7 @@ func (i *InstrIter) Remove() {
 	} else {
 		i.BB.Tail = prev
 	}
+	i.Cur = next
 }
 
 type BaseInstr struct {
@@ -129,3 +137,280 @@ func (i *BaseInstr) GetNext() IInstr { return i.Next }
 func (i *BaseInstr) SetNext(instr IInstr) { i.Next = instr }
 
 func (i *BaseInstr) GetBasicBlock() *BasicBlock { return i.BB }
+
+// Move data from one operand to another
+type Move struct {
+	BaseInstr
+	Src, Dst IValue
+	Type     IType
+}
+
+func NewMove(bb *BasicBlock, src, dst IValue) *Move {
+	if !src.GetType().IsIdentical(dst.GetType()) {
+		panic(NewIRError(
+			fmt.Sprintf("source and destination operands are not of same type"),
+		))
+	}
+	return &Move{
+		BaseInstr: *NewBaseInstr(bb),
+		Src:       src,
+		Dst:       dst,
+		Type:      src.GetType(),
+	}
+}
+
+// Load value from pointer to an operand
+type Load struct {
+	BaseInstr
+	Src, Dst IValue
+	Type     IType
+}
+
+func NewLoad(bb *BasicBlock, src, dst IValue) *Load {
+	if src.GetType().GetTypeEnum() != Pointer {
+		panic(NewIRError("source operand is not pointer type"))
+	}
+	baseType := src.GetType().(*PtrType).Base
+	if !baseType.IsIdentical(dst.GetType()) && baseType.GetTypeEnum() != Void {
+		panic(NewIRError("base type of source is not identical to destination type"))
+	}
+	return &Load{
+		BaseInstr: *NewBaseInstr(bb),
+		Src:       src,
+		Dst:       dst,
+		Type:      dst.GetType(),
+	}
+}
+
+// Store the value in an operand to a pointer
+type Store struct {
+	BaseInstr
+	Src, Dst IValue
+	Type     IType
+}
+
+func NewStore(bb *BasicBlock, src, dst IValue) *Store {
+	if dst.GetType().GetTypeEnum() != Pointer {
+		panic(NewIRError("destination operand is not pointer type"))
+	}
+	baseType := dst.GetType().(*PtrType).Base
+	if !baseType.IsIdentical(src.GetType()) && baseType.GetTypeEnum() != Void {
+		panic(NewIRError("base type of destination is not identical to source type"))
+	}
+	return &Store{
+		BaseInstr: *NewBaseInstr(bb),
+		Src:       src,
+		Dst:       dst,
+		Type:      src.GetType(),
+	}
+}
+
+type UnaryOp int
+
+const (
+	NEG UnaryOp = iota // integer, float
+	NOT                // integer
+)
+
+type Unary struct {
+	BaseInstr
+	Op              UnaryOp
+	Operand, Result IValue
+}
+
+func NewUnary(bb *BasicBlock, op UnaryOp, operand, result IValue) *Unary {
+	if !operand.GetType().IsIdentical(result.GetType()) {
+		panic(NewIRError("result type incompatible with operand type"))
+	}
+
+	switch op {
+	case NEG:
+		if !operand.GetType().GetTypeEnum().Match(Integer | Float) {
+			panic(NewIRError("invalid operand type"))
+		}
+	case NOT:
+		if !operand.GetType().GetTypeEnum().Match(Integer) {
+			panic(NewIRError("invalid operand type"))
+		}
+	}
+
+	return &Unary{
+		BaseInstr: *NewBaseInstr(bb),
+		Op:        op,
+		Operand:   operand,
+		Result:    result,
+	}
+}
+
+type BinaryOp int
+
+const (
+	ADD BinaryOp = iota
+	SUB
+	MUL
+	DIV
+	AND
+	OR
+	XOR
+	SHL
+	SHR
+	EQ
+	NE
+	LT
+	LE
+	GT
+	GE
+)
+
+const (
+	ArithmeticOp = ADD | SUB | MUL | DIV | AND | OR | XOR | SHL | SHR
+	CompareOp    = EQ | NE | LT | LE | GT | GE
+)
+
+type Binary struct {
+	BaseInstr
+	Op                  BinaryOp
+	Left, Right, Result IValue
+}
+
+func NewBinary(bb *BasicBlock, op BinaryOp, left, right, result IValue) *Binary {
+	// Check type equivalence of operands
+	if !left.GetType().IsIdentical(right.GetType()) {
+		panic(NewIRError("two operands are not of same type"))
+	}
+
+	// Check type enum of operands
+	switch op {
+	case ADD, SUB, MUL, DIV:
+		if !left.GetType().GetTypeEnum().Match(Integer | Float) {
+			panic(NewIRError("invalid operand type"))
+		}
+	case AND, OR, XOR:
+		if !left.GetType().GetTypeEnum().Match(Integer) {
+			panic(NewIRError("invalid operand type"))
+		}
+	case SHL, SHR, EQ, NE, LT, LE, GT, GE:
+		if !left.GetType().GetTypeEnum().Match(Integer &^ I1) {
+			panic(NewIRError("invalid operand type"))
+		}
+	}
+
+	// Check result type
+	switch op {
+	case ADD, SUB, MUL, DIV, AND, OR, XOR, SHL, SHR:
+		if !result.GetType().IsIdentical(left.GetType()) {
+			panic(NewIRError("invalid result type"))
+		}
+	case EQ, NE, LT, LE, GT, GE:
+		if !result.GetType().GetTypeEnum().Match(I1) {
+			panic(NewIRError("invalid result type"))
+		}
+	}
+
+	return &Binary{
+		BaseInstr: *NewBaseInstr(bb),
+		Op:        op,
+		Left:      left,
+		Right:     right,
+		Result:    result,
+	}
+}
+
+type Jump struct {
+	BaseInstr
+	Target *BasicBlock
+}
+
+func NewJump(cur, target *BasicBlock) *Jump {
+	return &Jump{
+		BaseInstr: *NewBaseInstr(cur),
+		Target:    target,
+	}
+}
+
+type Branch struct {
+	BaseInstr
+	Cond        IValue
+	True, False *BasicBlock
+}
+
+func NewBranch(cur *BasicBlock, cond IValue, bTrue, bFalse *BasicBlock) *Branch {
+	if cond.GetType().GetTypeEnum() != I1 {
+		panic(NewIRError("wrong condition value type"))
+	}
+	return &Branch{
+		BaseInstr: *NewBaseInstr(cur),
+		Cond:      cond,
+		True:      bTrue,
+		False:     bFalse,
+	}
+}
+
+type Call struct {
+	BaseInstr
+	Func *Func
+	Args []IValue
+	Ret  IValue // struct that accept return value
+}
+
+func NewCall(bb *BasicBlock, called *Func, args []IValue, ret IValue) *Call {
+	// Check parameter type
+	funcType := called.Type.(*FuncType)
+	if len(funcType.Param) != len(args) {
+		panic(NewIRError(
+			fmt.Sprintf("wrong argument number, want %d, have %d",
+				len(funcType.Param), len(args)),
+		))
+	}
+	for i := range funcType.Param {
+		if !funcType.Param[i].IsIdentical(args[i].GetType()) {
+			panic(NewIRError("invalid argument type"))
+		}
+	}
+
+	// Check return type
+	if ret == nil {
+		if len(funcType.Return.Field) == 0 {
+			goto Construct
+		} else {
+			panic(NewIRError("return operand not provided"))
+		}
+	}
+	if !funcType.Return.IsIdentical(ret.GetType()) {
+		panic(NewIRError("invalid operand type"))
+	}
+
+Construct:
+	return &Call{
+		BaseInstr: *NewBaseInstr(bb),
+		Func:      called,
+		Args:      args,
+		Ret:       ret,
+	}
+}
+
+type Return struct {
+	BaseInstr
+	Func   *Func
+	Values []IValue
+}
+
+func NewReturn(bb *BasicBlock, fun *Func, values []IValue) *Return {
+	paramType := fun.Type.(*FuncType).Param
+	if len(paramType) != len(values) {
+		panic(NewIRError(
+			fmt.Sprintf("wrong return number, want %d, have %d", len(paramType),
+				len(values)),
+		))
+	}
+	for i := range paramType {
+		if !paramType[i].IsIdentical(values[i].GetType()) {
+			panic(NewIRError("invalid return type"))
+		}
+	}
+	return &Return{
+		BaseInstr: *NewBaseInstr(bb),
+		Func:      fun,
+		Values:    values,
+	}
+}

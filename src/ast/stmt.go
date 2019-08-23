@@ -30,14 +30,6 @@ func (s *BlockStmt) AddStmt(stmt IStmtNode) {
 	s.Stmts = append(s.Stmts, stmt)
 }
 
-func (s *BlockStmt) ToStringTree() string {
-	str := "(block"
-	for _, s := range s.Stmts {
-		str += s.ToStringTree()
-	}
-	return str + ")"
-}
-
 type AssignStmt struct {
 	BaseASTNode
 	Lhs, Rhs []IExprNode
@@ -63,24 +55,6 @@ func NewInitStmt(loc *Loc, lhs, rhs []IExprNode) *AssignStmt {
 	}
 }
 
-func (s *AssignStmt) ToStringTree() string {
-	str := "(= ("
-	for i, e := range s.Lhs {
-		if i != 0 {
-			str += " "
-		}
-		str += e.ToStringTree()
-	}
-	str += ") ("
-	for i, e := range s.Rhs {
-		if i != 0 {
-			str += " "
-		}
-		str += e.ToStringTree()
-	}
-	return str + ")"
-}
-
 type IncDecStmt struct {
 	BaseASTNode
 	Expr IExprNode
@@ -95,16 +69,6 @@ func NewIncDecStmt(loc *Loc, expr IExprNode, inc bool) *IncDecStmt {
 	}
 }
 
-func (s *IncDecStmt) ToStringTree() string {
-	var op string
-	if s.Inc {
-		op = "++"
-	} else {
-		op = "--"
-	}
-	return fmt.Sprintf("(%s %s)", op, s.Expr.ToStringTree())
-}
-
 type ReturnStmt struct {
 	BaseASTNode
 	Expr []IExprNode
@@ -117,14 +81,6 @@ func NewReturnStmt(loc *Loc, expr []IExprNode, decl *FuncDecl) *ReturnStmt {
 		Expr:        expr,
 		Func:        decl,
 	}
-}
-
-func (s *ReturnStmt) ToStringTree() string {
-	str := "(return"
-	for _, expr := range s.Expr {
-		str += " " + expr.ToStringTree()
-	}
-	return str + ")"
 }
 
 type ForClause struct {
@@ -152,19 +108,6 @@ func NewForClauseStmt(loc *Loc, init IStmtNode, cond IExprNode, post IStmtNode,
 	}
 	block.Ctrl = s
 	return s
-}
-
-func (s *ForClauseStmt) ToStringTree() string {
-	init := ""
-	if s.Init != nil {
-		init = s.Init.ToStringTree()
-	}
-	post := ""
-	if s.Post != nil {
-		post = s.Post.ToStringTree()
-	}
-	return fmt.Sprintf("(for %s %s %s %s)", init, s.Cond.ToStringTree(), post,
-		s.Block.ToStringTree())
 }
 
 type BreakStmt struct {
@@ -216,16 +159,4 @@ func NewIfStmt(loc *Loc, init IStmtNode, cond IExprNode, block *BlockStmt,
 		Block:       block,
 		Else:        els,
 	}
-}
-
-func (s *IfStmt) ToStringTree() string {
-	init := ""
-	if s.Init != nil {
-		init = s.Init.ToStringTree()
-	}
-	els := ""
-	if s.Else != nil {
-		els = s.Else.ToStringTree()
-	}
-	return fmt.Sprintf("(if %s %s %s)", init, s.Cond.ToStringTree(), els)
 }

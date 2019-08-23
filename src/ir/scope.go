@@ -9,13 +9,13 @@ type Symbol struct {
 }
 
 type Scope struct {
-	// point to higher level scope, lower ones are not needed
+	// Point to higher level scope, lower ones are not needed
 	Parent *Scope
-	// linear list of entries
+	// Linear list of entries
 	Entries []*Symbol
-	// look up table that helps querying
+	// Look up table that helps querying
 	table map[string]*Symbol
-	// indicate whether this scope is global
+	// Indicate whether this scope is global
 	Global bool
 }
 
@@ -56,5 +56,5 @@ func (s *Scope) Lookup(name string) (symbol *Symbol, scope *Scope) {
 		scope = scope.Parent
 	}
 	// symbol must be found, otherwise there is logical error in the compiler
-	panic(fmt.Errorf("symbol %s not found", name))
+	panic(NewIRError(fmt.Sprintf("symbol %s not found", name)))
 }

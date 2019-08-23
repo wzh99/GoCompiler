@@ -30,14 +30,6 @@ func (d *FuncDecl) AddStmt(stmt IStmtNode) {
 	d.Stmts = append(d.Stmts, stmt)
 }
 
-func (d *FuncDecl) ToStringTree() string {
-	str := "(" + d.Name
-	for _, s := range d.Stmts {
-		str += " " + s.ToStringTree()
-	}
-	return str + ")"
-}
-
 func (d *FuncDecl) GenSymbol() *Symbol {
 	return NewSymbol(d.GetLoc(), d.Name, FuncEntry, d.Type, nil)
 }
