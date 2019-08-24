@@ -389,7 +389,7 @@ func (t *TupleType) IsIdentical(o IType) bool {
 		}
 	}
 	return true
-	// tuple is not defined in the language, so there is no type alias
+	// tuple is not an actual type in the language, so there is no type alias
 }
 
 type FuncType struct {

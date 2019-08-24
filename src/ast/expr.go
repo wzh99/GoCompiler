@@ -148,7 +148,7 @@ type IdExpr struct {
 	BaseExprNode
 	Name     string // should keep name for lookup in global scope
 	Symbol   *Symbol
-	Captured bool
+	Captured bool // whether it is captured from scope of another function
 }
 
 var IsKeyword = map[string]bool{

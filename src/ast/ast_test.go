@@ -12,6 +12,7 @@ package main
 
 func foo1() (d int) {
 	f := Foo{b: g}
+	x := f.b
 	a, pi := foo2(3 + g)
 	for i := 0; i < 4; i++ {
 		if b := i * i; b > 4 {

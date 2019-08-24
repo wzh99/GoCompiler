@@ -144,6 +144,11 @@ func (c *SemaChecker) VisitReturnStmt(stmt *ReturnStmt) interface{} {
 			return nil // no need to check
 		}
 		if len(stmt.Func.NamedRet) > 0 { // return values are named
+			// Append named returns to expression list of return statement
+			stmt.Expr = make([]IExprNode, 0)
+			for _, symbol := range stmt.Func.NamedRet {
+				stmt.Expr = append(stmt.Expr, NewIdExpr(symbol.Loc, symbol.Name, symbol))
+			}
 			return nil // ok to have no return expressions
 		}
 		panic(NewSemaError(stmt.Loc, "empty return value"))
@@ -229,6 +234,8 @@ func (c *SemaChecker) VisitExpr(expr IExprNode) interface{} {
 		return c.VisitIdExpr(expr.(*IdExpr))
 	case *FuncCallExpr:
 		return c.VisitFuncCallExpr(expr.(*FuncCallExpr))
+	case *SelectExpr:
+		return c.VisitSelectExpr(expr.(*SelectExpr))
 	case *UnaryExpr:
 		return c.VisitUnaryExpr(expr.(*UnaryExpr))
 	case *BinaryExpr:
@@ -414,7 +421,7 @@ func (c *SemaChecker) VisitSelectExpr(expr *SelectExpr) interface{} {
 	switch exprTypeEnum(expr.Target) {
 	case Struct:
 		// Get struct field
-		structType := expr.Type
+		structType := expr.Target.GetType()
 		if alias, ok := structType.(*AliasType); ok {
 			structType = alias.Under
 		}

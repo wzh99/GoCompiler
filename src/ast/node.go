@@ -17,7 +17,7 @@ func (n *BaseASTNode) GetLoc() *Loc { return n.Loc }
 type ProgramNode struct {
 	BaseASTNode
 	PkgName string
-	Global  *FuncDecl //
+	Global  *FuncDecl
 	Funcs   []*FuncDecl
 }
 
