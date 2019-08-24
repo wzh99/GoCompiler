@@ -205,6 +205,104 @@ func NewStore(bb *BasicBlock, src, dst IValue) *Store {
 	}
 }
 
+// Get pointer to elements in data aggregate (array or struct)
+type GetPtr struct {
+	BaseInstr
+	Base    IValue // base operand, must be data aggregate
+	Result  IValue // result pointer
+	Indices []IValue
+	Offset  []int // offset for struct, width for array
+}
+
+func NewGetPtr(bb *BasicBlock, base, result IValue, indices []IValue) *GetPtr {
+	// Check aggregate type and build offset list
+	curType := base.GetType()
+	offset := make([]int, len(indices))
+
+	for dim := 0; dim < len(indices); dim++ {
+		// Check index operand type
+		if indices[dim].GetType().GetTypeEnum() != I64 {
+			panic(NewIRError("index is not an integer"))
+		}
+
+		// Compute offset according to type of aggregate
+		switch curType.GetTypeEnum() {
+		case Struct:
+			structType := curType.(*StructType)
+			immIdx, ok := indices[dim].(*ImmValue)
+			if !ok {
+				panic(NewIRError("struct index is not an immediate"))
+			}
+			index := immIdx.Value.(int)
+			offset[dim] = structType.Field[index].Offset
+			curType = structType.Field[index].Type
+
+		case Array:
+			arrayType := curType.(*ArrayType)
+			offset[dim] = arrayType.Elem.GetSize()
+			curType = arrayType.Elem
+
+		default:
+			panic(NewIRError("not aggregate type"))
+		}
+	}
+
+	// Check result operand
+	ptrType, ok := result.GetType().(*PtrType)
+	if !ok {
+		panic(NewIRError("result is not a pointer"))
+	}
+	if !curType.IsIdentical(ptrType.Base) {
+		panic(NewIRError("invalid result type"))
+	}
+
+	return &GetPtr{
+		BaseInstr: *NewBaseInstr(bb),
+		Base:      base,
+		Result:    result,
+		Indices:   indices,
+		Offset:    offset,
+	}
+}
+
+type IntToPtr struct {
+	BaseInstr
+	Src, Dst IValue
+}
+
+func NewIntToPtr(bb *BasicBlock, src, dst IValue) *IntToPtr {
+	if src.GetType().GetTypeEnum() != I64 {
+		panic(NewIRError("source operand is not i64"))
+	}
+	if dst.GetType().GetTypeEnum() != Pointer {
+		panic(NewIRError("destination operand is not pointer"))
+	}
+	return &IntToPtr{
+		BaseInstr: *NewBaseInstr(bb),
+		Src:       src,
+		Dst:       dst,
+	}
+}
+
+type PtrToInt struct {
+	BaseInstr
+	Src, Dst IValue
+}
+
+func NewPtrToInt(bb *BasicBlock, src, dst IValue) *IntToPtr {
+	if src.GetType().GetTypeEnum() != Pointer {
+		panic(NewIRError("source operand is not i64"))
+	}
+	if dst.GetType().GetTypeEnum() != I64 {
+		panic(NewIRError("destination operand is not pointer"))
+	}
+	return &IntToPtr{
+		BaseInstr: *NewBaseInstr(bb),
+		Src:       src,
+		Dst:       dst,
+	}
+}
+
 type UnaryOp int
 
 const (
