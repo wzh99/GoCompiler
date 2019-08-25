@@ -60,17 +60,17 @@ func NewF64Imm(value float64) *ImmValue {
 type Func struct {
 	BaseValue
 	// Function label
-	Label string
+	Name string
 	// A function has only one begin block and one end block
 	Begin, End *BasicBlock
 	// Base scope of current function, may have nested scopes
 	Scope *Scope
 }
 
-func NewFunc(tp *FuncType, label string, scope *Scope) *Func {
+func NewFunc(tp *FuncType, name string, scope *Scope) *Func {
 	return &Func{
 		BaseValue: *NewBaseValue(tp),
-		Label:     label,
+		Name:      name,
 		Begin:     nil, // to be assigned later
 		End:       nil, // to be assigned later
 		Scope:     scope,

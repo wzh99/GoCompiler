@@ -291,15 +291,33 @@ type PtrToInt struct {
 
 func NewPtrToInt(bb *BasicBlock, src, dst IValue) *IntToPtr {
 	if src.GetType().GetTypeEnum() != Pointer {
-		panic(NewIRError("source operand is not i64"))
+		panic(NewIRError("source operand is not pointer"))
 	}
 	if dst.GetType().GetTypeEnum() != I64 {
-		panic(NewIRError("destination operand is not pointer"))
+		panic(NewIRError("destination operand is not i64"))
 	}
 	return &IntToPtr{
 		BaseInstr: *NewBaseInstr(bb),
 		Src:       src,
 		Dst:       dst,
+	}
+}
+
+// Set specified memory space to all zero
+type Clear struct {
+	BaseInstr
+	Begin IValue // pointer to the beginning address
+	Size  int    // number of bytes to be cleared, determined at compile time
+}
+
+func NewClear(bb *BasicBlock, begin IValue, size int) *Clear {
+	if begin.GetType().GetTypeEnum() != Pointer {
+		panic(NewIRError("begin operand is not pointer"))
+	}
+	return &Clear{
+		BaseInstr: *NewBaseInstr(bb),
+		Begin:     begin,
+		Size:      size,
 	}
 }
 

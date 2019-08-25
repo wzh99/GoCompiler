@@ -509,7 +509,7 @@ func (c *SemaChecker) VisitUnaryExpr(e *UnaryExpr) interface{} {
 					e.Expr.GetType().ToString()),
 			))
 		}
-		e.Type = e.Expr.GetType().(*PtrType).Ref
+		e.Type = e.Expr.GetType().(*PtrType).Base
 	}
 
 	return nil
@@ -609,7 +609,7 @@ func (c *SemaChecker) VisitAliasType(tp *AliasType) interface{} {
 }
 
 func (c *SemaChecker) VisitPtrType(tp *PtrType) interface{} {
-	c.resolveType(&tp.Ref)
+	c.resolveType(&tp.Base)
 	return nil
 }
 

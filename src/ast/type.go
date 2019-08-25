@@ -226,15 +226,15 @@ func (t *NilType) IsIdentical(o IType) bool {
 
 type PtrType struct {
 	BaseType
-	Ref IType
+	Base IType
 }
 
 func NewPtrType(loc *Loc, ref IType) *PtrType {
-	return &PtrType{BaseType: *NewBaseType(loc, Ptr), Ref: ref}
+	return &PtrType{BaseType: *NewBaseType(loc, Ptr), Base: ref}
 }
 
 func (t *PtrType) ToString() string {
-	return fmt.Sprintf("*%s", t.Ref.ToString())
+	return fmt.Sprintf("*%s", t.Base.ToString())
 }
 
 func (t *PtrType) IsIdentical(o IType) bool {
@@ -242,7 +242,7 @@ func (t *PtrType) IsIdentical(o IType) bool {
 		return alias.IsIdentical(t)
 	}
 	t2, ok := o.(*PtrType)
-	return ok && t.Ref.IsIdentical(t2.Ref)
+	return ok && t.Base.IsIdentical(t2.Base)
 }
 
 type ArrayType struct {
