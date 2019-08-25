@@ -1,6 +1,6 @@
-// Code generated from /Users/littlefrog/GoCompiler/src/parser/Golang.g4 by ANTLR 4.7.2. DO NOT EDIT.
+// Code generated from /Users/littlefrog/GoCompiler/src/parse/Golang.g4 by ANTLR 4.7.2. DO NOT EDIT.
 
-package parser // Golang
+package parse // Golang
 
 import (
 	"fmt"
@@ -678,7 +678,7 @@ const (
 type ISourceFileContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsSourceFileContext differentiates from other interfaces.
@@ -920,7 +920,7 @@ func (p *GolangParser) SourceFile() (localctx ISourceFileContext) {
 type IPackageClauseContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsPackageClauseContext differentiates from other interfaces.
@@ -1013,7 +1013,7 @@ func (p *GolangParser) PackageClause() (localctx IPackageClauseContext) {
 type IImportDeclContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsImportDeclContext differentiates from other interfaces.
@@ -1181,7 +1181,7 @@ func (p *GolangParser) ImportDecl() (localctx IImportDeclContext) {
 type IImportSpecContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsImportSpecContext differentiates from other interfaces.
@@ -1299,7 +1299,7 @@ func (p *GolangParser) ImportSpec() (localctx IImportSpecContext) {
 type IImportPathContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsImportPathContext differentiates from other interfaces.
@@ -1388,7 +1388,7 @@ func (p *GolangParser) ImportPath() (localctx IImportPathContext) {
 type ITopLevelDeclContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsTopLevelDeclContext differentiates from other interfaces.
@@ -1523,7 +1523,7 @@ func (p *GolangParser) TopLevelDecl() (localctx ITopLevelDeclContext) {
 type IDeclarationContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsDeclarationContext differentiates from other interfaces.
@@ -1661,7 +1661,7 @@ func (p *GolangParser) Declaration() (localctx IDeclarationContext) {
 type IConstDeclContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsConstDeclContext differentiates from other interfaces.
@@ -1807,7 +1807,7 @@ func (p *GolangParser) ConstDecl() (localctx IConstDeclContext) {
 type IConstSpecContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsConstSpecContext differentiates from other interfaces.
@@ -1948,7 +1948,7 @@ func (p *GolangParser) ConstSpec() (localctx IConstSpecContext) {
 type IIdentifierListContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsIdentifierListContext differentiates from other interfaces.
@@ -2060,7 +2060,7 @@ func (p *GolangParser) IdentifierList() (localctx IIdentifierListContext) {
 type IExpressionListContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsExpressionListContext differentiates from other interfaces.
@@ -2190,7 +2190,7 @@ func (p *GolangParser) ExpressionList() (localctx IExpressionListContext) {
 type ITypeDeclContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsTypeDeclContext differentiates from other interfaces.
@@ -2336,7 +2336,7 @@ func (p *GolangParser) TypeDecl() (localctx ITypeDeclContext) {
 type ITypeSpecContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsTypeSpecContext differentiates from other interfaces.
@@ -2439,7 +2439,7 @@ func (p *GolangParser) TypeSpec() (localctx ITypeSpecContext) {
 type IFunctionDeclContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsFunctionDeclContext differentiates from other interfaces.
@@ -2546,7 +2546,7 @@ func (p *GolangParser) FunctionDecl() (localctx IFunctionDeclContext) {
 type IFunctionContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsFunctionContext differentiates from other interfaces.
@@ -2655,7 +2655,7 @@ func (p *GolangParser) Function() (localctx IFunctionContext) {
 type IMethodDeclContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsMethodDeclContext differentiates from other interfaces.
@@ -2776,7 +2776,7 @@ func (p *GolangParser) MethodDecl() (localctx IMethodDeclContext) {
 type IReceiverContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsReceiverContext differentiates from other interfaces.
@@ -2879,7 +2879,7 @@ func (p *GolangParser) Receiver() (localctx IReceiverContext) {
 type IVarDeclContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsVarDeclContext differentiates from other interfaces.
@@ -3025,7 +3025,7 @@ func (p *GolangParser) VarDecl() (localctx IVarDeclContext) {
 type IVarSpecContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsVarSpecContext differentiates from other interfaces.
@@ -3179,7 +3179,7 @@ func (p *GolangParser) VarSpec() (localctx IVarSpecContext) {
 type IBlockContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsBlockContext differentiates from other interfaces.
@@ -3312,7 +3312,7 @@ func (p *GolangParser) Block() (localctx IBlockContext) {
 type IStatementListContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsStatementListContext differentiates from other interfaces.
@@ -3460,7 +3460,7 @@ func (p *GolangParser) StatementList() (localctx IStatementListContext) {
 type IStatementContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsStatementContext differentiates from other interfaces.
@@ -3799,7 +3799,7 @@ func (p *GolangParser) Statement() (localctx IStatementContext) {
 type ISimpleStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsSimpleStmtContext differentiates from other interfaces.
@@ -3985,7 +3985,7 @@ func (p *GolangParser) SimpleStmt() (localctx ISimpleStmtContext) {
 type IExpressionStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsExpressionStmtContext differentiates from other interfaces.
@@ -4080,7 +4080,7 @@ func (p *GolangParser) ExpressionStmt() (localctx IExpressionStmtContext) {
 type ISendStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsSendStmtContext differentiates from other interfaces.
@@ -4196,7 +4196,7 @@ func (p *GolangParser) SendStmt() (localctx ISendStmtContext) {
 type IIncDecStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// GetOp returns the op token.
@@ -4321,7 +4321,7 @@ func (p *GolangParser) IncDecStmt() (localctx IIncDecStmtContext) {
 type IAssignmentContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// GetOp returns the op token.
@@ -4531,7 +4531,7 @@ func (p *GolangParser) Assignment() (localctx IAssignmentContext) {
 type IShortVarDeclContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsShortVarDeclContext differentiates from other interfaces.
@@ -4644,7 +4644,7 @@ func (p *GolangParser) ShortVarDecl() (localctx IShortVarDeclContext) {
 type IEmptyStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsEmptyStmtContext differentiates from other interfaces.
@@ -4728,7 +4728,7 @@ func (p *GolangParser) EmptyStmt() (localctx IEmptyStmtContext) {
 type ILabeledStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsLabeledStmtContext differentiates from other interfaces.
@@ -4835,7 +4835,7 @@ func (p *GolangParser) LabeledStmt() (localctx ILabeledStmtContext) {
 type IReturnStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsReturnStmtContext differentiates from other interfaces.
@@ -4942,7 +4942,7 @@ func (p *GolangParser) ReturnStmt() (localctx IReturnStmtContext) {
 type IBreakStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsBreakStmtContext differentiates from other interfaces.
@@ -5043,7 +5043,7 @@ func (p *GolangParser) BreakStmt() (localctx IBreakStmtContext) {
 type IContinueStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsContinueStmtContext differentiates from other interfaces.
@@ -5144,7 +5144,7 @@ func (p *GolangParser) ContinueStmt() (localctx IContinueStmtContext) {
 type IGotoStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsGotoStmtContext differentiates from other interfaces.
@@ -5237,7 +5237,7 @@ func (p *GolangParser) GotoStmt() (localctx IGotoStmtContext) {
 type IFallthroughStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsFallthroughStmtContext differentiates from other interfaces.
@@ -5321,7 +5321,7 @@ func (p *GolangParser) FallthroughStmt() (localctx IFallthroughStmtContext) {
 type IDeferStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsDeferStmtContext differentiates from other interfaces.
@@ -5420,7 +5420,7 @@ func (p *GolangParser) DeferStmt() (localctx IDeferStmtContext) {
 type IIfStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsIfStmtContext differentiates from other interfaces.
@@ -5611,7 +5611,7 @@ func (p *GolangParser) IfStmt() (localctx IIfStmtContext) {
 type ISwitchStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsSwitchStmtContext differentiates from other interfaces.
@@ -5729,7 +5729,7 @@ func (p *GolangParser) SwitchStmt() (localctx ISwitchStmtContext) {
 type IExprSwitchStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsExprSwitchStmtContext differentiates from other interfaces.
@@ -5905,7 +5905,7 @@ func (p *GolangParser) ExprSwitchStmt() (localctx IExprSwitchStmtContext) {
 type IExprCaseClauseContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsExprCaseClauseContext differentiates from other interfaces.
@@ -6018,7 +6018,7 @@ func (p *GolangParser) ExprCaseClause() (localctx IExprCaseClauseContext) {
 type IExprSwitchCaseContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsExprSwitchCaseContext differentiates from other interfaces.
@@ -6133,7 +6133,7 @@ func (p *GolangParser) ExprSwitchCase() (localctx IExprSwitchCaseContext) {
 type ITypeSwitchStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsTypeSwitchStmtContext differentiates from other interfaces.
@@ -6302,7 +6302,7 @@ func (p *GolangParser) TypeSwitchStmt() (localctx ITypeSwitchStmtContext) {
 type ITypeSwitchGuardContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsTypeSwitchGuardContext differentiates from other interfaces.
@@ -6431,7 +6431,7 @@ func (p *GolangParser) TypeSwitchGuard() (localctx ITypeSwitchGuardContext) {
 type ITypeCaseClauseContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsTypeCaseClauseContext differentiates from other interfaces.
@@ -6544,7 +6544,7 @@ func (p *GolangParser) TypeCaseClause() (localctx ITypeCaseClauseContext) {
 type ITypeSwitchCaseContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsTypeSwitchCaseContext differentiates from other interfaces.
@@ -6659,7 +6659,7 @@ func (p *GolangParser) TypeSwitchCase() (localctx ITypeSwitchCaseContext) {
 type ITypeListContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsTypeListContext differentiates from other interfaces.
@@ -6786,7 +6786,7 @@ func (p *GolangParser) TypeList() (localctx ITypeListContext) {
 type ISelectStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsSelectStmtContext differentiates from other interfaces.
@@ -6917,7 +6917,7 @@ func (p *GolangParser) SelectStmt() (localctx ISelectStmtContext) {
 type ICommClauseContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsCommClauseContext differentiates from other interfaces.
@@ -7030,7 +7030,7 @@ func (p *GolangParser) CommClause() (localctx ICommClauseContext) {
 type ICommCaseContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsCommCaseContext differentiates from other interfaces.
@@ -7167,7 +7167,7 @@ func (p *GolangParser) CommCase() (localctx ICommCaseContext) {
 type IRecvStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsRecvStmtContext differentiates from other interfaces.
@@ -7306,7 +7306,7 @@ func (p *GolangParser) RecvStmt() (localctx IRecvStmtContext) {
 type IForStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsForStmtContext differentiates from other interfaces.
@@ -7457,7 +7457,7 @@ func (p *GolangParser) ForStmt() (localctx IForStmtContext) {
 type IForClauseContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsForClauseContext differentiates from other interfaces.
@@ -7612,7 +7612,7 @@ func (p *GolangParser) ForClause() (localctx IForClauseContext) {
 type IRangeClauseContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsRangeClauseContext differentiates from other interfaces.
@@ -7755,7 +7755,7 @@ func (p *GolangParser) RangeClause() (localctx IRangeClauseContext) {
 type IGoStmtContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsGoStmtContext differentiates from other interfaces.
@@ -7854,7 +7854,7 @@ func (p *GolangParser) GoStmt() (localctx IGoStmtContext) {
 type ITpContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsTpContext differentiates from other interfaces.
@@ -8000,7 +8000,7 @@ func (p *GolangParser) Tp() (localctx ITpContext) {
 type ITypeNameContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsTypeNameContext differentiates from other interfaces.
@@ -8089,7 +8089,7 @@ func (p *GolangParser) TypeName() (localctx ITypeNameContext) {
 type ITypeLitContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsTypeLitContext differentiates from other interfaces.
@@ -8309,7 +8309,7 @@ func (p *GolangParser) TypeLit() (localctx ITypeLitContext) {
 type IArrayTypeContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsArrayTypeContext differentiates from other interfaces.
@@ -8426,7 +8426,7 @@ func (p *GolangParser) ArrayType() (localctx IArrayTypeContext) {
 type IArrayLengthContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsArrayLengthContext differentiates from other interfaces.
@@ -8521,7 +8521,7 @@ func (p *GolangParser) ArrayLength() (localctx IArrayLengthContext) {
 type IElementTypeContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsElementTypeContext differentiates from other interfaces.
@@ -8616,7 +8616,7 @@ func (p *GolangParser) ElementType() (localctx IElementTypeContext) {
 type IPointerTypeContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsPointerTypeContext differentiates from other interfaces.
@@ -8715,7 +8715,7 @@ func (p *GolangParser) PointerType() (localctx IPointerTypeContext) {
 type IInterfaceTypeContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsInterfaceTypeContext differentiates from other interfaces.
@@ -8846,7 +8846,7 @@ func (p *GolangParser) InterfaceType() (localctx IInterfaceTypeContext) {
 type ISliceTypeContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsSliceTypeContext differentiates from other interfaces.
@@ -8949,7 +8949,7 @@ func (p *GolangParser) SliceType() (localctx ISliceTypeContext) {
 type IMapTypeContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsMapTypeContext differentiates from other interfaces.
@@ -9070,7 +9070,7 @@ func (p *GolangParser) MapType() (localctx IMapTypeContext) {
 type IChannelTypeContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsChannelTypeContext differentiates from other interfaces.
@@ -9195,7 +9195,7 @@ func (p *GolangParser) ChannelType() (localctx IChannelTypeContext) {
 type IMethodSpecContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsMethodSpecContext differentiates from other interfaces.
@@ -9346,7 +9346,7 @@ func (p *GolangParser) MethodSpec() (localctx IMethodSpecContext) {
 type IFunctionTypeContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsFunctionTypeContext differentiates from other interfaces.
@@ -9445,7 +9445,7 @@ func (p *GolangParser) FunctionType() (localctx IFunctionTypeContext) {
 type ISignatureContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsSignatureContext differentiates from other interfaces.
@@ -9567,7 +9567,7 @@ func (p *GolangParser) Signature() (localctx ISignatureContext) {
 type IResultContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsResultContext differentiates from other interfaces.
@@ -9685,7 +9685,7 @@ func (p *GolangParser) Result() (localctx IResultContext) {
 type IParametersContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsParametersContext differentiates from other interfaces.
@@ -9807,7 +9807,7 @@ func (p *GolangParser) Parameters() (localctx IParametersContext) {
 type IParameterListContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsParameterListContext differentiates from other interfaces.
@@ -9937,7 +9937,7 @@ func (p *GolangParser) ParameterList() (localctx IParameterListContext) {
 type IParameterDeclContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsParameterDeclContext differentiates from other interfaces.
@@ -10064,7 +10064,7 @@ func (p *GolangParser) ParameterDecl() (localctx IParameterDeclContext) {
 type IOperandContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsOperandContext differentiates from other interfaces.
@@ -10207,7 +10207,7 @@ func (p *GolangParser) Operand() (localctx IOperandContext) {
 type ILiteralContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsLiteralContext differentiates from other interfaces.
@@ -10345,7 +10345,7 @@ func (p *GolangParser) Literal() (localctx ILiteralContext) {
 type IBasicLitContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsBasicLitContext differentiates from other interfaces.
@@ -10458,7 +10458,7 @@ func (p *GolangParser) BasicLit() (localctx IBasicLitContext) {
 type IOperandNameContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsOperandNameContext differentiates from other interfaces.
@@ -10547,7 +10547,7 @@ func (p *GolangParser) OperandName() (localctx IOperandNameContext) {
 type ICompositeLitContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsCompositeLitContext differentiates from other interfaces.
@@ -10656,7 +10656,7 @@ func (p *GolangParser) CompositeLit() (localctx ICompositeLitContext) {
 type ILiteralTypeContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsLiteralTypeContext differentiates from other interfaces.
@@ -10854,7 +10854,7 @@ func (p *GolangParser) LiteralType() (localctx ILiteralTypeContext) {
 type ILiteralValueContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsLiteralValueContext differentiates from other interfaces.
@@ -10976,7 +10976,7 @@ func (p *GolangParser) LiteralValue() (localctx ILiteralValueContext) {
 type IElementListContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsElementListContext differentiates from other interfaces.
@@ -11106,7 +11106,7 @@ func (p *GolangParser) ElementList() (localctx IElementListContext) {
 type IKeyedElementContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsKeyedElementContext differentiates from other interfaces.
@@ -11225,7 +11225,7 @@ func (p *GolangParser) KeyedElement() (localctx IKeyedElementContext) {
 type IKeyContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsKeyContext differentiates from other interfaces.
@@ -11354,7 +11354,7 @@ func (p *GolangParser) Key() (localctx IKeyContext) {
 type IElementContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsElementContext differentiates from other interfaces.
@@ -11475,7 +11475,7 @@ func (p *GolangParser) Element() (localctx IElementContext) {
 type IStructTypeContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsStructTypeContext differentiates from other interfaces.
@@ -11606,7 +11606,7 @@ func (p *GolangParser) StructType() (localctx IStructTypeContext) {
 type IFieldDeclContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsFieldDeclContext differentiates from other interfaces.
@@ -11753,7 +11753,7 @@ func (p *GolangParser) FieldDecl() (localctx IFieldDeclContext) {
 type IAnonymousFieldContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsAnonymousFieldContext differentiates from other interfaces.
@@ -11860,7 +11860,7 @@ func (p *GolangParser) AnonymousField() (localctx IAnonymousFieldContext) {
 type IFunctionLitContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsFunctionLitContext differentiates from other interfaces.
@@ -11959,7 +11959,7 @@ func (p *GolangParser) FunctionLit() (localctx IFunctionLitContext) {
 type IPrimaryExprContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsPrimaryExprContext differentiates from other interfaces.
@@ -12233,7 +12233,7 @@ func (p *GolangParser) primaryExpr(_p int) (localctx IPrimaryExprContext) {
 type ISelectorContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsSelectorContext differentiates from other interfaces.
@@ -12326,7 +12326,7 @@ func (p *GolangParser) Selector() (localctx ISelectorContext) {
 type IIndexContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsIndexContext differentiates from other interfaces.
@@ -12429,7 +12429,7 @@ func (p *GolangParser) Index() (localctx IIndexContext) {
 type ISliceContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsSliceContext differentiates from other interfaces.
@@ -12603,7 +12603,7 @@ func (p *GolangParser) Slice() (localctx ISliceContext) {
 type ITypeAssertionContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsTypeAssertionContext differentiates from other interfaces.
@@ -12710,7 +12710,7 @@ func (p *GolangParser) TypeAssertion() (localctx ITypeAssertionContext) {
 type IArgumentsContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsArgumentsContext differentiates from other interfaces.
@@ -12879,7 +12879,7 @@ func (p *GolangParser) Arguments() (localctx IArgumentsContext) {
 type IExpressionContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// GetOp returns the op token.
@@ -13227,7 +13227,7 @@ func (p *GolangParser) expression(_p int) (localctx IExpressionContext) {
 type IUnaryExprContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// GetOp returns the op token.
@@ -13379,7 +13379,7 @@ func (p *GolangParser) UnaryExpr() (localctx IUnaryExprContext) {
 type IConversionContext interface {
 	antlr.ParserRuleContext
 
-	// GetParser returns the parser.
+	// GetParser returns the parse.
 	GetParser() antlr.Parser
 
 	// IsConversionContext differentiates from other interfaces.
