@@ -87,7 +87,8 @@ func (c *SemaChecker) VisitAssignStmt(stmt *AssignStmt) interface{} {
 	if tuple, ok := stmt.Rhs[0].GetType().(*TupleType); ok {
 		if len(rhsType) != 1 { // other expressions than function call appears
 			panic(NewSemaError(stmt.Lhs[0].GetLoc(),
-				fmt.Sprintf("other expressions than function call appear on the right hand side"),
+				fmt.Sprintf("other expressions than function call appear on the right "+
+					"hand side"),
 			))
 		}
 		rhsType = tuple.Elem
@@ -165,7 +166,8 @@ func (c *SemaChecker) VisitReturnStmt(stmt *ReturnStmt) interface{} {
 	if tuple, ok := exprType[0].(*TupleType); ok {
 		if len(exprType) != 1 { // other expressions than function call appears
 			panic(NewSemaError(stmt.Expr[0].GetLoc(),
-				fmt.Sprintf("other expressions than function call appear on the right hand side"),
+				fmt.Sprintf("other expressions than function call appear on the right "+
+					"hand side"),
 			))
 		}
 		exprType = tuple.Elem
@@ -622,7 +624,8 @@ func (c *SemaChecker) VisitArrayType(tp *ArrayType) interface{} {
 	c.mayChange(&tp.lenExpr)
 	constExpr, ok := tp.lenExpr.(*ConstExpr)
 	if !ok {
-		panic(NewSemaError(tp.lenExpr.GetLoc(), "array length should be a constant expression"))
+		panic(NewSemaError(tp.lenExpr.GetLoc(), "array length should be a constant "+
+			"expression"))
 	}
 	length, ok := constExpr.Val.(int)
 	if !ok {

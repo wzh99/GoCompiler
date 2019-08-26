@@ -146,6 +146,9 @@ type Move struct {
 }
 
 func NewMove(bb *BasicBlock, src, dst IValue) *Move {
+	if _, ok := dst.(*ImmValue); ok {
+		panic(NewIRError("destination operand cannot be an immediate"))
+	}
 	if !src.GetType().IsIdentical(dst.GetType()) {
 		panic(NewIRError(
 			fmt.Sprintf("source and destination operands are not of same type"),
@@ -464,14 +467,17 @@ func NewBranch(cur *BasicBlock, cond IValue, bTrue, bFalse *BasicBlock) *Branch 
 
 type Call struct {
 	BaseInstr
-	Func *Func
+	Func IValue
 	Args []IValue
 	Ret  IValue // struct that accept return value
 }
 
-func NewCall(bb *BasicBlock, called *Func, args []IValue, ret IValue) *Call {
+func NewCall(bb *BasicBlock, fun IValue, args []IValue, ret IValue) *Call {
 	// Check parameter type
-	funcType := called.Type.(*FuncType)
+	funcType, ok := fun.GetType().(*FuncType)
+	if !ok {
+		panic(NewIRError("cannot call a non-function value"))
+	}
 	if len(funcType.Param) != len(args) {
 		panic(NewIRError(
 			fmt.Sprintf("wrong argument number, want %d, have %d",
@@ -485,12 +491,10 @@ func NewCall(bb *BasicBlock, called *Func, args []IValue, ret IValue) *Call {
 	}
 
 	// Check return type
-	if ret == nil {
-		if len(funcType.Return.Field) == 0 {
-			goto Construct
-		} else {
-			panic(NewIRError("return operand not provided"))
-		}
+	if len(funcType.Return.Field) == 0 { // no sense in accessing return operands
+		goto Construct
+	} else if ret == nil {
+		panic(NewIRError("return operand not provided"))
 	}
 	if !funcType.Return.IsIdentical(ret.GetType()) {
 		panic(NewIRError("invalid operand type"))
@@ -499,7 +503,7 @@ func NewCall(bb *BasicBlock, called *Func, args []IValue, ret IValue) *Call {
 Construct:
 	return &Call{
 		BaseInstr: *NewBaseInstr(bb),
-		Func:      called,
+		Func:      fun,
 		Args:      args,
 		Ret:       ret,
 	}

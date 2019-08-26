@@ -18,14 +18,12 @@ func (v *BaseValue) GetType() IType { return v.Type }
 type SymbolValue struct {
 	BaseValue
 	Symbol *Symbol
-	Scope  *Scope
 }
 
-func NewSymbolValue(symbol *Symbol, scope *Scope) *SymbolValue {
+func NewSymbolValue(symbol *Symbol) *SymbolValue {
 	return &SymbolValue{
 		BaseValue: *NewBaseValue(symbol.Type),
 		Symbol:    symbol,
-		Scope:     scope,
 	}
 }
 
@@ -56,13 +54,21 @@ func NewF64Imm(value float64) *ImmValue {
 	}
 }
 
+func NewNullPtr() *ImmValue {
+	return &ImmValue{
+		BaseValue: *NewBaseValue(NewPtrType(NewBaseType(Void))),
+		Value:     nil,
+	}
+}
+
 // IR version of function, directly callable.
 type Func struct {
 	BaseValue
 	// Function label
 	Name string
-	// A function has only one begin block and one end block
-	Begin, End *BasicBlock
+	// A function has one entrance block, but can have several exit blocks
+	Enter *BasicBlock
+	Exit  []*BasicBlock
 	// Base scope of current function, may have nested scopes
 	Scope *Scope
 }
@@ -71,8 +77,10 @@ func NewFunc(tp *FuncType, name string, scope *Scope) *Func {
 	return &Func{
 		BaseValue: *NewBaseValue(tp),
 		Name:      name,
-		Begin:     nil, // to be assigned later
-		End:       nil, // to be assigned later
+		Enter:     nil,                    // to be assigned later
+		Exit:      make([]*BasicBlock, 0), // to be assigned later
 		Scope:     scope,
 	}
 }
+
+func (f *Func) AddExitBlock(exit *BasicBlock) { f.Exit = append(f.Exit, exit) }

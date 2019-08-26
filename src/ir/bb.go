@@ -24,6 +24,11 @@ func NewBasicBlock(label string, fun *Func) *BasicBlock {
 }
 
 func (b *BasicBlock) Append(instr IInstr) {
+	if b.Head == nil {
+		b.Head = instr
+		b.Tail = instr
+		return
+	}
 	instr.SetPrev(b.Tail) // prev_tail <- instr
 	b.Tail.SetNext(instr) // prev_tail <-> instr
 	b.Tail = instr        // prev_tail <-> instr <- tail

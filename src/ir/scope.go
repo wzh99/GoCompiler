@@ -1,6 +1,6 @@
 package ir
 
-import "fmt"
+import "ast"
 
 // Similar to the one in AST, but with simplified data
 type Symbol struct {
@@ -8,53 +8,53 @@ type Symbol struct {
 	Type IType
 }
 
+// Every function has only one scope. No nested scopes.
 type Scope struct {
-	// Point to higher level scope, lower ones are not needed
-	Parent *Scope
 	// Linear list of entries
 	Entries []*Symbol
 	// Look up table that helps querying
 	table map[string]*Symbol
 	// Indicate whether this scope is global
 	Global bool
+	// Transform AST symbol to IR symbol
+	astToIr map[*ast.Symbol]*Symbol
 }
 
 func NewGlobalScope() *Scope {
 	return &Scope{
-		Parent:  nil,
 		Entries: make([]*Symbol, 0),
 		table:   make(map[string]*Symbol),
 		Global:  true,
+		astToIr: make(map[*ast.Symbol]*Symbol),
 	}
 }
 
-func NewLocalScope(parent *Scope) *Scope {
+func NewLocalScope() *Scope {
 	return &Scope{
-		Parent:  parent,
 		Entries: make([]*Symbol, 0),
 		table:   make(map[string]*Symbol),
 		Global:  false,
+		astToIr: make(map[*ast.Symbol]*Symbol),
 	}
 }
 
-func (s *Scope) AddSymbol(name string, tp IType) {
-	entry := &Symbol{
+func (s *Scope) AddSymbolFromAST(astSym *ast.Symbol, name string, tp IType) *Symbol {
+	irSym := &Symbol{
 		Name: name,
 		Type: tp,
 	}
-	s.Entries = append(s.Entries, entry)
-	s.table[name] = entry
+	s.Entries = append(s.Entries, irSym)
+	s.table[name] = irSym
+	s.astToIr[astSym] = irSym
+	return irSym
 }
 
-func (s *Scope) Lookup(name string) (symbol *Symbol, scope *Scope) {
-	scope = s
-	for scope != nil {
-		symbol = scope.table[name]
-		if symbol != nil {
-			return
-		}
-		scope = scope.Parent
+func (s *Scope) AddTempSymbol(name string, tp IType) *Symbol {
+	sym := &Symbol{
+		Name: name,
+		Type: tp,
 	}
-	// symbol must be found, otherwise there is logical error in the compiler
-	panic(NewIRError(fmt.Sprintf("symbol %s not found", name)))
+	s.Entries = append(s.Entries, sym)
+	s.table[name] = sym
+	return sym
 }

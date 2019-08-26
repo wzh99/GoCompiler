@@ -5,7 +5,7 @@ type EntryFlag int
 const (
 	VarEntry   EntryFlag = iota
 	ConstEntry           // variables and constants should be treated differently
-	FuncEntry            // directly defined functions, excluding lambdas
+	FuncEntry            // functions defined in top level, excluding lambdas
 	TypeEntry
 )
 

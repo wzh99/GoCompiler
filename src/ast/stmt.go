@@ -33,8 +33,7 @@ func (s *BlockStmt) AddStmt(stmt IStmtNode) {
 type AssignStmt struct {
 	BaseASTNode
 	Lhs, Rhs []IExprNode
-	// Set this to true if it initialize variables
-	Init bool
+	Init     bool // set this to true if it initialize variables
 }
 
 func NewAssignStmt(loc *Loc, lhs, rhs []IExprNode) *AssignStmt {

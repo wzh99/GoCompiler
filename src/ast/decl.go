@@ -19,8 +19,15 @@ type FuncDecl struct {
 
 func NewFuncDecl(loc *Loc, name string, tp *FuncType, scope *Scope,
 	namedRet []*Symbol) *FuncDecl {
-	d := &FuncDecl{BaseASTNode: *NewBaseASTNode(loc), Name: name, Type: tp, Scope: scope,
-		Stmts: make([]IStmtNode, 0), NamedRet: namedRet}
+	d := &FuncDecl{
+		BaseASTNode: *NewBaseASTNode(loc),
+		Name:        name,
+		Type:        tp,
+		Scope:       scope,
+		Stmts:       make([]IStmtNode, 0),
+		NamedRet:    namedRet,
+		Lit:         nil,
+	}
 	d.Scope.Func = d
 	return d
 }
@@ -32,7 +39,7 @@ func (d *FuncDecl) AddStmt(stmt IStmtNode) {
 }
 
 func (d *FuncDecl) GenSymbol() *Symbol {
-	return NewSymbol(d.GetLoc(), d.Name, FuncEntry, d.Type, nil)
+	return NewSymbol(d.GetLoc(), d.Name, FuncEntry, d.Type, d)
 }
 
 // An intermediate structure when building AST
