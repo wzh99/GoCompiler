@@ -14,12 +14,23 @@ type Scope struct {
 }
 
 func NewGlobalScope() *Scope {
-	return &Scope{Symbols: NewSymbolTable(), Parent: nil, Children: make([]*Scope, 0), Global: true}
+	return &Scope{Symbols: NewSymbolTable(),
+		Parent:    nil,
+		Children:  make([]*Scope, 0),
+		Global:    true,
+		operandId: make(map[*IdExpr]bool),
+	}
 }
 
 func NewLocalScope(parent *Scope) *Scope {
-	s := &Scope{Symbols: NewSymbolTable(), Parent: parent, Children: make([]*Scope, 0), Global: false,
-		Func: parent.Func}
+	s := &Scope{
+		Symbols:   NewSymbolTable(),
+		Parent:    parent,
+		Children:  make([]*Scope, 0),
+		Global:    false,
+		Func:      parent.Func,
+		operandId: make(map[*IdExpr]bool),
+	}
 	parent.AddChild(s)
 	return s
 }
@@ -28,22 +39,20 @@ func (s *Scope) AddChild(child *Scope) {
 	s.Children = append(s.Children, child)
 }
 
-func (s *Scope) AddSymbol(entry *Symbol) {
+func (s *Scope) AddSymbol(symbol *Symbol) {
 	// Reject unnamed symbol
-	if len(entry.Name) == 0 {
-		panic(fmt.Errorf("%s unnamed symbol", entry.Loc.ToString()))
+	if len(symbol.Name) == 0 {
+		panic(fmt.Errorf("%s unnamed symbol", symbol.Loc.ToString()))
 	}
 	// Reject redefined symbol
-	if s.CheckDefined(entry.Name) {
-		panic(fmt.Errorf("%s redefined symbol: %s", entry.Loc.ToString(), entry.Name))
+	if s.CheckDefined(symbol.Name) {
+		panic(fmt.Errorf("%s redefined symbol: %s", symbol.Loc.ToString(), symbol.Name))
 	}
-	s.Symbols.Add(entry)
+	symbol.Scope = s
+	s.Symbols.Add(symbol)
 }
 
 func (s *Scope) AddOperandId(id *IdExpr) {
-	if s.operandId == nil {
-		s.operandId = make(map[*IdExpr]bool)
-	}
 	s.operandId[id] = true
 }
 

@@ -14,6 +14,7 @@ type FuncDecl struct {
 	Scope    *Scope
 	Stmts    []IStmtNode
 	NamedRet []*Symbol // for named return values
+	Lit      *FuncLit  // point back to the literal that defines this function, if exists
 }
 
 func NewFuncDecl(loc *Loc, name string, tp *FuncType, scope *Scope,

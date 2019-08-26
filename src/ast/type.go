@@ -404,8 +404,11 @@ func NewFunctionType(loc *Loc, param, result []IType) *FuncType {
 }
 
 func (t *FuncType) ToString() string {
-	return fmt.Sprintf("func (%s) %s %s", t.Receiver.ToString(), t.Param.ToString(),
-		t.Result.ToString())
+	receiver := ""
+	if t.Receiver != nil {
+		receiver = t.Receiver.ToString()
+	}
+	return fmt.Sprintf("func (%s) %s %s", receiver, t.Param.ToString(), t.Result.ToString())
 }
 
 func (t *FuncType) IsIdentical(o IType) bool {

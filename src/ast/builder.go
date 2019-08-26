@@ -2,7 +2,7 @@ package ast
 
 import (
 	"fmt"
-	. "parser"
+	. "parse"
 	"strconv"
 )
 
@@ -917,6 +917,14 @@ func (v *Builder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 		for id := range top.operandId {
 			if id.Captured {
 				closureSet[id.Symbol] = true
+				// Trace back function by function and add to scope of that function
+				lastFunc := decl
+				for scope := decl.Scope; scope.Func != id.Symbol.Scope.Func; scope = scope.Parent {
+					if scope.Func != lastFunc {
+						scope.AddOperandId(id)
+						lastFunc = scope.Func
+					}
+				}
 			}
 		}
 
@@ -934,7 +942,9 @@ func (v *Builder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 		closureTable.Add(entry)
 	}
 
-	return NewFuncLit(NewLocFromContext(ctx), decl, closureTable)
+	lit := NewFuncLit(NewLocFromContext(ctx), decl, closureTable)
+	decl.Lit = lit
+	return lit
 }
 
 func (v *Builder) VisitPrimaryExpr(ctx *PrimaryExprContext) interface{} {

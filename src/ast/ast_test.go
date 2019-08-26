@@ -3,7 +3,7 @@ package ast
 import (
 	"fmt"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
-	. "parser"
+	. "parse"
 	"testing"
 )
 
@@ -21,6 +21,12 @@ func foo1() (d int) {
 			a -= b
 		}
 		continue
+	}
+	e := 7
+	g := func() func(int) {
+		return func(x int) {
+			h := e + x
+		}
 	}
 	return a
 }

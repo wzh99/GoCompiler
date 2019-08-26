@@ -256,6 +256,7 @@ func (c *SemaChecker) VisitLiteralExpr(expr ILiteralExpr) interface{} {
 
 func (c *SemaChecker) VisitFuncLit(expr *FuncLit) interface{} {
 	c.VisitFuncDecl(expr.Decl)
+	expr.Type = expr.Decl.Type
 	return nil
 }
 

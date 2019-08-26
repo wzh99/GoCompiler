@@ -10,11 +10,12 @@ const (
 )
 
 type Symbol struct {
-	Loc  *Loc
-	Name string
-	Flag EntryFlag
-	Type IType       // if nil, the type of current symbol is unknown
-	Val  interface{} // reserved for constant expression
+	Loc   *Loc
+	Name  string
+	Flag  EntryFlag
+	Type  IType       // if nil, the type of current symbol is unknown
+	Val   interface{} // reserved for constant expression
+	Scope *Scope      // the scope where this symbol is defined
 }
 
 func NewSymbol(loc *Loc, name string, flag EntryFlag, tp IType, val interface{}) *Symbol {
