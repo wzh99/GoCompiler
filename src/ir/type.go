@@ -152,7 +152,9 @@ func (t *PtrType) IsIdentical(o IType) bool {
 	if !ok {
 		return false
 	}
-	// pointer to void is equivalent to pointer to other type
+	// Pointer to void is equivalent to pointer to other type.
+	// This may be unsafe, but allows for more flexibility, when the base type of pointer
+	// is not clear.
 	if t.Base.GetTypeEnum() == Void || t2.Base.GetTypeEnum() == Void {
 		return true
 	}

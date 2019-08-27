@@ -208,6 +208,28 @@ func NewStore(bb *BasicBlock, src, dst IValue) *Store {
 	}
 }
 
+// Allocate memory in heap space
+type Malloc struct {
+	BaseInstr
+	Return IValue
+	Size   int // decided by the type the base type of pointer
+}
+
+func NewMalloc(bb *BasicBlock, ret IValue) *Malloc {
+	if ret.GetType().GetTypeEnum() != Pointer {
+		panic(NewIRError("source operand is not pointer"))
+	}
+	baseType := ret.GetType().(*PtrType).Base
+	if baseType.GetTypeEnum() == Void {
+		panic(NewIRError("source operand is void pointer"))
+	}
+	return &Malloc{
+		BaseInstr: *NewBaseInstr(bb),
+		Return:    ret,
+		Size:      baseType.GetSize(),
+	}
+}
+
 // Get pointer to elements in data aggregate (array or struct)
 type GetPtr struct {
 	BaseInstr
@@ -306,21 +328,38 @@ func NewPtrToInt(bb *BasicBlock, src, dst IValue) *IntToPtr {
 	}
 }
 
+// Add offset to a pointer
+type PtrOffset struct {
+	BaseInstr
+	Src, Dst IValue // must be pointer type
+	Offset   int    // evaluated at compile time.
+}
+
+func NewPtrOffset(bb *BasicBlock, src, dst IValue, offset int) *PtrOffset {
+	if src.GetType().GetTypeEnum() != Pointer {
+		panic(NewIRError("source operand is not pointer"))
+	}
+	if dst.GetType().GetTypeEnum() != Pointer {
+		panic(NewIRError("source operand is not pointer"))
+	}
+	return &PtrOffset{
+		BaseInstr: *NewBaseInstr(bb),
+		Src:       src,
+		Dst:       dst,
+		Offset:    offset,
+	}
+}
+
 // Set specified memory space to all zero
 type Clear struct {
 	BaseInstr
-	Begin IValue // pointer to the beginning address
-	Size  int    // number of bytes to be cleared, determined at compile time
+	Value IValue
 }
 
-func NewClear(bb *BasicBlock, begin IValue, size int) *Clear {
-	if begin.GetType().GetTypeEnum() != Pointer {
-		panic(NewIRError("begin operand is not pointer"))
-	}
+func NewClear(bb *BasicBlock, value IValue) *Clear {
 	return &Clear{
 		BaseInstr: *NewBaseInstr(bb),
-		Begin:     begin,
-		Size:      size,
+		Value:     value,
 	}
 }
 

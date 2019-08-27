@@ -198,7 +198,7 @@ func NewSelectExpr(loc *Loc, target IExprNode, member *IdExpr) *SelectExpr {
 	}
 }
 
-func (e *SelectExpr) IsLValue() bool { return true }
+func (e *SelectExpr) IsLValue() bool { return true } // s.a = b
 
 type IndexExpr struct {
 	BaseExprNode

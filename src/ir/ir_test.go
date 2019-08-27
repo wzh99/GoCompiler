@@ -13,8 +13,11 @@ package main
 
 func foo1() {
 	k, pi := foo2(1, 2)
-	// a, b, c := 2, 3, 5
-	// g, a, b := 6, b, c
+	f := func() {
+		g := func() {
+			e := pi
+		}
+	}
 }
 
 func foo2(i int, j int) (a int, pi float64) {

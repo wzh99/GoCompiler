@@ -7,7 +7,7 @@ import (
 
 type Program struct {
 	// Scope of global variables
-	// Note that in AST, the Global member of program node is a function, while in IR
+	// Note that in AST, the global member of program node is a function, while in IR
 	// this member is a scope. This is because in IR, the hierarchy of scope is lost.
 	// Access global scope through global function is not straightforward.
 	Global *Scope
@@ -18,6 +18,22 @@ type Program struct {
 	nBlock int
 	// Temporary operand counter (to distinguish temporaries)
 	nTmp int
+}
+
+type CaptureSpec struct {
+	// The symbol captured from outer function
+	Symbol *Symbol
+	// Index of current item in the list
+	Index int
+}
+
+type CaptureList struct {
+	// Captured item specification
+	Spec []*CaptureSpec
+	// Lookup table for identifiers in AST
+	SymToCap map[*ast.Symbol]*CaptureSpec
+	// The struct type descriptor of capture list
+	Type *StructType
 }
 
 type Builder struct {
@@ -90,15 +106,55 @@ func (b *Builder) requestBlockName() string {
 }
 
 func (b *Builder) VisitScope(astScope *ast.Scope) interface{} {
-	for _, symbol := range astScope.Symbols.Entries {
-		if symbol.Flag == ast.VarEntry { // only add variable symbol
-			irType := b.VisitType(symbol.Type).(IType)
-			name := fmt.Sprintf("_s%d_%s", b.nScope, symbol.Name)
-			b.fun.Scope.AddSymbolFromAST(symbol, name, irType)
+	idx := 0 // index in AST function scope
+	fun := astScope.Func
+	entries := astScope.Symbols.Entries
+
+	// Add receiver to IR scope and its parameter list
+	if fun.Type.Receiver != nil {
+		symbol := entries[idx]
+		b.fun.Scope.AddSymbolFromAST(symbol, b.genSymbolName(symbol.Name),
+			b.VisitType(symbol.Type).(IType), true)
+		idx++
+	}
+
+	// Add normal parameters to IR scope and its parameter list
+	for k := 0; k < len(fun.Type.Param.Elem); k++ {
+		symbol := entries[idx]
+		b.fun.Scope.AddSymbolFromAST(symbol, b.genSymbolName(symbol.Name),
+			b.VisitType(symbol.Type).(IType), true)
+		idx++
+	}
+
+	// Add function capture list pointer to IR scope and parameter list
+	if !astScope.Global {
+		b.fun.Scope.AddSymbol("_caplist", NewPtrType(NewBaseType(Void)), true)
+	}
+
+	// Add local symbols to IR scope
+	for ; idx < len(astScope.Symbols.Entries); idx++ {
+		symbol := entries[idx]
+		if symbol.Flag == ast.VarEntry {
+			b.fun.Scope.AddSymbolFromAST(symbol, b.genSymbolName(symbol.Name),
+				b.VisitType(symbol.Type).(IType), false)
 		}
 	}
+
+	// Add captured symbols to IR scope, if this scope is from a literal function
+	if astScope.Func.Lit != nil {
+		lit := astScope.Func.Lit
+		for _, symbol := range lit.Closure.Entries {
+			b.fun.Scope.AddSymbolFromAST(symbol, b.genSymbolName(symbol.Name),
+				b.VisitType(symbol.Type).(IType), false)
+		}
+	}
+
 	b.nScope++
 	return nil
+}
+
+func (b *Builder) genSymbolName(name string) string {
+	return fmt.Sprintf("_s%d_%s", b.nScope, name)
 }
 
 func (b *Builder) genSignature(decl *ast.FuncDecl) *Func {
@@ -131,33 +187,83 @@ func (b *Builder) VisitAssignStmt(stmt *ast.AssignStmt) interface{} {
 			fieldVal := b.loadField(ret, i)
 			b.moveToDst(stmt.Lhs[i], fieldVal) // move to destination
 		}
+		return nil
+	}
+
+	// Process assignment with possibly multiple values
+	interList := make([]IValue, 0)
+	for _, r := range stmt.Rhs { // move from source to intermediates
+		if _, ok := r.(*ast.ZeroValue); ok {
+			interList = append(interList, nil)
+			continue
+		}
+		inter := b.newTempSymbol(b.VisitType(r.GetType()).(IType))
+		interList = append(interList, inter)
+		b.moveFromSrc(r, inter)
+	}
+	for i, l := range stmt.Lhs {
+		b.moveToDst(l, interList[i])
 	}
 
 	return nil
 }
 
-func (b *Builder) newTempSymbol(tp IType) *SymbolValue {
-	sym := b.fun.Scope.AddTempSymbol(b.requestTempName(), tp)
-	return NewSymbolValue(sym)
-}
+// Temporary IR values serves as an intermediate. The emitted instruction depends on the
+// expression type of destination.
+func (b *Builder) moveFromSrc(srcNode ast.IExprNode, inter IValue) {
+	srcRet := b.VisitExpr(srcNode)
 
-// Source operand is always an IR value. The emitted instruction depends on the expression
-// type of destination.
-func (b *Builder) moveToDst(dstNode ast.IExprNode, src IValue) {
-	unary, ok := dstNode.(*ast.UnaryExpr)
-	if ok && unary.Op == ast.DEREF {
-		dstPtr := b.VisitExpr(unary.Expr).(IValue)
-		b.emit(NewStore(b.bb, src, dstPtr)) // store to the pointer
-	} else {
-		dstVal := b.VisitExpr(dstNode).(IValue)
-		b.emit(NewMove(b.bb, src, dstVal))
+	switch srcRet.(type) {
+	case IValue:
+		b.emit(NewMove(b.bb, srcRet.(IValue), inter))
+
+	case *GetPtr:
+		srcPtr := srcRet.(*GetPtr).Result
+		b.emit(NewLoad(b.bb, srcPtr, inter))
 	}
 }
 
-func (b *Builder) requestTempName() string {
-	str := fmt.Sprintf("_t%d", b.prg.nTmp)
+func (b *Builder) moveToDst(dstNode ast.IExprNode, inter IValue) {
+	// DEREF has different semantic on different sides of assignment
+	if unary, ok := dstNode.(*ast.UnaryExpr); ok {
+		dstRet := b.VisitExpr(unary.Expr)
+
+		switch dstRet.(type) {
+		case IValue: // an symbol value, must be a pointer type (*p = s)
+			b.emit(NewStore(b.bb, inter, dstRet.(IValue))) // store to the pointer
+
+		case *GetPtr: // an get pointer instruction (*p.f = s)
+			getPtr := dstRet.(*GetPtr)
+			b.emit(getPtr)            // emit that instruction
+			fieldPtr := getPtr.Result // get pointer to that pointer field
+			field := b.newTempSymbol(fieldPtr.GetType().(*PtrType).Base)
+			b.emit(NewLoad(b.bb, fieldPtr, field)) // get pointer field
+			b.emit(NewStore(b.bb, inter, field))   // store to that field
+		}
+
+	} else {
+		dstRet := b.VisitExpr(dstNode)
+
+		switch dstRet.(type) {
+		case IValue: // d = s
+			dstVal := dstRet.(IValue)
+			if inter == nil {
+				b.emit(NewClear(b.bb, dstVal))
+			} else {
+				b.emit(NewMove(b.bb, inter, dstVal)) // move between symbols
+			}
+
+		case *GetPtr: // d.f = s
+			b.emit(NewStore(b.bb, inter, dstRet.(*GetPtr).Result)) // store to field pointer
+		}
+	}
+}
+
+func (b *Builder) newTempSymbol(tp IType) *SymbolValue {
+	name := fmt.Sprintf("_t%d", b.prg.nTmp)
 	b.prg.nTmp++
-	return str
+	sym := b.fun.Scope.AddTempSymbol(name, tp)
+	return NewSymbolValue(sym)
 }
 
 // All expression visiting methods return result operand
@@ -177,8 +283,82 @@ func (b *Builder) VisitLiteralExpr(expr ast.ILiteralExpr) interface{} {
 	switch expr.(type) {
 	case *ast.ConstExpr:
 		return b.VisitConstExpr(expr.(*ast.ConstExpr))
+	case *ast.FuncLit:
+		return b.VisitFuncLit(expr.(*ast.FuncLit))
 	}
 	return nil
+}
+
+func (b *Builder) VisitFuncLit(expr *ast.FuncLit) interface{} {
+	// Backup outer function context
+	prevFunc := b.fun
+	prevBB := b.bb
+
+	// Build function scope
+	scope := NewLocalScope()
+	closureType := b.VisitType(expr.Type).(*StructType)
+	funcLit := NewFunc(closureType.Field[0].Type.(*FuncType), b.requestFuncLitName(), scope)
+	b.fun = funcLit
+	b.prg.Funcs = append(b.prg.Funcs, b.fun) // add to program function list
+	b.VisitScope(expr.Decl.Scope)
+
+	// Build capture list
+	params := b.fun.Scope.Params
+	capList := &CaptureList{
+		Spec:     make([]*CaptureSpec, 0),
+		SymToCap: make(map[*ast.Symbol]*CaptureSpec),
+		Type:     nil,
+	}
+	field := make([]IType, 0)
+	for i, s := range expr.Closure.Entries {
+		spec := &CaptureSpec{
+			Symbol: prevFunc.Scope.astToIr[s],
+			Index:  i,
+		}
+		capList.Spec = append(capList.Spec, spec)
+		capList.SymToCap[s] = spec
+		field = append(field, spec.Symbol.Type)
+	}
+	capList.Type = NewStructType(field)
+
+	// Load captured values to local variables
+	// This make captured values behave like normal local variables.
+	listPtr := NewSymbolValue(params[len(params)-1])
+	for i := range capList.Spec {
+		valPtr := b.newTempSymbol(NewPtrType(NewBaseType(Void)))
+		b.emit(NewPtrOffset(b.bb, listPtr, valPtr, capList.Type.Field[i].Offset))
+		b.emit(NewLoad(b.bb, valPtr, NewSymbolValue(capList.Spec[i].Symbol)))
+	}
+
+	// Visit statements and build IR
+	b.fun.Enter = NewBasicBlock(b.requestBlockName(), b.fun) // create entrance block
+	b.bb = b.fun.Enter
+	for _, stmt := range expr.Decl.Stmts {
+		b.VisitStmt(stmt)
+	}
+
+	// Restore outer function context
+	b.fun = prevFunc
+	b.bb = prevBB
+
+	// Setup closure in the outer function
+	litVal := b.newTempSymbol(closureType)
+	funcPtr := b.newTempSymbol(NewPtrType(closureType.Field[0].Type))
+	b.emit(NewGetPtr(b.bb, litVal, funcPtr, []IValue{NewI64Imm(0)}))
+	b.emit(NewStore(b.bb, funcLit, funcPtr))
+	listPtrPtr := b.newTempSymbol(NewPtrType(closureType.Field[1].Type))
+	b.emit(NewGetPtr(b.bb, litVal, listPtrPtr, []IValue{NewI64Imm(1)}))
+	mallocRet := b.newTempSymbol(NewPtrType(capList.Type)) // provide size to instruction
+	b.emit(NewMalloc(b.bb, mallocRet))
+	b.emit(NewStore(b.bb, mallocRet, listPtrPtr))
+
+	return litVal
+}
+
+func (b *Builder) requestFuncLitName() string {
+	name := fmt.Sprintf("_F%d", b.nFuncLit)
+	b.nFuncLit++
+	return name
 }
 
 func (b *Builder) VisitConstExpr(expr *ast.ConstExpr) interface{} {
@@ -202,10 +382,7 @@ func (b *Builder) VisitFuncCallExpr(expr *ast.FuncCallExpr) interface{} {
 	}
 
 	// Emit instructions depending on function type
-	ret := NewSymbolValue(&Symbol{
-		Name: b.requestTempName(),
-		Type: fun.GetType().(*FuncType).Return,
-	})
+	ret := b.newTempSymbol(fun.GetType().(*FuncType).Return)
 	if topFunc, ok := fun.(*Func); ok { // top level function
 		args = append(args, NewNullPtr()) // capture list is nil
 		b.emit(NewCall(b.bb, topFunc, args, ret))
@@ -252,6 +429,8 @@ func (b *Builder) VisitType(tp ast.IType) interface{} {
 		return b.VisitArrayType(tp.(*ast.ArrayType))
 	case *ast.StructType:
 		return b.VisitStructType(tp.(*ast.StructType))
+	case *ast.FuncType:
+		return b.VisitFuncType(tp.(*ast.FuncType))
 	}
 	return nil
 }

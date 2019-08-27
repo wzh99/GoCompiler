@@ -915,16 +915,18 @@ func (v *Builder) VisitFunctionLit(ctx *FunctionLitContext) interface{} {
 		top := stack[len(stack)-1]
 		stack = stack[:len(stack)-1] // pop an element from stack
 		for id := range top.operandId {
-			if id.Captured {
-				closureSet[id.Symbol] = true
-				// Trace back function by function and add to scope of that function
-				lastFunc := decl
-				for scope := decl.Scope; scope.Func != id.Symbol.Scope.Func; scope = scope.Parent {
-					if scope.Func != lastFunc {
-						scope.AddOperandId(id)
-						lastFunc = scope.Func
-					}
+			if !id.Captured {
+				continue
+			}
+			closureSet[id.Symbol] = true
+			// Trace back function by function and add to scope of these functions
+			lastFunc := decl
+			for scope := decl.Scope; scope.Func != id.Symbol.Scope.Func; scope = scope.Parent {
+				if scope.Func == lastFunc {
+					continue
 				}
+				scope.AddOperandId(id)
+				lastFunc = scope.Func
 			}
 		}
 
