@@ -11,8 +11,8 @@ import (
 const source = `
 package main
 
-func foo1() {
-	k, pi := foo2(1, 2)
+func test1() {
+	k, pi := test2(1, 2)
 	f := func() {
 		g := func() {
 			e := pi
@@ -20,8 +20,14 @@ func foo1() {
 	}
 }
 
-func foo2(i int, j int) (a int, pi float64) {
+func test2(i int, j int) (a int, pi float64) {
 	return i, 3.14
+}
+
+func test3() int {
+	var a [5]int
+	b := 3
+	a[b] = 3
 }
 `
 

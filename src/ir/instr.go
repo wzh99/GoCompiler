@@ -290,6 +290,10 @@ func NewGetPtr(bb *BasicBlock, base, result IValue, indices []IValue) *GetPtr {
 	}
 }
 
+func (p *GetPtr) AppendIndex(index IValue, result IValue) *GetPtr {
+	return NewGetPtr(p.BB, p.Base, result, append(p.Indices, index))
+}
+
 // Add offset to a pointer
 type PtrOffset struct {
 	BaseInstr
@@ -369,6 +373,7 @@ const (
 	SUB
 	MUL
 	DIV
+	MOD
 	AND
 	OR
 	XOR
@@ -405,7 +410,7 @@ func NewBinary(bb *BasicBlock, op BinaryOp, left, right, result IValue) *Binary 
 		if !left.GetType().GetTypeEnum().Match(Integer | Float) {
 			panic(NewIRError("invalid operand type"))
 		}
-	case AND, OR, XOR:
+	case MOD, AND, OR, XOR:
 		if !left.GetType().GetTypeEnum().Match(Integer) {
 			panic(NewIRError("invalid operand type"))
 		}

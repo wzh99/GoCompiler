@@ -212,13 +212,15 @@ func (b *Builder) moveFromSrc(srcNode ast.IExprNode, inter IValue) {
 
 	case *GetPtr:
 		srcPtr := srcRet.(*GetPtr).Result
-		b.emit(NewLoad(b.bb, srcPtr, inter))
+		b.emit(srcRet.(*GetPtr))             // emit that getptr instruction
+		b.emit(NewLoad(b.bb, srcPtr, inter)) // load value from pointer
 	}
 }
 
 func (b *Builder) moveToDst(dstNode ast.IExprNode, inter IValue) {
 	// DEREF has different semantic on different sides of assignment
 	if unary, ok := dstNode.(*ast.UnaryExpr); ok {
+		// DEREF is the only possible unary operation on left hand side
 		dstRet := b.VisitExpr(unary.Expr)
 
 		switch dstRet.(type) {
@@ -247,7 +249,9 @@ func (b *Builder) moveToDst(dstNode ast.IExprNode, inter IValue) {
 			}
 
 		case *GetPtr: // d.f = s
-			b.emit(NewStore(b.bb, inter, dstRet.(*GetPtr).Result)) // store to field pointer
+			instr := dstRet.(*GetPtr)
+			b.emit(instr)
+			b.emit(NewStore(b.bb, inter, instr.Result)) // store to field pointer
 		}
 	}
 }
@@ -264,10 +268,18 @@ func (b *Builder) VisitExpr(expr ast.IExprNode) interface{} {
 	switch expr.(type) {
 	case ast.ILiteralExpr:
 		return b.VisitLiteralExpr(expr.(ast.ILiteralExpr))
-	case *ast.FuncCallExpr:
-		return b.VisitFuncCallExpr(expr.(*ast.FuncCallExpr))
 	case *ast.IdExpr:
 		return b.VisitIdExpr(expr.(*ast.IdExpr))
+	case *ast.FuncCallExpr:
+		return b.VisitFuncCallExpr(expr.(*ast.FuncCallExpr))
+	case *ast.SelectExpr:
+		return b.VisitSelectExpr(expr.(*ast.SelectExpr))
+	case *ast.IndexExpr:
+		return b.VisitIndexExpr(expr.(*ast.IndexExpr))
+	case *ast.UnaryExpr:
+		return b.VisitUnaryExpr(expr.(*ast.UnaryExpr))
+	case *ast.BinaryExpr:
+		return b.VisitBinaryExpr(expr.(*ast.BinaryExpr))
 	}
 	return nil
 }
@@ -371,6 +383,16 @@ func (b *Builder) VisitConstExpr(expr *ast.ConstExpr) interface{} {
 	return nil
 }
 
+func (b *Builder) VisitIdExpr(expr *ast.IdExpr) interface{} {
+	switch expr.Symbol.Flag {
+	case ast.VarEntry:
+		return NewSymbolValue(b.fun.Scope.astToIr[expr.Symbol])
+	case ast.FuncEntry:
+		return b.funcTable[expr.Symbol.Val.(*ast.FuncDecl)]
+	}
+	return nil
+}
+
 func (b *Builder) VisitFuncCallExpr(expr *ast.FuncCallExpr) interface{} {
 	// Evaluate function and argument expressions
 	fun := b.VisitExpr(expr.Func).(IValue)
@@ -403,14 +425,125 @@ func (b *Builder) loadField(value IValue, index int) *SymbolValue {
 	return field
 }
 
-func (b *Builder) VisitIdExpr(expr *ast.IdExpr) interface{} {
-	switch expr.Symbol.Flag {
-	case ast.VarEntry:
-		return NewSymbolValue(b.fun.Scope.astToIr[expr.Symbol])
-	case ast.FuncEntry:
-		return b.funcTable[expr.Symbol.Val.(*ast.FuncDecl)]
+func (b *Builder) VisitSelectExpr(expr *ast.SelectExpr) interface{} {
+	// Find out the index of member in the struct field
+	index := -1
+	for i, s := range asAstStructType(expr.Target.GetType()).Field.Entries {
+		if s.Name == expr.Member.Name {
+			index = i // must be found, otherwise there's logic error in program
+			break
+		}
+	}
+
+	// Visit target expression
+	retVal := b.VisitExpr(expr.Target)
+	exprType := b.VisitType(expr.Type).(IType)
+	switch retVal.(type) {
+	case IValue:
+		return NewGetPtr(b.bb, retVal.(IValue), b.newTempSymbol(NewPtrType(exprType)),
+			[]IValue{NewI64Imm(index)})
+	case *GetPtr:
+		return b.appendIndex(retVal.(*GetPtr), NewI64Imm(index), exprType)
+	}
+
+	return nil
+}
+
+func asAstStructType(tp ast.IType) *ast.StructType {
+	if alias, ok := tp.(*ast.AliasType); ok {
+		return alias.Under.(*ast.StructType)
+	}
+	return tp.(*ast.StructType)
+}
+
+func (b *Builder) appendIndex(instr *GetPtr, index IValue, elemType IType) *GetPtr {
+	prevRes := instr.Result
+	switch prevRes.(type) {
+	case *SymbolValue:
+		symVal := prevRes.(*SymbolValue)
+		ptrType := NewPtrType(elemType)
+		symVal.Type = ptrType
+		symVal.Symbol.Type = ptrType
+	default:
+		panic(NewIRError("type cannot be changed for non-symbol value"))
+	}
+	return instr.AppendIndex(index, prevRes)
+}
+
+func (b *Builder) VisitIndexExpr(expr *ast.IndexExpr) interface{} {
+	arrRet := b.VisitExpr(expr.Array)
+	index := b.retrieveValue(b.VisitExpr(expr.Index))
+	switch arrRet.(type) {
+	case IValue:
+		array := arrRet.(IValue)
+		return NewGetPtr(
+			b.bb, array, b.newTempSymbol(NewPtrType(array.GetType().(*ArrayType).Elem)),
+			[]IValue{index},
+		)
+	case *GetPtr:
+		return b.appendIndex(arrRet.(*GetPtr), index, b.VisitType(expr.Type).(IType))
 	}
 	return nil
+}
+
+func (b *Builder) retrieveValue(obj interface{}) IValue {
+	switch obj.(type) {
+	case IValue:
+		return obj.(IValue)
+	case *GetPtr:
+		instr := obj.(*GetPtr)
+		val := b.newTempSymbol(instr.Result.GetType().(*PtrType).Base)
+		b.emit(instr)
+		b.emit(NewLoad(b.bb, instr.Result, val))
+		return val
+	}
+	return nil
+}
+
+func (b *Builder) VisitUnaryExpr(expr *ast.UnaryExpr) interface{} {
+	val := b.retrieveValue(b.VisitExpr(expr.Expr))
+	var res IValue
+	switch expr.Op {
+	case ast.POS:
+		return val
+	case ast.NEG:
+		res = b.newTempSymbol(val.GetType())
+		b.emit(NewUnary(b.bb, NEG, val, res))
+	case ast.NOT, ast.INV:
+		res = b.newTempSymbol(val.GetType())
+		b.emit(NewUnary(b.bb, NOT, val, res))
+	case ast.DEREF:
+		ptrType := val.GetType().(*PtrType)
+		res = b.newTempSymbol(ptrType.Base)
+		b.emit(NewLoad(b.bb, val, res))
+	case ast.REF:
+		res = b.newTempSymbol(NewPtrType(val.GetType()))
+		b.emit(NewGetPtr(b.bb, val, res, []IValue{}))
+	}
+	return res
+}
+
+var astBinOpToIr = map[ast.BinaryOp]BinaryOp{
+	ast.ADD: ADD, ast.SUB: SUB, ast.MUL: MUL, ast.DIV: DIV, ast.MOD: MOD,
+	ast.SHL: SHL, ast.SHR: SHR, ast.AAND: AND, ast.AOR: OR, ast.XOR: XOR,
+	ast.LAND: AND, ast.LOR: OR, ast.EQ: EQ, ast.NE: NE, ast.LT: LT, ast.LE: LE,
+	ast.GT: GT, ast.GE: GE,
+}
+
+func (b *Builder) VisitBinaryExpr(expr *ast.BinaryExpr) interface{} {
+	left := b.retrieveValue(b.VisitExpr(expr.Left))
+	right := b.retrieveValue(b.VisitExpr(expr.Right))
+	op := astBinOpToIr[expr.Op]
+	var resType IType
+	switch op {
+	case ADD, SUB, MUL, DIV, MOD, SHL, SHR, AND, OR, XOR:
+		resType = left.GetType()
+	case EQ, NE, LT, LE, GT, GE:
+		resType = NewBaseType(I1)
+	}
+	res := b.newTempSymbol(resType)
+	b.emit(NewBinary(b.bb, op, left, right, res))
+	return res
 }
 
 func (b *Builder) VisitType(tp ast.IType) interface{} {

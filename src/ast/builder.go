@@ -662,6 +662,8 @@ func (v *Builder) VisitTypeLit(ctx *TypeLitContext) interface{} {
 		return v.VisitFunctionType(tp.(*FunctionTypeContext)).(IType)
 	} else if tp := ctx.StructType(); tp != nil {
 		return v.VisitStructType(tp.(*StructTypeContext)).(IType)
+	} else if tp := ctx.PointerType(); tp != nil {
+		return v.VisitPointerType(tp.(*PointerTypeContext)).(IType)
 	}
 	return nil
 }

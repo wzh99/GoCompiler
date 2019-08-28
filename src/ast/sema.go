@@ -238,6 +238,8 @@ func (c *SemaChecker) VisitExpr(expr IExprNode) interface{} {
 		return c.VisitFuncCallExpr(expr.(*FuncCallExpr))
 	case *SelectExpr:
 		return c.VisitSelectExpr(expr.(*SelectExpr))
+	case *IndexExpr:
+		return c.VisitIndexExpr(expr.(*IndexExpr))
 	case *UnaryExpr:
 		return c.VisitUnaryExpr(expr.(*UnaryExpr))
 	case *BinaryExpr:
@@ -448,9 +450,11 @@ func (c *SemaChecker) VisitSelectExpr(expr *SelectExpr) interface{} {
 }
 
 func (c *SemaChecker) VisitIndexExpr(expr *IndexExpr) interface{} {
+	c.VisitExpr(expr.Array)
 	if !exprTypeEnum(expr.Array).Match(Array | Slice) {
 		panic(NewSemaError(expr.Array.GetLoc(), "cannot be indexed"))
 	}
+	c.mayChange(&expr.Index) // index could be constant expression
 	if !exprTypeEnum(expr.Index).Match(IntegerType) {
 		panic(NewSemaError(expr.Index.GetLoc(), "index is not an integer"))
 	}
@@ -480,8 +484,8 @@ func (c *SemaChecker) VisitUnaryExpr(e *UnaryExpr) interface{} {
 	}
 
 	// Check type
-	err := NewSemaError(e.Loc, fmt.Sprintf(" unary operator %s undefined on type %s",
-		UnaryOpStr[e.Op], e.Type.ToString()))
+	err := NewSemaError(e.Loc, fmt.Sprintf("unary operator %s undefined on type %s",
+		UnaryOpStr[e.Op], e.Expr.GetType().ToString()))
 	switch e.Op {
 	case POS, NEG:
 		if !exprTypeEnum(e.Expr).Match(PrimitiveType &^ String) {

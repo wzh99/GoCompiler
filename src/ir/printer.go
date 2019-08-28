@@ -3,7 +3,6 @@ package ir
 import (
 	"fmt"
 	"io"
-	"os"
 )
 
 type Printer struct {
@@ -11,7 +10,7 @@ type Printer struct {
 	writer io.Writer
 }
 
-func NewPrinter(out *os.File) *Printer {
+func NewPrinter(out io.Writer) *Printer {
 	return &Printer{
 		writer: out,
 	}
