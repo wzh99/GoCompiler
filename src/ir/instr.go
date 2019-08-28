@@ -35,7 +35,7 @@ func NewInstrIterFromBlock(bb *BasicBlock) *InstrIter {
 	}
 }
 
-func (i *InstrIter) Valid() bool { return i.Cur != nil }
+func (i *InstrIter) IsValid() bool { return i.Cur != nil }
 
 func (i *InstrIter) Next() { i.Cur = i.Cur.GetNext() }
 
@@ -287,44 +287,6 @@ func NewGetPtr(bb *BasicBlock, base, result IValue, indices []IValue) *GetPtr {
 		Result:    result,
 		Indices:   indices,
 		Offset:    offset,
-	}
-}
-
-type IntToPtr struct {
-	BaseInstr
-	Src, Dst IValue
-}
-
-func NewIntToPtr(bb *BasicBlock, src, dst IValue) *IntToPtr {
-	if src.GetType().GetTypeEnum() != I64 {
-		panic(NewIRError("source operand is not i64"))
-	}
-	if dst.GetType().GetTypeEnum() != Pointer {
-		panic(NewIRError("destination operand is not pointer"))
-	}
-	return &IntToPtr{
-		BaseInstr: *NewBaseInstr(bb),
-		Src:       src,
-		Dst:       dst,
-	}
-}
-
-type PtrToInt struct {
-	BaseInstr
-	Src, Dst IValue
-}
-
-func NewPtrToInt(bb *BasicBlock, src, dst IValue) *IntToPtr {
-	if src.GetType().GetTypeEnum() != Pointer {
-		panic(NewIRError("source operand is not pointer"))
-	}
-	if dst.GetType().GetTypeEnum() != I64 {
-		panic(NewIRError("destination operand is not i64"))
-	}
-	return &IntToPtr{
-		BaseInstr: *NewBaseInstr(bb),
-		Src:       src,
-		Dst:       dst,
 	}
 }
 

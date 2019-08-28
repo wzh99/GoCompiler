@@ -31,9 +31,10 @@ type IType interface {
 	GetTypeEnum() TypeEnum
 	GetSize() int
 	IsIdentical(tp IType) bool
+	ToString() string
 }
 
-// Serves as both primitive type struct and base struct for other types
+// Serves as both primitive type descriptor and base struct for other types
 type BaseType struct {
 	Enum TypeEnum
 }
@@ -60,6 +61,12 @@ func (t *BaseType) GetSize() int {
 func (t *BaseType) IsIdentical(t2 IType) bool {
 	return t.Enum == t2.GetTypeEnum()
 }
+
+var typeEnumToStr = map[TypeEnum]string{
+	Void: "void", I1: "i1", I64: "i64", F64: "f64",
+}
+
+func (t *BaseType) ToString() string { return typeEnumToStr[t.Enum] }
 
 // Struct field in IR, no names are involved.
 type FieldSpec struct {
@@ -109,6 +116,17 @@ func (t *StructType) IsIdentical(o IType) bool {
 	return true
 }
 
+func (t *StructType) ToString() string {
+	str := "{"
+	for i, f := range t.Field {
+		if i != 0 {
+			str += ", "
+		}
+		str += f.Type.ToString()
+	}
+	return str + "}"
+}
+
 type ArrayType struct {
 	BaseType
 	Elem IType
@@ -131,6 +149,10 @@ func (t *ArrayType) IsIdentical(o IType) bool {
 		return false
 	}
 	return t.Elem.IsIdentical(t2.Elem) && t.Len == t2.Len
+}
+
+func (t *ArrayType) ToString() string {
+	return fmt.Sprintf("[%d]%s", t.Len, t.Elem.ToString())
 }
 
 type PtrType struct {
@@ -161,6 +183,10 @@ func (t *PtrType) IsIdentical(o IType) bool {
 	return t.Base.IsIdentical(t2.Base)
 }
 
+func (t *PtrType) ToString() string {
+	return fmt.Sprintf("*%s", t.Base.ToString())
+}
+
 type FuncType struct {
 	BaseType
 	Param  []IType
@@ -188,4 +214,15 @@ func (t *FuncType) IsIdentical(o IType) bool {
 		}
 	}
 	return t.Return.IsIdentical(t2.Return)
+}
+
+func (t *FuncType) ToString() string {
+	str := "("
+	for i, p := range t.Param {
+		if i != 0 {
+			str += ", "
+		}
+		str += p.ToString()
+	}
+	return str + fmt.Sprintf(")->%s", t.Return.ToString())
 }

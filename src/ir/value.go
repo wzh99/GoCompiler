@@ -1,7 +1,12 @@
 package ir
 
+import (
+	"fmt"
+)
+
 type IValue interface {
 	GetType() IType
+	ToString() string
 }
 
 type BaseValue struct {
@@ -14,6 +19,8 @@ func NewBaseValue(tp IType) *BaseValue {
 
 func (v *BaseValue) GetType() IType { return v.Type }
 
+func (v *BaseValue) ToString() string { return "" }
+
 // Values stored in symbol table of scopes
 type SymbolValue struct {
 	BaseValue
@@ -25,6 +32,10 @@ func NewSymbolValue(symbol *Symbol) *SymbolValue {
 		BaseValue: *NewBaseValue(symbol.Type),
 		Symbol:    symbol,
 	}
+}
+
+func (v *SymbolValue) ToString() string {
+	return fmt.Sprintf("%s: %s", v.Symbol.Name, v.Type.ToString())
 }
 
 // Immediate values, refer to constants in AST
@@ -61,6 +72,25 @@ func NewNullPtr() *ImmValue {
 	}
 }
 
+func (v *ImmValue) ToString() string {
+	switch v.Type.GetTypeEnum() {
+	case I1:
+		val := v.Value.(bool)
+		if val {
+			return "0: i1"
+		} else {
+			return "1: i1"
+		}
+	case I64:
+		return fmt.Sprintf("%d: i64", v.Value.(int))
+	case F64:
+		return fmt.Sprintf("%f: f64", v.Value.(float64))
+	case Pointer:
+		return "nullptr"
+	}
+	return ""
+}
+
 // IR version of function, directly callable.
 type Func struct {
 	BaseValue
@@ -84,3 +114,5 @@ func NewFunc(tp *FuncType, name string, scope *Scope) *Func {
 }
 
 func (f *Func) AddExitBlock(exit *BasicBlock) { f.Exit = append(f.Exit, exit) }
+
+func (f *Func) ToString() string { return f.Name }

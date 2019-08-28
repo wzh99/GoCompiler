@@ -6,6 +6,7 @@ import (
 )
 
 type Program struct {
+	Name string
 	// Scope of global variables
 	// Note that in AST, the global member of program node is a function, while in IR
 	// this member is a scope. This is because in IR, the hierarchy of scope is lost.
@@ -20,20 +21,11 @@ type Program struct {
 	nTmp int
 }
 
-type CaptureSpec struct {
-	// The symbol captured from outer function
-	Symbol *Symbol
-	// Index of current item in the list
-	Index int
-}
-
 type CaptureList struct {
 	// Captured item specification
-	Spec []*CaptureSpec
-	// Lookup table for identifiers in AST
-	SymToCap map[*ast.Symbol]*CaptureSpec
+	symbols []*Symbol
 	// The struct type descriptor of capture list
-	Type *StructType
+	tp *StructType
 }
 
 type Builder struct {
@@ -61,6 +53,7 @@ func NewBuilder() *Builder {
 func (b *Builder) VisitProgram(node *ast.ProgramNode) interface{} {
 	// Generate signature of all top level functions, in case they are referenced.
 	b.prg = &Program{
+		Name:   node.PkgName,
 		Funcs:  []*Func{b.genSignature(node.Global)},
 		nBlock: 0,
 		nTmp:   0,
@@ -128,7 +121,7 @@ func (b *Builder) VisitScope(astScope *ast.Scope) interface{} {
 
 	// Add function capture list pointer to IR scope and parameter list
 	if !astScope.Global {
-		b.fun.Scope.AddSymbol("_caplist", NewPtrType(NewBaseType(Void)), true)
+		b.fun.Scope.AddSymbol("_cap", NewPtrType(NewBaseType(Void)), true)
 	}
 
 	// Add local symbols to IR scope
@@ -300,34 +293,30 @@ func (b *Builder) VisitFuncLit(expr *ast.FuncLit) interface{} {
 	funcLit := NewFunc(closureType.Field[0].Type.(*FuncType), b.requestFuncLitName(), scope)
 	b.fun = funcLit
 	b.prg.Funcs = append(b.prg.Funcs, b.fun) // add to program function list
+	b.funcTable[expr.Decl] = funcLit
 	b.VisitScope(expr.Decl.Scope)
 
 	// Build capture list
 	params := b.fun.Scope.Params
 	capList := &CaptureList{
-		Spec:     make([]*CaptureSpec, 0),
-		SymToCap: make(map[*ast.Symbol]*CaptureSpec),
-		Type:     nil,
+		symbols: make([]*Symbol, 0),
+		tp:      nil,
 	}
 	field := make([]IType, 0)
-	for i, s := range expr.Closure.Entries {
-		spec := &CaptureSpec{
-			Symbol: prevFunc.Scope.astToIr[s],
-			Index:  i,
-		}
-		capList.Spec = append(capList.Spec, spec)
-		capList.SymToCap[s] = spec
-		field = append(field, spec.Symbol.Type)
+	for _, s := range expr.Closure.Entries {
+		irSymbol := prevFunc.Scope.astToIr[s]
+		capList.symbols = append(capList.symbols, irSymbol)
+		field = append(field, irSymbol.Type)
 	}
-	capList.Type = NewStructType(field)
+	capList.tp = NewStructType(field)
 
 	// Load captured values to local variables
 	// This make captured values behave like normal local variables.
 	listPtr := NewSymbolValue(params[len(params)-1])
-	for i := range capList.Spec {
+	for i := range capList.symbols {
 		valPtr := b.newTempSymbol(NewPtrType(NewBaseType(Void)))
-		b.emit(NewPtrOffset(b.bb, listPtr, valPtr, capList.Type.Field[i].Offset))
-		b.emit(NewLoad(b.bb, valPtr, NewSymbolValue(capList.Spec[i].Symbol)))
+		b.emit(NewPtrOffset(b.bb, listPtr, valPtr, capList.tp.Field[i].Offset))
+		b.emit(NewLoad(b.bb, valPtr, NewSymbolValue(capList.symbols[i])))
 	}
 
 	// Visit statements and build IR
@@ -343,13 +332,22 @@ func (b *Builder) VisitFuncLit(expr *ast.FuncLit) interface{} {
 
 	// Setup closure in the outer function
 	litVal := b.newTempSymbol(closureType)
+	// Store function as the first field of closure
 	funcPtr := b.newTempSymbol(NewPtrType(closureType.Field[0].Type))
 	b.emit(NewGetPtr(b.bb, litVal, funcPtr, []IValue{NewI64Imm(0)}))
 	b.emit(NewStore(b.bb, funcLit, funcPtr))
+	// Allocate heap space for capture list
+	mallocRet := b.newTempSymbol(NewPtrType(capList.tp)) // provide size to instruction
+	b.emit(NewMalloc(b.bb, mallocRet))
+	// Store captured operands to list
+	for i, s := range capList.symbols {
+		elemPtr := b.newTempSymbol(NewPtrType(s.Type))
+		b.emit(NewPtrOffset(b.bb, mallocRet, elemPtr, capList.tp.Field[i].Offset))
+		b.emit(NewStore(b.bb, NewSymbolValue(s), elemPtr))
+	}
+	// Store capture list pointer as the second field of closure
 	listPtrPtr := b.newTempSymbol(NewPtrType(closureType.Field[1].Type))
 	b.emit(NewGetPtr(b.bb, litVal, listPtrPtr, []IValue{NewI64Imm(1)}))
-	mallocRet := b.newTempSymbol(NewPtrType(capList.Type)) // provide size to instruction
-	b.emit(NewMalloc(b.bb, mallocRet))
 	b.emit(NewStore(b.bb, mallocRet, listPtrPtr))
 
 	return litVal
