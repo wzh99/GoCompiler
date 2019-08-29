@@ -24,6 +24,7 @@ func NewBasicBlock(label string, fun *Func) *BasicBlock {
 }
 
 func (b *BasicBlock) Append(instr IInstr) {
+	instr.SetBasicBlock(b)
 	if b.Head == nil {
 		b.Head = instr
 		b.Tail = instr
@@ -38,13 +39,15 @@ func (b *BasicBlock) Append(instr IInstr) {
 // Automatically create a jump instruction in the receiver block, and create edges in
 // two blocks.
 func (b *BasicBlock) JumpTo(b2 *BasicBlock) {
-	b.Append(NewJump(b, b2))
+	instr := NewJump(b2)
+	b.Append(instr)
 	b.Exit = append(b.Exit, b2)
 	b2.Enter = append(b2.Enter, b)
 }
 
 func (b *BasicBlock) BranchTo(cond IValue, trueBB, falseBB *BasicBlock) {
-	b.Append(NewBranch(b, cond, trueBB, falseBB))
+	instr := NewBranch(cond, trueBB, falseBB)
+	b.Append(instr)
 	b.Exit = append(b.Exit, trueBB, falseBB)
 	trueBB.Enter = append(trueBB.Enter, b)
 	falseBB.Enter = append(falseBB.Enter, b)

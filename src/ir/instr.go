@@ -8,6 +8,7 @@ type IInstr interface {
 	GetNext() IInstr
 	SetNext(instr IInstr)
 	GetBasicBlock() *BasicBlock
+	SetBasicBlock(bb *BasicBlock)
 }
 
 // Instruction iterator
@@ -138,6 +139,8 @@ func (i *BaseInstr) SetNext(instr IInstr) { i.Next = instr }
 
 func (i *BaseInstr) GetBasicBlock() *BasicBlock { return i.BB }
 
+func (i *BaseInstr) SetBasicBlock(bb *BasicBlock) { i.BB = bb }
+
 // Move data from one operand to another
 type Move struct {
 	BaseInstr
@@ -145,7 +148,7 @@ type Move struct {
 	Type     IType
 }
 
-func NewMove(bb *BasicBlock, src, dst IValue) *Move {
+func NewMove(src, dst IValue) *Move {
 	if _, ok := dst.(*ImmValue); ok {
 		panic(NewIRError("destination operand cannot be an immediate"))
 	}
@@ -155,7 +158,7 @@ func NewMove(bb *BasicBlock, src, dst IValue) *Move {
 		))
 	}
 	return &Move{
-		BaseInstr: *NewBaseInstr(bb),
+		BaseInstr: *NewBaseInstr(nil),
 		Src:       src,
 		Dst:       dst,
 		Type:      src.GetType(),
@@ -169,7 +172,7 @@ type Load struct {
 	Type     IType
 }
 
-func NewLoad(bb *BasicBlock, src, dst IValue) *Load {
+func NewLoad(src, dst IValue) *Load {
 	if src.GetType().GetTypeEnum() != Pointer {
 		panic(NewIRError("source operand is not pointer type"))
 	}
@@ -178,7 +181,7 @@ func NewLoad(bb *BasicBlock, src, dst IValue) *Load {
 		panic(NewIRError("base type of source is not identical to destination type"))
 	}
 	return &Load{
-		BaseInstr: *NewBaseInstr(bb),
+		BaseInstr: *NewBaseInstr(nil),
 		Src:       src,
 		Dst:       dst,
 		Type:      dst.GetType(),
@@ -192,7 +195,7 @@ type Store struct {
 	Type     IType
 }
 
-func NewStore(bb *BasicBlock, src, dst IValue) *Store {
+func NewStore(src, dst IValue) *Store {
 	if dst.GetType().GetTypeEnum() != Pointer {
 		panic(NewIRError("destination operand is not pointer type"))
 	}
@@ -201,7 +204,7 @@ func NewStore(bb *BasicBlock, src, dst IValue) *Store {
 		panic(NewIRError("base type of destination is not identical to source type"))
 	}
 	return &Store{
-		BaseInstr: *NewBaseInstr(bb),
+		BaseInstr: *NewBaseInstr(nil),
 		Src:       src,
 		Dst:       dst,
 		Type:      src.GetType(),
@@ -215,7 +218,7 @@ type Malloc struct {
 	Size   int // decided by the type the base type of pointer
 }
 
-func NewMalloc(bb *BasicBlock, ret IValue) *Malloc {
+func NewMalloc(ret IValue) *Malloc {
 	if ret.GetType().GetTypeEnum() != Pointer {
 		panic(NewIRError("source operand is not pointer"))
 	}
@@ -224,7 +227,7 @@ func NewMalloc(bb *BasicBlock, ret IValue) *Malloc {
 		panic(NewIRError("source operand is void pointer"))
 	}
 	return &Malloc{
-		BaseInstr: *NewBaseInstr(bb),
+		BaseInstr: *NewBaseInstr(nil),
 		Return:    ret,
 		Size:      baseType.GetSize(),
 	}
@@ -239,7 +242,7 @@ type GetPtr struct {
 	Offset  []int // offset for struct, width for array
 }
 
-func NewGetPtr(bb *BasicBlock, base, result IValue, indices []IValue) *GetPtr {
+func NewGetPtr(base, result IValue, indices []IValue) *GetPtr {
 	// Check aggregate type and build offset list
 	curType := base.GetType()
 	offset := make([]int, len(indices))
@@ -282,7 +285,7 @@ func NewGetPtr(bb *BasicBlock, base, result IValue, indices []IValue) *GetPtr {
 	}
 
 	return &GetPtr{
-		BaseInstr: *NewBaseInstr(bb),
+		BaseInstr: *NewBaseInstr(nil),
 		Base:      base,
 		Result:    result,
 		Indices:   indices,
@@ -291,7 +294,7 @@ func NewGetPtr(bb *BasicBlock, base, result IValue, indices []IValue) *GetPtr {
 }
 
 func (p *GetPtr) AppendIndex(index IValue, result IValue) *GetPtr {
-	return NewGetPtr(p.BB, p.Base, result, append(p.Indices, index))
+	return NewGetPtr(p.Base, result, append(p.Indices, index))
 }
 
 // Add offset to a pointer
@@ -301,7 +304,7 @@ type PtrOffset struct {
 	Offset   int    // evaluated at compile time.
 }
 
-func NewPtrOffset(bb *BasicBlock, src, dst IValue, offset int) *PtrOffset {
+func NewPtrOffset(src, dst IValue, offset int) *PtrOffset {
 	if src.GetType().GetTypeEnum() != Pointer {
 		panic(NewIRError("source operand is not pointer"))
 	}
@@ -309,7 +312,7 @@ func NewPtrOffset(bb *BasicBlock, src, dst IValue, offset int) *PtrOffset {
 		panic(NewIRError("source operand is not pointer"))
 	}
 	return &PtrOffset{
-		BaseInstr: *NewBaseInstr(bb),
+		BaseInstr: *NewBaseInstr(nil),
 		Src:       src,
 		Dst:       dst,
 		Offset:    offset,
@@ -322,9 +325,9 @@ type Clear struct {
 	Value IValue
 }
 
-func NewClear(bb *BasicBlock, value IValue) *Clear {
+func NewClear(value IValue) *Clear {
 	return &Clear{
-		BaseInstr: *NewBaseInstr(bb),
+		BaseInstr: *NewBaseInstr(nil),
 		Value:     value,
 	}
 }
@@ -342,7 +345,7 @@ type Unary struct {
 	Operand, Result IValue
 }
 
-func NewUnary(bb *BasicBlock, op UnaryOp, operand, result IValue) *Unary {
+func NewUnary(op UnaryOp, operand, result IValue) *Unary {
 	if !operand.GetType().IsIdentical(result.GetType()) {
 		panic(NewIRError("result type incompatible with operand type"))
 	}
@@ -359,7 +362,7 @@ func NewUnary(bb *BasicBlock, op UnaryOp, operand, result IValue) *Unary {
 	}
 
 	return &Unary{
-		BaseInstr: *NewBaseInstr(bb),
+		BaseInstr: *NewBaseInstr(nil),
 		Op:        op,
 		Operand:   operand,
 		Result:    result,
@@ -398,7 +401,7 @@ type Binary struct {
 	Left, Right, Result IValue
 }
 
-func NewBinary(bb *BasicBlock, op BinaryOp, left, right, result IValue) *Binary {
+func NewBinary(op BinaryOp, left, right, result IValue) *Binary {
 	// Check type equivalence of operands
 	if !left.GetType().IsIdentical(right.GetType()) {
 		panic(NewIRError("two operands are not of same type"))
@@ -433,7 +436,7 @@ func NewBinary(bb *BasicBlock, op BinaryOp, left, right, result IValue) *Binary 
 	}
 
 	return &Binary{
-		BaseInstr: *NewBaseInstr(bb),
+		BaseInstr: *NewBaseInstr(nil),
 		Op:        op,
 		Left:      left,
 		Right:     right,
@@ -446,9 +449,9 @@ type Jump struct {
 	Target *BasicBlock
 }
 
-func NewJump(cur, target *BasicBlock) *Jump {
+func NewJump(target *BasicBlock) *Jump {
 	return &Jump{
-		BaseInstr: *NewBaseInstr(cur),
+		BaseInstr: *NewBaseInstr(nil),
 		Target:    target,
 	}
 }
@@ -459,12 +462,12 @@ type Branch struct {
 	True, False *BasicBlock
 }
 
-func NewBranch(cur *BasicBlock, cond IValue, bTrue, bFalse *BasicBlock) *Branch {
+func NewBranch(cond IValue, bTrue, bFalse *BasicBlock) *Branch {
 	if cond.GetType().GetTypeEnum() != I1 {
 		panic(NewIRError("wrong condition value type"))
 	}
 	return &Branch{
-		BaseInstr: *NewBaseInstr(cur),
+		BaseInstr: *NewBaseInstr(nil),
 		Cond:      cond,
 		True:      bTrue,
 		False:     bFalse,
@@ -478,7 +481,7 @@ type Call struct {
 	Ret  IValue // struct that accept return value
 }
 
-func NewCall(bb *BasicBlock, fun IValue, args []IValue, ret IValue) *Call {
+func NewCall(fun IValue, args []IValue, ret IValue) *Call {
 	// Check parameter type
 	funcType, ok := fun.GetType().(*FuncType)
 	if !ok {
@@ -508,7 +511,7 @@ func NewCall(bb *BasicBlock, fun IValue, args []IValue, ret IValue) *Call {
 
 Construct:
 	return &Call{
-		BaseInstr: *NewBaseInstr(bb),
+		BaseInstr: *NewBaseInstr(nil),
 		Func:      fun,
 		Args:      args,
 		Ret:       ret,
@@ -521,7 +524,7 @@ type Return struct {
 	Values []IValue
 }
 
-func NewReturn(bb *BasicBlock, fun *Func, values []IValue) *Return {
+func NewReturn(fun *Func, values []IValue) *Return {
 	ret := fun.Type.(*FuncType).Return.Field
 	if len(ret) != len(values) {
 		panic(NewIRError(
@@ -535,7 +538,7 @@ func NewReturn(bb *BasicBlock, fun *Func, values []IValue) *Return {
 		}
 	}
 	return &Return{
-		BaseInstr: *NewBaseInstr(bb),
+		BaseInstr: *NewBaseInstr(nil),
 		Func:      fun,
 		Values:    values,
 	}

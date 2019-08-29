@@ -236,12 +236,12 @@ func (b *Builder) moveFromSrc(srcNode ast.IExprNode, inter IValue) {
 
 	switch srcRet.(type) {
 	case IValue:
-		b.emit(NewMove(b.bb, srcRet.(IValue), inter))
+		b.emit(NewMove(srcRet.(IValue), inter))
 
 	case *GetPtr:
 		srcPtr := srcRet.(*GetPtr).Result
-		b.emit(srcRet.(*GetPtr))             // emit that getptr instruction
-		b.emit(NewLoad(b.bb, srcPtr, inter)) // load value from pointer
+		b.emit(srcRet.(*GetPtr))       // emit that getptr instruction
+		b.emit(NewLoad(srcPtr, inter)) // load value from pointer
 	}
 }
 
@@ -253,15 +253,15 @@ func (b *Builder) moveToDst(dstNode ast.IExprNode, inter IValue) {
 
 		switch dstRet.(type) {
 		case IValue: // an symbol value, must be a pointer type (*p = s)
-			b.emit(NewStore(b.bb, inter, dstRet.(IValue))) // store to the pointer
+			b.emit(NewStore(inter, dstRet.(IValue))) // store to the pointer
 
 		case *GetPtr: // an get pointer instruction (*p.f = s)
 			getPtr := dstRet.(*GetPtr)
 			b.emit(getPtr)            // emit that instruction
 			fieldPtr := getPtr.Result // get pointer to that pointer field
 			field := b.newTempSymbol(fieldPtr.GetType().(*PtrType).Base)
-			b.emit(NewLoad(b.bb, fieldPtr, field)) // get pointer field
-			b.emit(NewStore(b.bb, inter, field))   // store to that field
+			b.emit(NewLoad(fieldPtr, field)) // get pointer field
+			b.emit(NewStore(inter, field))   // store to that field
 		}
 
 	} else {
@@ -271,15 +271,15 @@ func (b *Builder) moveToDst(dstNode ast.IExprNode, inter IValue) {
 		case IValue: // d = s
 			dstVal := dstRet.(IValue)
 			if inter == nil {
-				b.emit(NewClear(b.bb, dstVal))
+				b.emit(NewClear(dstVal))
 			} else {
-				b.emit(NewMove(b.bb, inter, dstVal)) // move between symbols
+				b.emit(NewMove(inter, dstVal)) // move between symbols
 			}
 
 		case *GetPtr: // d.f = s
 			instr := dstRet.(*GetPtr)
 			b.emit(instr)
-			b.emit(NewStore(b.bb, inter, instr.Result)) // store to field pointer
+			b.emit(NewStore(inter, instr.Result)) // store to field pointer
 		}
 	}
 }
@@ -302,15 +302,15 @@ func (b *Builder) VisitIncDecStmt(stmt *ast.IncDecStmt) interface{} {
 	switch exprRet.(type) {
 	case *SymbolValue:
 		val := exprRet.(*SymbolValue)
-		b.emit(NewBinary(b.bb, op, val, NewI64Imm(1), val))
+		b.emit(NewBinary(op, val, NewI64Imm(1), val))
 	case *GetPtr:
 		instr := exprRet.(*GetPtr)
 		b.emit(instr)
 		valType := instr.Result.GetType().(*PtrType).Base
 		val := b.newTempSymbol(valType)
-		b.emit(NewLoad(b.bb, instr.Result, val))
-		b.emit(NewBinary(b.bb, op, val, NewI64Imm(1), val))
-		b.emit(NewStore(b.bb, val, instr.Result))
+		b.emit(NewLoad(instr.Result, val))
+		b.emit(NewBinary(op, val, NewI64Imm(1), val))
+		b.emit(NewStore(val, instr.Result))
 	}
 	return nil
 }
@@ -320,7 +320,7 @@ func (b *Builder) VisitReturnStmt(stmt *ast.ReturnStmt) interface{} {
 	for _, r := range stmt.Expr {
 		ret = append(ret, b.retrieveValue(b.VisitExpr(r)))
 	}
-	b.emit(NewReturn(b.bb, b.fun, ret))
+	b.emit(NewReturn(b.fun, ret))
 	return nil
 }
 
@@ -391,8 +391,8 @@ func (b *Builder) VisitFuncLit(expr *ast.FuncLit) interface{} {
 	listPtr := NewSymbolValue(params[len(params)-1])
 	for i := range capList.symbols {
 		valPtr := b.newTempSymbol(NewPtrType(NewBaseType(Void)))
-		b.emit(NewPtrOffset(b.bb, listPtr, valPtr, capList.tp.Field[i].Offset))
-		b.emit(NewLoad(b.bb, valPtr, NewSymbolValue(capList.symbols[i])))
+		b.emit(NewPtrOffset(listPtr, valPtr, capList.tp.Field[i].Offset))
+		b.emit(NewLoad(valPtr, NewSymbolValue(capList.symbols[i])))
 	}
 
 	// Visit statements and build IR
@@ -410,21 +410,21 @@ func (b *Builder) VisitFuncLit(expr *ast.FuncLit) interface{} {
 	litVal := b.newTempSymbol(closureType)
 	// Store function as the first field of closure
 	funcPtr := b.newTempSymbol(NewPtrType(closureType.Field[0].Type))
-	b.emit(NewGetPtr(b.bb, litVal, funcPtr, []IValue{NewI64Imm(0)}))
-	b.emit(NewStore(b.bb, funcLit, funcPtr))
+	b.emit(NewGetPtr(litVal, funcPtr, []IValue{NewI64Imm(0)}))
+	b.emit(NewStore(funcLit, funcPtr))
 	// Allocate heap space for capture list
 	mallocRet := b.newTempSymbol(NewPtrType(capList.tp)) // provide size to instruction
-	b.emit(NewMalloc(b.bb, mallocRet))
+	b.emit(NewMalloc(mallocRet))
 	// Store captured operands to list
 	for i, s := range capList.symbols {
 		elemPtr := b.newTempSymbol(NewPtrType(s.Type))
-		b.emit(NewPtrOffset(b.bb, mallocRet, elemPtr, capList.tp.Field[i].Offset))
-		b.emit(NewStore(b.bb, NewSymbolValue(s), elemPtr))
+		b.emit(NewPtrOffset(mallocRet, elemPtr, capList.tp.Field[i].Offset))
+		b.emit(NewStore(NewSymbolValue(s), elemPtr))
 	}
 	// Store capture list pointer as the second field of closure
 	listPtrPtr := b.newTempSymbol(NewPtrType(closureType.Field[1].Type))
-	b.emit(NewGetPtr(b.bb, litVal, listPtrPtr, []IValue{NewI64Imm(1)}))
-	b.emit(NewStore(b.bb, mallocRet, listPtrPtr))
+	b.emit(NewGetPtr(litVal, listPtrPtr, []IValue{NewI64Imm(1)}))
+	b.emit(NewStore(mallocRet, listPtrPtr))
 
 	return litVal
 }
@@ -469,12 +469,12 @@ func (b *Builder) VisitFuncCallExpr(expr *ast.FuncCallExpr) interface{} {
 	ret := b.newTempSymbol(fun.GetType().(*FuncType).Return)
 	if topFunc, ok := fun.(*Func); ok { // top level function
 		args = append(args, NewNullPtr()) // capture list is nil
-		b.emit(NewCall(b.bb, topFunc, args, ret))
+		b.emit(NewCall(topFunc, args, ret))
 	} else { // closure (constructed from literals)
 		funcAddr := b.loadField(fun, 0)
 		capList := b.loadField(fun, 1)
 		args = append(args, capList)
-		b.emit(NewCall(b.bb, funcAddr, args, ret))
+		b.emit(NewCall(funcAddr, args, ret))
 	}
 
 	return ret
@@ -483,9 +483,9 @@ func (b *Builder) VisitFuncCallExpr(expr *ast.FuncCallExpr) interface{} {
 func (b *Builder) loadField(value IValue, index int) *SymbolValue {
 	structType := value.GetType().(*StructType)
 	ptr := b.newTempSymbol(NewPtrType(structType.Field[index].Type))
-	b.emit(NewGetPtr(b.bb, value, ptr, []IValue{NewI64Imm(index)}))
+	b.emit(NewGetPtr(value, ptr, []IValue{NewI64Imm(index)}))
 	field := b.newTempSymbol(structType.Field[index].Type)
-	b.emit(NewLoad(b.bb, ptr, field))
+	b.emit(NewLoad(ptr, field))
 	return field
 }
 
@@ -504,7 +504,7 @@ func (b *Builder) VisitSelectExpr(expr *ast.SelectExpr) interface{} {
 	exprType := b.VisitType(expr.Type).(IType)
 	switch retVal.(type) {
 	case IValue:
-		return NewGetPtr(b.bb, retVal.(IValue), b.newTempSymbol(NewPtrType(exprType)),
+		return NewGetPtr(retVal.(IValue), b.newTempSymbol(NewPtrType(exprType)),
 			[]IValue{NewI64Imm(index)})
 	case *GetPtr:
 		return b.appendIndex(retVal.(*GetPtr), NewI64Imm(index), exprType)
@@ -541,7 +541,7 @@ func (b *Builder) VisitIndexExpr(expr *ast.IndexExpr) interface{} {
 	case IValue:
 		array := arrRet.(IValue)
 		return NewGetPtr(
-			b.bb, array, b.newTempSymbol(NewPtrType(array.GetType().(*ArrayType).Elem)),
+			array, b.newTempSymbol(NewPtrType(array.GetType().(*ArrayType).Elem)),
 			[]IValue{index},
 		)
 	case *GetPtr:
@@ -558,7 +558,7 @@ func (b *Builder) retrieveValue(obj interface{}) IValue {
 		instr := obj.(*GetPtr)
 		val := b.newTempSymbol(instr.Result.GetType().(*PtrType).Base)
 		b.emit(instr)
-		b.emit(NewLoad(b.bb, instr.Result, val))
+		b.emit(NewLoad(instr.Result, val))
 		return val
 	}
 	return nil
@@ -575,10 +575,10 @@ func (b *Builder) shortCircuitEval(expr ast.IExprNode) interface{} {
 	result := b.newTempSymbol(NewBaseType(I1))
 	nextBB := b.newBasicBlock()
 	setTrue := b.newBasicBlock()
-	setTrue.Append(NewMove(setTrue, NewI1Imm(true), result))
+	setTrue.Append(NewMove(NewI1Imm(true), result))
 	setTrue.JumpTo(nextBB)
 	setFalse := b.newBasicBlock()
-	setFalse.Append(NewMove(setFalse, NewI1Imm(false), result))
+	setFalse.Append(NewMove(NewI1Imm(false), result))
 	setFalse.JumpTo(nextBB)
 
 	// Main recursion
@@ -643,17 +643,17 @@ func (b *Builder) VisitUnaryExpr(expr *ast.UnaryExpr) interface{} {
 		return val
 	case ast.NEG:
 		res = b.newTempSymbol(val.GetType())
-		b.emit(NewUnary(b.bb, NEG, val, res))
+		b.emit(NewUnary(NEG, val, res))
 	case ast.NOT, ast.INV:
 		res = b.newTempSymbol(val.GetType())
-		b.emit(NewUnary(b.bb, NOT, val, res))
+		b.emit(NewUnary(NOT, val, res))
 	case ast.DEREF:
 		ptrType := val.GetType().(*PtrType)
 		res = b.newTempSymbol(ptrType.Base)
-		b.emit(NewLoad(b.bb, val, res))
+		b.emit(NewLoad(val, res))
 	case ast.REF:
 		res = b.newTempSymbol(NewPtrType(val.GetType()))
-		b.emit(NewGetPtr(b.bb, val, res, []IValue{}))
+		b.emit(NewGetPtr(val, res, []IValue{}))
 	}
 	return res
 }
@@ -677,7 +677,7 @@ func (b *Builder) VisitBinaryExpr(expr *ast.BinaryExpr) interface{} {
 		resType = NewBaseType(I1)
 	}
 	res := b.newTempSymbol(resType)
-	b.emit(NewBinary(b.bb, op, left, right, res))
+	b.emit(NewBinary(op, left, right, res))
 	return res
 }
 
