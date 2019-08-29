@@ -522,15 +522,15 @@ type Return struct {
 }
 
 func NewReturn(bb *BasicBlock, fun *Func, values []IValue) *Return {
-	paramType := fun.Type.(*FuncType).Param
-	if len(paramType) != len(values) {
+	ret := fun.Type.(*FuncType).Return.Field
+	if len(ret) != len(values) {
 		panic(NewIRError(
-			fmt.Sprintf("wrong return number, want %d, have %d", len(paramType),
+			fmt.Sprintf("wrong return number, want %d, have %d", len(ret),
 				len(values)),
 		))
 	}
-	for i := range paramType {
-		if !paramType[i].IsIdentical(values[i].GetType()) {
+	for i, f := range ret {
+		if !f.Type.IsIdentical(values[i].GetType()) {
 			panic(NewIRError("invalid return type"))
 		}
 	}

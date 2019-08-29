@@ -34,3 +34,18 @@ func (b *BasicBlock) Append(instr IInstr) {
 	b.Tail = instr        // prev_tail <-> instr <- tail
 	instr.SetNext(nil)
 }
+
+// Automatically create a jump instruction in the receiver block, and create edges in
+// two blocks.
+func (b *BasicBlock) JumpTo(b2 *BasicBlock) {
+	b.Append(NewJump(b, b2))
+	b.Exit = append(b.Exit, b2)
+	b2.Enter = append(b2.Enter, b)
+}
+
+func (b *BasicBlock) BranchTo(cond IValue, trueBB, falseBB *BasicBlock) {
+	b.Append(NewBranch(b, cond, trueBB, falseBB))
+	b.Exit = append(b.Exit, trueBB, falseBB)
+	trueBB.Enter = append(trueBB.Enter, b)
+	falseBB.Enter = append(falseBB.Enter, b)
+}

@@ -2,7 +2,6 @@ package ast
 
 type IVisitor interface {
 	VisitProgram(program *ProgramNode) interface{}
-
 	VisitFuncDecl(decl *FuncDecl) interface{}
 	VisitScope(scope *Scope) interface{}
 

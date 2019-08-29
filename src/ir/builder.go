@@ -98,10 +98,18 @@ func (b *Builder) requestBlockName() string {
 	return str
 }
 
+func (b *Builder) newBasicBlock() *BasicBlock {
+	return NewBasicBlock(b.requestBlockName(), b.fun)
+}
+
 func (b *Builder) VisitScope(astScope *ast.Scope) interface{} {
 	idx := 0 // index in AST function scope
 	fun := astScope.Func
 	entries := astScope.Symbols.Entries
+	nested := astScope.Func.Scope != astScope
+	if nested { // nested scope
+		goto LocalSymbols
+	}
 
 	// Add receiver to IR scope and its parameter list
 	if fun.Type.Receiver != nil {
@@ -125,12 +133,16 @@ func (b *Builder) VisitScope(astScope *ast.Scope) interface{} {
 	}
 
 	// Add local symbols to IR scope
+LocalSymbols:
 	for ; idx < len(astScope.Symbols.Entries); idx++ {
 		symbol := entries[idx]
 		if symbol.Flag == ast.VarEntry {
 			b.fun.Scope.AddSymbolFromAST(symbol, b.genSymbolName(symbol.Name),
 				b.VisitType(symbol.Type).(IType), false)
 		}
+	}
+	if nested {
+		goto EndScope
 	}
 
 	// Add captured symbols to IR scope, if this scope is from a literal function
@@ -142,6 +154,7 @@ func (b *Builder) VisitScope(astScope *ast.Scope) interface{} {
 		}
 	}
 
+EndScope:
 	b.nScope++
 	return nil
 }
@@ -164,8 +177,23 @@ func (b *Builder) VisitStmt(stmt ast.IStmtNode) interface{} {
 	switch stmt.(type) {
 	case ast.IExprNode:
 		b.VisitExpr(stmt.(ast.IExprNode))
+	case *ast.BlockStmt:
+		b.VisitBlockStmt(stmt.(*ast.BlockStmt))
 	case *ast.AssignStmt:
 		b.VisitAssignStmt(stmt.(*ast.AssignStmt))
+	case *ast.IncDecStmt:
+		b.VisitIncDecStmt(stmt.(*ast.IncDecStmt))
+	case *ast.ReturnStmt:
+		b.VisitReturnStmt(stmt.(*ast.ReturnStmt))
+	}
+	return nil
+}
+
+// AST blocks just set up new scope, they have nothing to do with basic blocks in IR
+func (b *Builder) VisitBlockStmt(stmt *ast.BlockStmt) interface{} {
+	b.VisitScope(stmt.Scope)
+	for _, s := range stmt.Stmts {
+		b.VisitStmt(s)
 	}
 	return nil
 }
@@ -263,8 +291,44 @@ func (b *Builder) newTempSymbol(tp IType) *SymbolValue {
 	return NewSymbolValue(sym)
 }
 
+func (b *Builder) VisitIncDecStmt(stmt *ast.IncDecStmt) interface{} {
+	exprRet := b.VisitExpr(stmt.Expr)
+	var op BinaryOp
+	if stmt.Inc {
+		op = ADD
+	} else {
+		op = SUB
+	}
+	switch exprRet.(type) {
+	case *SymbolValue:
+		val := exprRet.(*SymbolValue)
+		b.emit(NewBinary(b.bb, op, val, NewI64Imm(1), val))
+	case *GetPtr:
+		instr := exprRet.(*GetPtr)
+		b.emit(instr)
+		valType := instr.Result.GetType().(*PtrType).Base
+		val := b.newTempSymbol(valType)
+		b.emit(NewLoad(b.bb, instr.Result, val))
+		b.emit(NewBinary(b.bb, op, val, NewI64Imm(1), val))
+		b.emit(NewStore(b.bb, val, instr.Result))
+	}
+	return nil
+}
+
+func (b *Builder) VisitReturnStmt(stmt *ast.ReturnStmt) interface{} {
+	ret := make([]IValue, 0)
+	for _, r := range stmt.Expr {
+		ret = append(ret, b.retrieveValue(b.VisitExpr(r)))
+	}
+	b.emit(NewReturn(b.bb, b.fun, ret))
+	return nil
+}
+
 // All expression visiting methods return result operand
 func (b *Builder) VisitExpr(expr ast.IExprNode) interface{} {
+	if canUseShortCircuit(expr) {
+		return b.shortCircuitEval(expr)
+	}
 	switch expr.(type) {
 	case ast.ILiteralExpr:
 		return b.VisitLiteralExpr(expr.(ast.ILiteralExpr))
@@ -498,6 +562,77 @@ func (b *Builder) retrieveValue(obj interface{}) IValue {
 		return val
 	}
 	return nil
+}
+
+// Short circuit evaluation for boolean expressions
+func (b *Builder) shortCircuitEval(expr ast.IExprNode) interface{} {
+	// Build initial basic blocks.
+	//      Start (separated from the previous block, to be merged later)
+	//    T /   \ F
+	//   True   False
+	//      \   /
+	//      Next
+	result := b.newTempSymbol(NewBaseType(I1))
+	nextBB := b.newBasicBlock()
+	setTrue := b.newBasicBlock()
+	setTrue.Append(NewMove(setTrue, NewI1Imm(true), result))
+	setTrue.JumpTo(nextBB)
+	setFalse := b.newBasicBlock()
+	setFalse.Append(NewMove(setFalse, NewI1Imm(false), result))
+	setFalse.JumpTo(nextBB)
+
+	// Main recursion
+	type ControlInfo struct {
+		True, False *BasicBlock
+	}
+	var visit func(expr ast.IExprNode, trueBB, falseBB *BasicBlock)
+	visit = func(expr ast.IExprNode, trueBB, falseBB *BasicBlock) {
+		// Decide whether the expression should be divided further
+		if !canUseShortCircuit(expr) {
+			// When the expression cannot be divided, branch to the blocks provided in
+			// the control info.
+			cond := b.retrieveValue(b.VisitExpr(expr))
+			b.bb.BranchTo(cond, trueBB, falseBB)
+			return
+		}
+
+		switch expr.(type) {
+		case *ast.UnaryExpr: // NOT operator
+			// Invert the control blocks, stay in current basic block.
+			visit(expr.(*ast.UnaryExpr).Expr, falseBB, trueBB)
+
+		case *ast.BinaryExpr:
+			binExpr := expr.(*ast.BinaryExpr)
+			rightBB := b.newBasicBlock()
+			switch binExpr.Op {
+			case ast.LAND:
+				visit(binExpr.Left, rightBB, falseBB) // stays in current basic block
+			case ast.LOR:
+				visit(binExpr.Left, trueBB, rightBB)
+			}
+			b.bb = rightBB
+			visit(binExpr.Right, trueBB, falseBB)
+			return
+		}
+	}
+	visit(expr, setTrue, setFalse)
+	b.bb = nextBB
+
+	return result
+}
+
+func canUseShortCircuit(expr ast.IExprNode) bool {
+	if expr.GetType().GetTypeEnum() != ast.Bool {
+		return false
+	}
+	switch expr.(type) {
+	case *ast.UnaryExpr:
+		return expr.(*ast.UnaryExpr).Op == ast.NOT
+	case *ast.BinaryExpr:
+		return expr.(*ast.BinaryExpr).Op&(ast.LAND|ast.LOR) != 0
+	default:
+		return false
+	}
 }
 
 func (b *Builder) VisitUnaryExpr(expr *ast.UnaryExpr) interface{} {

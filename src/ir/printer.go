@@ -175,7 +175,7 @@ var unaryOpStr = map[UnaryOp]string{
 }
 
 func (p *Printer) VisitUnary(instr *Unary) interface{} {
-	p.writeInstr(unaryOpStr[instr.Op], instr.Operand, instr.Result)
+	p.writeInstr(unaryOpStr[instr.Op], instr.Result, instr.Operand)
 	return nil
 }
 
@@ -190,7 +190,7 @@ func (p *Printer) VisitBinary(instr *Binary) interface{} {
 }
 
 func (p *Printer) VisitJump(instr *Jump) interface{} {
-	p.write("\tjump %s\n", instr.BB.Name)
+	p.write("\tjump %s\n", instr.Target.Name)
 	return nil
 }
 

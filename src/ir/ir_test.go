@@ -11,23 +11,11 @@ import (
 const source = `
 package main
 
-func test1() {
-	k, pi := test2(1, 2)
-	f := func() {
-		g := func() {
-			e := pi
-		}
-	}
-}
-
-func test2(i int, j int) (a int, pi float64) {
-	return i, 3.14
-}
-
-func test3() int {
-	var a [5]int
-	b := 3
-	a[b] = 3
+func test3() bool {
+	a := 9
+	b := 10
+	p := a < b || b > 9 && a < 0
+	return p
 }
 `
 

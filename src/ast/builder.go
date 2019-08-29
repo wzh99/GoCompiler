@@ -797,8 +797,13 @@ func (v *Builder) VisitBasicLit(ctx *BasicLitContext) interface{} {
 func (v *Builder) VisitOperandName(ctx *OperandNameContext) interface{} {
 	// Create operand identifier
 	name := ctx.IDENTIFIER().GetText()
-	if name == "nil" { // return nil value if operand is "nil"
+	switch name {
+	case "nil":
 		return NewZeroValue(NewLocFromContext(ctx))
+	case "true":
+		return NewBoolConst(NewLocFromContext(ctx), true)
+	case "false":
+		return NewBoolConst(NewLocFromContext(ctx), false)
 	}
 	symbol, scope := v.cur.Lookup(name) // can be nil then
 	id := NewIdExpr(NewLocFromContext(ctx), name, symbol)

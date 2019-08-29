@@ -77,9 +77,9 @@ func (v *ImmValue) ToString() string {
 	case I1:
 		val := v.Value.(bool)
 		if val {
-			return "0: i1"
-		} else {
 			return "1: i1"
+		} else {
+			return "0: i1"
 		}
 	case I64:
 		return fmt.Sprintf("%d: i64", v.Value.(int))
