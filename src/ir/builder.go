@@ -28,6 +28,10 @@ type CaptureList struct {
 	tp *StructType
 }
 
+type LoopInfo struct {
+	Continue, Break *BasicBlock
+}
+
 type Builder struct {
 	ast.BaseVisitor
 	// Target program
@@ -42,11 +46,14 @@ type Builder struct {
 	nFuncLit int
 	// AST scope counter (to distinguish symbols in different scope). It is not for IR scope.
 	nScope int
+	// Continue and break targets for AST loop statement
+	loopInfo map[ast.IStmtNode]LoopInfo
 }
 
 func NewBuilder() *Builder {
 	return &Builder{
 		funcTable: make(map[*ast.FuncDecl]*Func), // the first function is global
+		loopInfo:  make(map[ast.IStmtNode]LoopInfo),
 	}
 }
 
@@ -185,6 +192,14 @@ func (b *Builder) VisitStmt(stmt ast.IStmtNode) interface{} {
 		b.VisitIncDecStmt(stmt.(*ast.IncDecStmt))
 	case *ast.ReturnStmt:
 		b.VisitReturnStmt(stmt.(*ast.ReturnStmt))
+	case *ast.IfStmt:
+		b.VisitIfStmt(stmt.(*ast.IfStmt))
+	case *ast.ForClauseStmt:
+		b.VisitForClauseStmt(stmt.(*ast.ForClauseStmt))
+	case *ast.BreakStmt:
+		b.VisitBreakStmt(stmt.(*ast.BreakStmt))
+	case *ast.ContinueStmt:
+		b.VisitContinueStmt(stmt.(*ast.ContinueStmt))
 	}
 	return nil
 }
@@ -321,6 +336,94 @@ func (b *Builder) VisitReturnStmt(stmt *ast.ReturnStmt) interface{} {
 		ret = append(ret, b.retrieveValue(b.VisitExpr(r)))
 	}
 	b.emit(NewReturn(b.fun, ret))
+	return nil
+}
+
+func (b *Builder) VisitIfStmt(stmt *ast.IfStmt) interface{} {
+	// Initialize basic blocks
+	b.VisitScope(stmt.Scope)
+	if stmt.Init != nil {
+		b.VisitStmt(stmt.Init)
+	}
+	trueBB := b.newBasicBlock()
+	nextBB := b.newBasicBlock()
+	var falseBB *BasicBlock
+	hasElse := stmt.Else != nil
+	if hasElse {
+		falseBB = b.newBasicBlock()
+	} else {
+		falseBB = nextBB
+	}
+
+	// Use short circuit evaluation
+	b.visitBoolExpr(stmt.Cond, trueBB, falseBB)
+
+	// Build IR in then and else clause
+	b.bb = trueBB
+	b.VisitBlockStmt(stmt.Then)
+	b.bb.JumpTo(nextBB)
+	if hasElse {
+		b.bb = falseBB
+		b.VisitStmt(stmt.Else)
+		b.bb.JumpTo(nextBB)
+	}
+	b.bb = nextBB
+
+	return nil
+}
+
+func (b *Builder) VisitForClauseStmt(stmt *ast.ForClauseStmt) interface{} {
+	// Initialize basic blocks
+	b.VisitScope(stmt.Scope)
+	if stmt.Init != nil {
+		b.VisitStmt(stmt.Init)
+	}
+	initBB := b.bb
+	bodyBB := b.newBasicBlock()
+	postBB := b.newBasicBlock() // instructions to be executed after main body
+	nextBB := b.newBasicBlock() // the basic block after for statement
+	hasCond := stmt.Cond != nil
+	var newIteBB *BasicBlock
+	if hasCond {
+		condBB := b.newBasicBlock()
+		newIteBB = condBB
+		initBB.JumpTo(condBB)                      // init -> cond
+		b.bb = condBB                              // instructions must all be in a new block
+		b.visitBoolExpr(stmt.Cond, bodyBB, nextBB) // cond ? body : next
+	} else {
+		newIteBB = bodyBB
+		initBB.JumpTo(bodyBB) // init -> body
+	}
+
+	// Visit main body
+	b.loopInfo[stmt] = LoopInfo{
+		Continue: postBB,
+		Break:    nextBB,
+	}
+	b.bb = bodyBB
+	b.VisitStmt(stmt.Block)
+	b.bb.JumpTo(postBB) // current basic block may not be the body defined before
+	b.bb = postBB
+	if stmt.Post != nil {
+		b.VisitStmt(stmt.Post)
+	}
+	postBB.JumpTo(newIteBB) // post -> newIte (cond/body)
+	b.bb = nextBB
+
+	return nil
+}
+
+func (b *Builder) VisitBreakStmt(stmt *ast.BreakStmt) interface{} {
+	target := b.loopInfo[stmt.Target].Break
+	b.bb.JumpTo(target)
+	b.bb = b.newBasicBlock() // just in case there are following statements
+	return nil
+}
+
+func (b *Builder) VisitContinueStmt(stmt *ast.ContinueStmt) interface{} {
+	target := b.loopInfo[stmt.Target].Continue
+	b.bb.JumpTo(target)
+	b.bb = b.newBasicBlock()
 	return nil
 }
 
@@ -567,7 +670,7 @@ func (b *Builder) retrieveValue(obj interface{}) IValue {
 // Short circuit evaluation for boolean expressions
 func (b *Builder) shortCircuitEval(expr ast.IExprNode) interface{} {
 	// Build initial basic blocks.
-	//      Start (separated from the previous block, to be merged later)
+	//      Start
 	//    T /   \ F
 	//   True   False
 	//      \   /
@@ -582,43 +685,40 @@ func (b *Builder) shortCircuitEval(expr ast.IExprNode) interface{} {
 	setFalse.JumpTo(nextBB)
 
 	// Main recursion
-	type ControlInfo struct {
-		True, False *BasicBlock
-	}
-	var visit func(expr ast.IExprNode, trueBB, falseBB *BasicBlock)
-	visit = func(expr ast.IExprNode, trueBB, falseBB *BasicBlock) {
-		// Decide whether the expression should be divided further
-		if !canUseShortCircuit(expr) {
-			// When the expression cannot be divided, branch to the blocks provided in
-			// the control info.
-			cond := b.retrieveValue(b.VisitExpr(expr))
-			b.bb.BranchTo(cond, trueBB, falseBB)
-			return
-		}
-
-		switch expr.(type) {
-		case *ast.UnaryExpr: // NOT operator
-			// Invert the control blocks, stay in current basic block.
-			visit(expr.(*ast.UnaryExpr).Expr, falseBB, trueBB)
-
-		case *ast.BinaryExpr:
-			binExpr := expr.(*ast.BinaryExpr)
-			rightBB := b.newBasicBlock()
-			switch binExpr.Op {
-			case ast.LAND:
-				visit(binExpr.Left, rightBB, falseBB) // stays in current basic block
-			case ast.LOR:
-				visit(binExpr.Left, trueBB, rightBB)
-			}
-			b.bb = rightBB
-			visit(binExpr.Right, trueBB, falseBB)
-			return
-		}
-	}
-	visit(expr, setTrue, setFalse)
+	b.visitBoolExpr(expr, setTrue, setFalse)
 	b.bb = nextBB
 
 	return result
+}
+
+func (b *Builder) visitBoolExpr(expr ast.IExprNode, trueBB, falseBB *BasicBlock) {
+	// Decide whether the expression should be divided further
+	if !canUseShortCircuit(expr) {
+		// When the expression cannot be divided, branch to the blocks provided in
+		// the control info.
+		cond := b.retrieveValue(b.VisitExpr(expr))
+		b.bb.BranchTo(cond, trueBB, falseBB)
+		return
+	}
+
+	switch expr.(type) {
+	case *ast.UnaryExpr: // NOT operator
+		// Invert the control blocks, stay in current basic block.
+		b.visitBoolExpr(expr.(*ast.UnaryExpr).Expr, falseBB, trueBB)
+
+	case *ast.BinaryExpr:
+		binExpr := expr.(*ast.BinaryExpr)
+		rightBB := b.newBasicBlock()
+		switch binExpr.Op {
+		case ast.LAND:
+			b.visitBoolExpr(binExpr.Left, rightBB, falseBB) // stays in current basic block
+		case ast.LOR:
+			b.visitBoolExpr(binExpr.Left, trueBB, rightBB)
+		}
+		b.bb = rightBB
+		b.visitBoolExpr(binExpr.Right, trueBB, falseBB)
+		return
+	}
 }
 
 func canUseShortCircuit(expr ast.IExprNode) bool {

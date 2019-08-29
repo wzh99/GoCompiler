@@ -13,9 +13,16 @@ package main
 
 func test3() bool {
 	a := 9
-	b := 10
-	p := a < b || b > 9 && a < 0
-	return p
+	for i := 0; i < 10; i++ {
+		if a < 12 {
+			a++
+			continue
+		} else {
+			a--
+			break
+		}
+	}
+	return a < 20
 }
 `
 

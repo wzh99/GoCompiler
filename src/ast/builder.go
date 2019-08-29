@@ -401,7 +401,8 @@ func (v *Builder) VisitStatement(ctx *StatementContext) interface{} {
 		v.popBlock()
 		v.popScope()
 	} else if s := ctx.IfStmt(); s != nil {
-		v.VisitIfStmt(s.(*IfStmtContext))
+		stmt := v.VisitIfStmt(s.(*IfStmtContext)).(*IfStmt)
+		v.addStmt(stmt)
 	} else if s := ctx.ForStmt(); s != nil {
 		v.VisitForStmt(s.(*ForStmtContext))
 	}
@@ -544,7 +545,8 @@ FindStmt:
 func (v *Builder) VisitIfStmt(ctx *IfStmtContext) interface{} {
 	// Visit if clause
 	var init IStmtNode
-	v.pushScope(NewLocalScope(v.cur)) // enter if clause scope
+	scope := NewLocalScope(v.cur)
+	v.pushScope(scope) // enter if clause scope
 	if s := ctx.SimpleStmt(); s != nil {
 		init = v.VisitSimpleStmt(s.(*SimpleStmtContext)).(IStmtNode)
 	}
@@ -575,15 +577,16 @@ func (v *Builder) VisitIfStmt(ctx *IfStmtContext) interface{} {
 
 	// Finish if statement
 	v.popScope() // exit if clause scope
-	v.addStmt(NewIfStmt(NewLocFromContext(ctx), init, cond, blockStmt, els))
-	return nil
+	ifStmt := NewIfStmt(NewLocFromContext(ctx), scope, init, cond, blockStmt, els)
+	return ifStmt
 }
 
 func (v *Builder) VisitForStmt(ctx *ForStmtContext) interface{} {
 	// Visit for clause
 	var init, post IStmtNode
 	var cond IExprNode
-	v.pushScope(NewLocalScope(v.cur)) // enter initialization scope
+	scope := NewLocalScope(v.cur)
+	v.pushScope(scope) // enter clause scope
 	if c := ctx.Expression(); c != nil {
 		cond = v.VisitExpression(c.(*ExpressionContext)).(IExprNode)
 	} else if c := ctx.ForClause(); c != nil {
@@ -595,9 +598,9 @@ func (v *Builder) VisitForStmt(ctx *ForStmtContext) interface{} {
 	v.pushScope(NewLocalScope(v.cur)) // enter block scope
 	blockCtx := ctx.Block().(*BlockContext)
 	blockStmt := NewBlockStmt(NewLocFromContext(blockCtx), v.cur)
-	// A for block may contain break statement. To ensure this for statement is found,
-	// its node must be added before block is visited
-	v.addStmt(NewForClauseStmt(NewLocFromContext(ctx), init, cond, post, blockStmt))
+	// A for block may contain break or continue statement. To ensure this for statement is
+	// found, its node must be added before block is visited
+	v.addStmt(NewForClauseStmt(NewLocFromContext(ctx), scope, init, cond, post, blockStmt))
 	v.pushBlock(blockStmt)
 	v.VisitBlock(blockCtx)
 	v.popBlock()

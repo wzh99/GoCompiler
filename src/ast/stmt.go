@@ -90,16 +90,18 @@ type ForClause struct {
 
 type ForClauseStmt struct {
 	BaseASTNode
+	Scope *Scope
 	Init  IStmtNode
 	Cond  IExprNode
 	Post  IStmtNode
 	Block *BlockStmt
 }
 
-func NewForClauseStmt(loc *Loc, init IStmtNode, cond IExprNode, post IStmtNode,
+func NewForClauseStmt(loc *Loc, scope *Scope, init IStmtNode, cond IExprNode, post IStmtNode,
 	block *BlockStmt) *ForClauseStmt {
 	s := &ForClauseStmt{
 		BaseASTNode: *NewBaseASTNode(loc),
+		Scope:       scope,
 		Init:        init,
 		Cond:        cond,
 		Post:        post,
@@ -143,19 +145,21 @@ func (s *ContinueStmt) ToStringTree() string {
 
 type IfStmt struct {
 	BaseASTNode
+	Scope *Scope
 	Init  IStmtNode // optional
 	Cond  IExprNode
-	Block *BlockStmt
+	Then  *BlockStmt
 	Else  IStmtNode // optional
 }
 
-func NewIfStmt(loc *Loc, init IStmtNode, cond IExprNode, block *BlockStmt,
+func NewIfStmt(loc *Loc, scope *Scope, init IStmtNode, cond IExprNode, block *BlockStmt,
 	els IStmtNode) *IfStmt {
 	return &IfStmt{
 		BaseASTNode: *NewBaseASTNode(loc),
+		Scope:       scope,
 		Init:        init,
 		Cond:        cond,
-		Block:       block,
+		Then:        block,
 		Else:        els,
 	}
 }

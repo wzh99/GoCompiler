@@ -69,8 +69,6 @@ func (i *InstrIter) InsertBefore(instr IInstr) {
 	cur.SetPrev(instr)
 	// instr <-> cur
 	instr.SetNext(cur)
-	// point to the added instruction
-	i.Cur = instr
 }
 
 // // Insert instruction after current instruction, and point to that one.
@@ -96,8 +94,6 @@ func (i *InstrIter) InsertAfter(instr IInstr) {
 	cur.SetNext(instr)
 	// cur <-> instr
 	instr.SetPrev(cur)
-	// point to added instruction
-	i.Cur = instr
 }
 
 func (i *InstrIter) Remove() {

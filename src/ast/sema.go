@@ -221,7 +221,7 @@ func (c *SemaChecker) VisitIfStmt(stmt *IfStmt) interface{} {
 			fmt.Sprintf("invalid type of if clause condition expression"),
 		))
 	}
-	c.VisitBlockStmt(stmt.Block)
+	c.VisitBlockStmt(stmt.Then)
 	if stmt.Else != nil {
 		c.VisitStmt(stmt.Else)
 	}
