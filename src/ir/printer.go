@@ -45,8 +45,9 @@ func (p *Printer) VisitProgram(prg *Program) interface{} {
 
 func (p *Printer) VisitScope(scope *Scope) interface{} {
 	for _, s := range scope.Symbols {
-		p.write("%s: %s\n", s.Name, s.Type.ToString())
+		p.write("%s: %s\n", s.ToString(), s.Type.ToString())
 	}
+	p.write("\n")
 	return nil
 }
 
@@ -61,19 +62,19 @@ func (p *Printer) VisitFunc(fun *Func) interface{} {
 	}
 	p.write("): \n")
 
-	// Print basic blocks with pre-order traversal
-	stack := []*BasicBlock{fun.Enter}
+	// Print basic blocks with breath first traversal
+	queue := []*BasicBlock{fun.Enter}
 	visited := make(map[*BasicBlock]bool)
-	for len(stack) > 0 {
-		top := stack[len(stack)-1]
-		stack = stack[:len(stack)-1] // pop an element from stack
+	for len(queue) > 0 {
+		top := queue[0]
+		queue = queue[1:] // dequeue an element
 		if visited[top] {
 			continue
 		}
 		p.VisitBasicBlock(top)
 		visited[top] = true // mark as visited
 		for _, bb := range top.Exit {
-			stack = append(stack, bb)
+			queue = append(queue, bb)
 		}
 	}
 	p.write("\n")

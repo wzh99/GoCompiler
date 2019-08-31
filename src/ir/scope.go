@@ -1,20 +1,45 @@
 package ir
 
-import "ast"
+import (
+	"ast"
+	"fmt"
+)
 
 // Similar to the one in AST, but with simplified data
 type Symbol struct {
 	Name  string
+	Ver   int // version index to support variable renaming
 	Type  IType
-	Param bool // indicate whether this symbol is parameter
+	Scope *Scope // the scope this symbol is defined
+	Param bool   // indicate whether this symbol is parameter
+}
+
+func (s *Symbol) Rename() *Symbol {
+	sym := &Symbol{
+		Name:  s.Name,
+		Ver:   s.Ver + 1,
+		Type:  s.Type,
+		Scope: s.Scope,
+		Param: false,
+	}
+	s.Scope.Symbols = append(s.Scope.Symbols, sym)
+	return sym
+}
+
+func (s *Symbol) ToString() string {
+	var scopeTag byte
+	if s.Scope.Global {
+		scopeTag = '@'
+	} else {
+		scopeTag = '$'
+	}
+	return fmt.Sprintf("%c%s.%d", scopeTag, s.Name, s.Ver)
 }
 
 // Every function has only one scope. No nested scopes.
 type Scope struct {
 	// Linear list of entries
 	Symbols []*Symbol
-	// Look up table that helps querying
-	table map[string]*Symbol
 	// Parameters should be taken special care
 	Params []*Symbol
 	// Map parameters back to its index in parameter list
@@ -28,7 +53,6 @@ type Scope struct {
 func NewGlobalScope() *Scope {
 	return &Scope{
 		Symbols:  make([]*Symbol, 0),
-		table:    make(map[string]*Symbol),
 		Params:   make([]*Symbol, 0),
 		ParamIdx: make(map[*Symbol]int),
 		Global:   true,
@@ -39,7 +63,6 @@ func NewGlobalScope() *Scope {
 func NewLocalScope() *Scope {
 	return &Scope{
 		Symbols:  make([]*Symbol, 0),
-		table:    make(map[string]*Symbol),
 		Params:   make([]*Symbol, 0),
 		ParamIdx: make(map[*Symbol]int),
 		Global:   false,
@@ -50,11 +73,12 @@ func NewLocalScope() *Scope {
 func (s *Scope) AddSymbol(name string, tp IType, param bool) *Symbol {
 	irSym := &Symbol{
 		Name:  name,
+		Ver:   0,
 		Type:  tp,
+		Scope: s,
 		Param: param,
 	}
 	s.Symbols = append(s.Symbols, irSym)
-	s.table[name] = irSym
 	if param {
 		index := len(s.Params)
 		s.Params = append(s.Params, irSym)
@@ -63,19 +87,12 @@ func (s *Scope) AddSymbol(name string, tp IType, param bool) *Symbol {
 	return irSym
 }
 
-func (s *Scope) AddSymbolFromAST(astSym *ast.Symbol, name string, tp IType, param bool) *Symbol {
+func (s *Scope) AddFromAST(astSym *ast.Symbol, name string, tp IType, param bool) *Symbol {
 	irSym := s.AddSymbol(name, tp, param)
 	s.astToIr[astSym] = irSym
 	return irSym
 }
 
-func (s *Scope) AddTempSymbol(name string, tp IType) *Symbol {
-	sym := &Symbol{
-		Name:  name,
-		Type:  tp,
-		Param: false,
-	}
-	s.Symbols = append(s.Symbols, sym)
-	s.table[name] = sym
-	return sym
+func (s *Scope) AddTemp(name string, tp IType) *Symbol {
+	return s.AddSymbol(name, tp, false)
 }

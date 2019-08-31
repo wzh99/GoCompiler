@@ -11,8 +11,9 @@ import (
 const source = `
 package main
 
+var a = 9
+
 func test3() bool {
-	a := 9
 	for i := 0; i < 10; i++ {
 		if a < 12 {
 			a++

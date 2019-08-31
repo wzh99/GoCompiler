@@ -35,7 +35,7 @@ func NewSymbolValue(symbol *Symbol) *SymbolValue {
 }
 
 func (v *SymbolValue) ToString() string {
-	return fmt.Sprintf("%s: %s", v.Symbol.Name, v.Type.ToString())
+	return fmt.Sprintf("%s: %s", v.Symbol.ToString(), v.Type.ToString())
 }
 
 // Immediate values, refer to constants in AST

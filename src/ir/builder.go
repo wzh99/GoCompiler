@@ -8,9 +8,8 @@ import (
 type Program struct {
 	Name string
 	// Scope of global variables
-	// Note that in AST, the global member of program node is a function, while in IR
-	// this member is a scope. This is because in IR, the hierarchy of scope is lost.
-	// Access global scope through global function is not straightforward.
+	// Note that global function can also has its local scope. Global scope is not the
+	// same as the scope of global function.
 	Global *Scope
 	// List of all compiled functions
 	// The first function is global function, which should be treated specially.
@@ -21,8 +20,8 @@ type Program struct {
 	nTmp int
 }
 
-type CaptureList struct {
-	// Captured item specification
+type ClosureEnv struct {
+	// Environment item specification
 	symbols []*Symbol
 	// The struct type descriptor of capture list
 	tp *StructType
@@ -72,10 +71,10 @@ func (b *Builder) VisitProgram(node *ast.ProgramNode) interface{} {
 	}
 
 	// Visit global function
-	b.prg.Global = NewGlobalScope()     // set global scope pointer of program
-	b.prg.Funcs[0].Scope = b.prg.Global // give global scope to global function
-	b.fun = b.prg.Funcs[0]              // set builder function pointer to global
-	b.VisitFuncDecl(node.Global)        // add symbols to scope
+	b.prg.Global = NewGlobalScope() // set global scope pointer of program
+	b.VisitScope(node.Global.Scope) // add symbols to global scope
+	b.fun = b.prg.Funcs[0]
+	b.VisitFuncDecl(node.Global) // visit global function
 
 	// Visit other top level functions
 	for i, decl := range node.Funcs {
@@ -87,11 +86,11 @@ func (b *Builder) VisitProgram(node *ast.ProgramNode) interface{} {
 }
 
 func (b *Builder) VisitFuncDecl(decl *ast.FuncDecl) interface{} {
-	if b.fun.Scope == nil { // global scope is constructed outside this method
-		b.fun.Scope = NewLocalScope() // build function scope
+	b.fun.Scope = NewLocalScope() // build function scope
+	if !decl.Scope.Global {
+		b.VisitScope(decl.Scope) // global scope has already been visited
 	}
-	b.VisitScope(decl.Scope)
-	b.fun.Enter = NewBasicBlock(b.requestBlockName(), b.fun) // create entrance block
+	b.fun.Enter = b.newBasicBlock("Start") // create entrance block
 	b.bb = b.fun.Enter
 	for _, stmt := range decl.Stmts {
 		b.VisitStmt(stmt)
@@ -105,8 +104,8 @@ func (b *Builder) requestBlockName() string {
 	return str
 }
 
-func (b *Builder) newBasicBlock() *BasicBlock {
-	return NewBasicBlock(b.requestBlockName(), b.fun)
+func (b *Builder) newBasicBlock(tag string) *BasicBlock {
+	return NewBasicBlock(fmt.Sprintf("%s_%s", b.requestBlockName(), tag), b.fun)
 }
 
 func (b *Builder) VisitScope(astScope *ast.Scope) interface{} {
@@ -114,6 +113,13 @@ func (b *Builder) VisitScope(astScope *ast.Scope) interface{} {
 	fun := astScope.Func
 	entries := astScope.Symbols.Entries
 	nested := astScope.Func.Scope != astScope
+	var scope *Scope
+	if astScope.Global {
+		scope = b.prg.Global
+	} else {
+		scope = b.fun.Scope
+	}
+
 	if nested { // nested scope
 		goto LocalSymbols
 	}
@@ -121,7 +127,7 @@ func (b *Builder) VisitScope(astScope *ast.Scope) interface{} {
 	// Add receiver to IR scope and its parameter list
 	if fun.Type.Receiver != nil {
 		symbol := entries[idx]
-		b.fun.Scope.AddSymbolFromAST(symbol, b.genSymbolName(symbol.Name),
+		scope.AddFromAST(symbol, b.genSymbolName(symbol.Name),
 			b.VisitType(symbol.Type).(IType), true)
 		idx++
 	}
@@ -129,14 +135,14 @@ func (b *Builder) VisitScope(astScope *ast.Scope) interface{} {
 	// Add normal parameters to IR scope and its parameter list
 	for k := 0; k < len(fun.Type.Param.Elem); k++ {
 		symbol := entries[idx]
-		b.fun.Scope.AddSymbolFromAST(symbol, b.genSymbolName(symbol.Name),
+		scope.AddFromAST(symbol, b.genSymbolName(symbol.Name),
 			b.VisitType(symbol.Type).(IType), true)
 		idx++
 	}
 
-	// Add function capture list pointer to IR scope and parameter list
+	// Add function environment to IR scope and parameter list
 	if !astScope.Global {
-		b.fun.Scope.AddSymbol("_cap", NewPtrType(NewBaseType(Void)), true)
+		scope.AddSymbol("_env", NewPtrType(NewBaseType(Void)), true)
 	}
 
 	// Add local symbols to IR scope
@@ -144,7 +150,7 @@ LocalSymbols:
 	for ; idx < len(astScope.Symbols.Entries); idx++ {
 		symbol := entries[idx]
 		if symbol.Flag == ast.VarEntry {
-			b.fun.Scope.AddSymbolFromAST(symbol, b.genSymbolName(symbol.Name),
+			scope.AddFromAST(symbol, b.genSymbolName(symbol.Name),
 				b.VisitType(symbol.Type).(IType), false)
 		}
 	}
@@ -152,11 +158,11 @@ LocalSymbols:
 		goto EndScope
 	}
 
-	// Add captured symbols to IR scope, if this scope is from a literal function
+	// Add captured symbols to IR scope, if this scope is from a closure
 	if astScope.Func.Lit != nil {
 		lit := astScope.Func.Lit
 		for _, symbol := range lit.Closure.Entries {
-			b.fun.Scope.AddSymbolFromAST(symbol, b.genSymbolName(symbol.Name),
+			scope.AddFromAST(symbol, b.genSymbolName(symbol.Name),
 				b.VisitType(symbol.Type).(IType), false)
 		}
 	}
@@ -302,7 +308,7 @@ func (b *Builder) moveToDst(dstNode ast.IExprNode, inter IValue) {
 func (b *Builder) newTempSymbol(tp IType) *SymbolValue {
 	name := fmt.Sprintf("_t%d", b.prg.nTmp)
 	b.prg.nTmp++
-	sym := b.fun.Scope.AddTempSymbol(name, tp)
+	sym := b.fun.Scope.AddTemp(name, tp)
 	return NewSymbolValue(sym)
 }
 
@@ -345,18 +351,18 @@ func (b *Builder) VisitIfStmt(stmt *ast.IfStmt) interface{} {
 	if stmt.Init != nil {
 		b.VisitStmt(stmt.Init)
 	}
-	trueBB := b.newBasicBlock()
-	nextBB := b.newBasicBlock()
+	trueBB := b.newBasicBlock("IfThen")
+	nextBB := b.newBasicBlock("IfNext")
 	var falseBB *BasicBlock
 	hasElse := stmt.Else != nil
 	if hasElse {
-		falseBB = b.newBasicBlock()
+		falseBB = b.newBasicBlock("IfFalse")
 	} else {
 		falseBB = nextBB
 	}
 
 	// Use short circuit evaluation
-	b.visitBoolExpr(stmt.Cond, trueBB, falseBB)
+	b.shortCircuitCtrl(stmt.Cond, trueBB, falseBB)
 
 	// Build IR in then and else clause
 	b.bb = trueBB
@@ -379,17 +385,17 @@ func (b *Builder) VisitForClauseStmt(stmt *ast.ForClauseStmt) interface{} {
 		b.VisitStmt(stmt.Init)
 	}
 	initBB := b.bb
-	bodyBB := b.newBasicBlock()
-	postBB := b.newBasicBlock() // instructions to be executed after main body
-	nextBB := b.newBasicBlock() // the basic block after for statement
+	bodyBB := b.newBasicBlock("ForBody")
+	postBB := b.newBasicBlock("ForPost") // instructions to be executed after main body
+	nextBB := b.newBasicBlock("ForNext") // the basic block after for statement
 	hasCond := stmt.Cond != nil
 	var newIteBB *BasicBlock
 	if hasCond {
-		condBB := b.newBasicBlock()
+		condBB := b.newBasicBlock("ForCond")
 		newIteBB = condBB
-		initBB.JumpTo(condBB)                      // init -> cond
-		b.bb = condBB                              // instructions must all be in a new block
-		b.visitBoolExpr(stmt.Cond, bodyBB, nextBB) // cond ? body : next
+		initBB.JumpTo(condBB)                         // init -> cond
+		b.bb = condBB                                 // instructions must all be in a new block
+		b.shortCircuitCtrl(stmt.Cond, bodyBB, nextBB) // cond ? body : next
 	} else {
 		newIteBB = bodyBB
 		initBB.JumpTo(bodyBB) // init -> body
@@ -416,14 +422,14 @@ func (b *Builder) VisitForClauseStmt(stmt *ast.ForClauseStmt) interface{} {
 func (b *Builder) VisitBreakStmt(stmt *ast.BreakStmt) interface{} {
 	target := b.loopInfo[stmt.Target].Break
 	b.bb.JumpTo(target)
-	b.bb = b.newBasicBlock() // just in case there are following statements
+	b.bb = b.newBasicBlock("BreakNext") // just in case there are following statements
 	return nil
 }
 
 func (b *Builder) VisitContinueStmt(stmt *ast.ContinueStmt) interface{} {
 	target := b.loopInfo[stmt.Target].Continue
 	b.bb.JumpTo(target)
-	b.bb = b.newBasicBlock()
+	b.bb = b.newBasicBlock("ContinueNext")
 	return nil
 }
 
@@ -477,7 +483,7 @@ func (b *Builder) VisitFuncLit(expr *ast.FuncLit) interface{} {
 
 	// Build capture list
 	params := b.fun.Scope.Params
-	capList := &CaptureList{
+	capList := &ClosureEnv{
 		symbols: make([]*Symbol, 0),
 		tp:      nil,
 	}
@@ -524,10 +530,10 @@ func (b *Builder) VisitFuncLit(expr *ast.FuncLit) interface{} {
 		b.emit(NewPtrOffset(mallocRet, elemPtr, capList.tp.Field[i].Offset))
 		b.emit(NewStore(NewSymbolValue(s), elemPtr))
 	}
-	// Store capture list pointer as the second field of closure
-	listPtrPtr := b.newTempSymbol(NewPtrType(closureType.Field[1].Type))
-	b.emit(NewGetPtr(litVal, listPtrPtr, []IValue{NewI64Imm(1)}))
-	b.emit(NewStore(mallocRet, listPtrPtr))
+	// Store environment pointer as the second field of closure
+	envPtrPtr := b.newTempSymbol(NewPtrType(closureType.Field[1].Type))
+	b.emit(NewGetPtr(litVal, envPtrPtr, []IValue{NewI64Imm(1)}))
+	b.emit(NewStore(mallocRet, envPtrPtr))
 
 	return litVal
 }
@@ -553,7 +559,11 @@ func (b *Builder) VisitConstExpr(expr *ast.ConstExpr) interface{} {
 func (b *Builder) VisitIdExpr(expr *ast.IdExpr) interface{} {
 	switch expr.Symbol.Flag {
 	case ast.VarEntry:
-		return NewSymbolValue(b.fun.Scope.astToIr[expr.Symbol])
+		symbol := b.fun.Scope.astToIr[expr.Symbol]
+		if symbol == nil {
+			symbol = b.prg.Global.astToIr[expr.Symbol]
+		}
+		return NewSymbolValue(symbol)
 	case ast.FuncEntry:
 		return b.funcTable[expr.Symbol.Val.(*ast.FuncDecl)]
 	}
@@ -676,23 +686,23 @@ func (b *Builder) shortCircuitEval(expr ast.IExprNode) interface{} {
 	//      \   /
 	//      Next
 	result := b.newTempSymbol(NewBaseType(I1))
-	nextBB := b.newBasicBlock()
-	setTrue := b.newBasicBlock()
+	nextBB := b.newBasicBlock("ShortCircuitNext")
+	setTrue := b.newBasicBlock("SetTrue")
 	setTrue.Append(NewMove(NewI1Imm(true), result))
 	setTrue.JumpTo(nextBB)
-	setFalse := b.newBasicBlock()
+	setFalse := b.newBasicBlock("SetFalse")
 	setFalse.Append(NewMove(NewI1Imm(false), result))
 	setFalse.JumpTo(nextBB)
 
 	// Main recursion
-	b.visitBoolExpr(expr, setTrue, setFalse)
+	b.shortCircuitCtrl(expr, setTrue, setFalse)
 	b.bb = nextBB
 
 	return result
 }
 
-func (b *Builder) visitBoolExpr(expr ast.IExprNode, trueBB, falseBB *BasicBlock) {
-	// Decide whether the expression should be divided further
+func (b *Builder) shortCircuitCtrl(expr ast.IExprNode, trueBB, falseBB *BasicBlock) {
+	// Decide whether short circuit control flow transform should be used on this expression
 	if !canUseShortCircuit(expr) {
 		// When the expression cannot be divided, branch to the blocks provided in
 		// the control info.
@@ -704,19 +714,19 @@ func (b *Builder) visitBoolExpr(expr ast.IExprNode, trueBB, falseBB *BasicBlock)
 	switch expr.(type) {
 	case *ast.UnaryExpr: // NOT operator
 		// Invert the control blocks, stay in current basic block.
-		b.visitBoolExpr(expr.(*ast.UnaryExpr).Expr, falseBB, trueBB)
+		b.shortCircuitCtrl(expr.(*ast.UnaryExpr).Expr, falseBB, trueBB)
 
 	case *ast.BinaryExpr:
 		binExpr := expr.(*ast.BinaryExpr)
-		rightBB := b.newBasicBlock()
+		rightBB := b.newBasicBlock("ShortCircuitRight")
 		switch binExpr.Op {
 		case ast.LAND:
-			b.visitBoolExpr(binExpr.Left, rightBB, falseBB) // stays in current basic block
+			b.shortCircuitCtrl(binExpr.Left, rightBB, falseBB) // stays in current basic block
 		case ast.LOR:
-			b.visitBoolExpr(binExpr.Left, trueBB, rightBB)
+			b.shortCircuitCtrl(binExpr.Left, trueBB, rightBB)
 		}
 		b.bb = rightBB
-		b.visitBoolExpr(binExpr.Right, trueBB, falseBB)
+		b.shortCircuitCtrl(binExpr.Right, trueBB, falseBB)
 		return
 	}
 }
