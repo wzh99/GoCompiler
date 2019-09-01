@@ -63,7 +63,7 @@ func (p *Printer) VisitFunc(fun *Func) interface{} {
 	p.write("): \n")
 
 	// Print basic blocks with BFS
-	fun.Enter.Accept(func(block *BasicBlock) {
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		p.VisitBasicBlock(block)
 	}, BreadthFirst)
 	p.write("\n")

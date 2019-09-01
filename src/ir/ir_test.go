@@ -41,4 +41,6 @@ func TestIRBuild(t *testing.T) {
 	irPrg := irBuilder.VisitProgram(asTree).(*Program)
 	printer := NewPrinter(os.Stdout)
 	printer.VisitProgram(irPrg)
+	ssa := NewSSAOpt()
+	ssa.Optimize(irPrg)
 }

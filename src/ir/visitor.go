@@ -22,7 +22,7 @@ type IVisitor interface {
 	VisitReturn(instr *Return) interface{}
 
 	VisitValue(val IValue) interface{}
-	VisitSymbolValue(val *Variable) interface{}
+	VisitVariable(val *Variable) interface{}
 	VisitImmValue(val *ImmValue) interface{}
 
 	VisitType(tp IType) interface{}

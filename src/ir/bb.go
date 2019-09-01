@@ -5,23 +5,28 @@ import "fmt"
 type BasicBlock struct {
 	// Block label
 	Name string
+	// The function this block lies in.
+	Func *Func
 	// Internally. a block is a linked list of instructions.
 	Head, Tail IInstr
 	// In a function, the basic blocks form a control flow graph.
 	// This set can be constructed when instructions are added to the function.
 	Pred, Succ map[*BasicBlock]bool
-	// The function this block lies in.
-	Func *Func
+	// Dominance tree can be constructed from CFG.
+	ImmDom   *BasicBlock          // immediate dominator of this block
+	Children map[*BasicBlock]bool // blocks that this immediately dominates
+	serial   [2]int               // pre-order traversal serial [in, out] that help determine dominance
 }
 
 func NewBasicBlock(label string, fun *Func) *BasicBlock {
 	return &BasicBlock{
-		Name: label,
-		Head: nil, // initially an empty list
-		Tail: nil,
-		Pred: make(map[*BasicBlock]bool),
-		Succ: make(map[*BasicBlock]bool),
-		Func: fun,
+		Name:     label,
+		Func:     fun,
+		Head:     nil, // initially an empty list
+		Tail:     nil,
+		Pred:     make(map[*BasicBlock]bool),
+		Succ:     make(map[*BasicBlock]bool),
+		Children: make(map[*BasicBlock]bool),
 	}
 }
 
@@ -103,14 +108,15 @@ func (b *BasicBlock) SplitEdgeTo(to, inserted *BasicBlock) { // b: predecessor, 
 	b.ConnectTo(inserted) // predecessor <-> inserted
 }
 
-type Traversal int
+type GraphTrav int
 
 const (
-	DepthFirst Traversal = iota
+	DepthFirst GraphTrav = iota
 	BreadthFirst
 )
 
-func (b *BasicBlock) Accept(action func(*BasicBlock), method Traversal) {
+// Accept current basic block as vertex in a graph
+func (b *BasicBlock) AcceptAsVert(action func(*BasicBlock), method GraphTrav) {
 	switch method {
 	case DepthFirst:
 		b.depthFirst(action)
@@ -151,4 +157,21 @@ func (b *BasicBlock) breadthFirst(action func(*BasicBlock)) {
 			queue = append(queue, bb)
 		}
 	}
+}
+
+func (b *BasicBlock) SetImmDom(b2 *BasicBlock) {
+	b.ImmDom = b2
+	b2.Children[b] = true
+}
+
+func (b *BasicBlock) AcceptAsTreeNode(pre, post func(*BasicBlock)) {
+	pre(b)
+	for child := range b.Children {
+		child.AcceptAsTreeNode(pre, post)
+	}
+	post(b)
+}
+
+func (b *BasicBlock) Dominates(b2 *BasicBlock) bool {
+	return b.serial[0] < b2.serial[0] && b.serial[1] > b2.serial[1]
 }
