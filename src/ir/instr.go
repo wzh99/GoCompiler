@@ -9,6 +9,9 @@ type IInstr interface {
 	SetNext(instr IInstr)
 	GetBasicBlock() *BasicBlock
 	SetBasicBlock(bb *BasicBlock)
+	// Values may be changed by other functions, pointers should be returned
+	GetDef() []*IValue
+	GetUse() []*IValue
 }
 
 // Instruction iterator
@@ -121,10 +124,6 @@ type BaseInstr struct {
 	BB *BasicBlock
 }
 
-func NewBaseInstr(bb *BasicBlock) *BaseInstr {
-	return &BaseInstr{BB: bb}
-}
-
 func (i *BaseInstr) GetPrev() IInstr { return i.Prev }
 
 func (i *BaseInstr) SetPrev(instr IInstr) { i.Prev = instr }
@@ -136,6 +135,10 @@ func (i *BaseInstr) SetNext(instr IInstr) { i.Next = instr }
 func (i *BaseInstr) GetBasicBlock() *BasicBlock { return i.BB }
 
 func (i *BaseInstr) SetBasicBlock(bb *BasicBlock) { i.BB = bb }
+
+func (i *BaseInstr) GetDef() []*IValue { return nil }
+
+func (i *BaseInstr) GetUse() []*IValue { return nil }
 
 // Move data from one operand to another
 type Move struct {
@@ -154,12 +157,15 @@ func NewMove(src, dst IValue) *Move {
 		))
 	}
 	return &Move{
-		BaseInstr: *NewBaseInstr(nil),
-		Src:       src,
-		Dst:       dst,
-		Type:      src.GetType(),
+		Src:  src,
+		Dst:  dst,
+		Type: src.GetType(),
 	}
 }
+
+func (m *Move) GetDef() []*IValue { return []*IValue{&m.Dst} }
+
+func (m *Move) GetUse() []*IValue { return []*IValue{&m.Src} }
 
 // Load value from pointer to an operand
 type Load struct {
@@ -177,12 +183,15 @@ func NewLoad(src, dst IValue) *Load {
 		panic(NewIRError("base type of source is not identical to destination type"))
 	}
 	return &Load{
-		BaseInstr: *NewBaseInstr(nil),
-		Src:       src,
-		Dst:       dst,
-		Type:      dst.GetType(),
+		Src:  src,
+		Dst:  dst,
+		Type: dst.GetType(),
 	}
 }
+
+func (l *Load) GetDef() []*IValue { return []*IValue{&l.Dst} }
+
+func (l *Load) GetUse() []*IValue { return []*IValue{&l.Src} }
 
 // Store the value in an operand to a pointer
 type Store struct {
@@ -200,18 +209,19 @@ func NewStore(src, dst IValue) *Store {
 		panic(NewIRError("base type of destination is not identical to source type"))
 	}
 	return &Store{
-		BaseInstr: *NewBaseInstr(nil),
-		Src:       src,
-		Dst:       dst,
-		Type:      src.GetType(),
+		Src:  src,
+		Dst:  dst,
+		Type: src.GetType(),
 	}
 }
+
+// Only focus the value destination pointer, not the memory content it points to.
+func (s *Store) GetUse() []*IValue { return []*IValue{&s.Src, &s.Dst} }
 
 // Allocate memory in heap space
 type Malloc struct {
 	BaseInstr
-	Return IValue
-	Size   int // decided by the type the base type of pointer
+	Result IValue
 }
 
 func NewMalloc(ret IValue) *Malloc {
@@ -223,11 +233,11 @@ func NewMalloc(ret IValue) *Malloc {
 		panic(NewIRError("source operand is void pointer"))
 	}
 	return &Malloc{
-		BaseInstr: *NewBaseInstr(nil),
-		Return:    ret,
-		Size:      baseType.GetSize(),
+		Result: ret,
 	}
 }
+
+func (m *Malloc) GetDef() []*IValue { return []*IValue{&m.Result} }
 
 // Get pointer to elements in data aggregate (array or struct)
 type GetPtr struct {
@@ -281,16 +291,25 @@ func NewGetPtr(base, result IValue, indices []IValue) *GetPtr {
 	}
 
 	return &GetPtr{
-		BaseInstr: *NewBaseInstr(nil),
-		Base:      base,
-		Result:    result,
-		Indices:   indices,
-		Offset:    offset,
+		Base:    base,
+		Result:  result,
+		Indices: indices,
+		Offset:  offset,
 	}
 }
 
 func (p *GetPtr) AppendIndex(index IValue, result IValue) *GetPtr {
 	return NewGetPtr(p.Base, result, append(p.Indices, index))
+}
+
+func (p *GetPtr) GetDef() []*IValue { return []*IValue{&p.Result} }
+
+func (p *GetPtr) GetUse() []*IValue {
+	use := []*IValue{&p.Base}
+	for i := range p.Indices {
+		use = append(use, &p.Indices[i])
+	}
+	return use
 }
 
 // Add offset to a pointer
@@ -308,12 +327,15 @@ func NewPtrOffset(src, dst IValue, offset int) *PtrOffset {
 		panic(NewIRError("source operand is not pointer"))
 	}
 	return &PtrOffset{
-		BaseInstr: *NewBaseInstr(nil),
-		Src:       src,
-		Dst:       dst,
-		Offset:    offset,
+		Src:    src,
+		Dst:    dst,
+		Offset: offset,
 	}
 }
+
+func (p *PtrOffset) GetDef() []*IValue { return []*IValue{&p.Dst} }
+
+func (p *PtrOffset) GetUse() []*IValue { return []*IValue{&p.Src} }
 
 // Set specified memory space to all zero
 type Clear struct {
@@ -323,10 +345,11 @@ type Clear struct {
 
 func NewClear(value IValue) *Clear {
 	return &Clear{
-		BaseInstr: *NewBaseInstr(nil),
-		Value:     value,
+		Value: value,
 	}
 }
+
+func (c *Clear) GetDef() []*IValue { return []*IValue{&c.Value} }
 
 type UnaryOp int
 
@@ -358,12 +381,15 @@ func NewUnary(op UnaryOp, operand, result IValue) *Unary {
 	}
 
 	return &Unary{
-		BaseInstr: *NewBaseInstr(nil),
-		Op:        op,
-		Operand:   operand,
-		Result:    result,
+		Op:      op,
+		Operand: operand,
+		Result:  result,
 	}
 }
+
+func (u *Unary) GetDef() []*IValue { return []*IValue{&u.Result} }
+
+func (u *Unary) GetUse() []*IValue { return []*IValue{&u.Operand} }
 
 type BinaryOp int
 
@@ -432,13 +458,16 @@ func NewBinary(op BinaryOp, left, right, result IValue) *Binary {
 	}
 
 	return &Binary{
-		BaseInstr: *NewBaseInstr(nil),
-		Op:        op,
-		Left:      left,
-		Right:     right,
-		Result:    result,
+		Op:     op,
+		Left:   left,
+		Right:  right,
+		Result: result,
 	}
 }
+
+func (b *Binary) GetDef() []*IValue { return []*IValue{&b.Result} }
+
+func (b *Binary) GetUse() []*IValue { return []*IValue{&b.Left, &b.Right} }
 
 type Jump struct {
 	BaseInstr
@@ -447,8 +476,7 @@ type Jump struct {
 
 func NewJump(target *BasicBlock) *Jump {
 	return &Jump{
-		BaseInstr: *NewBaseInstr(nil),
-		Target:    target,
+		Target: target,
 	}
 }
 
@@ -463,12 +491,13 @@ func NewBranch(cond IValue, bTrue, bFalse *BasicBlock) *Branch {
 		panic(NewIRError("wrong condition value type"))
 	}
 	return &Branch{
-		BaseInstr: *NewBaseInstr(nil),
-		Cond:      cond,
-		True:      bTrue,
-		False:     bFalse,
+		Cond:  cond,
+		True:  bTrue,
+		False: bFalse,
 	}
 }
+
+func (b *Branch) GetUse() []*IValue { return []*IValue{&b.Cond} }
 
 type Call struct {
 	BaseInstr
@@ -507,10 +536,9 @@ func NewCall(fun IValue, args []IValue, ret IValue) *Call {
 
 Construct:
 	return &Call{
-		BaseInstr: *NewBaseInstr(nil),
-		Func:      fun,
-		Args:      args,
-		Ret:       ret,
+		Func: fun,
+		Args: args,
+		Ret:  ret,
 	}
 }
 
@@ -518,6 +546,14 @@ type Return struct {
 	BaseInstr
 	Func   *Func
 	Values []IValue
+}
+
+func (r *Return) GetUse() []*IValue {
+	use := make([]*IValue, 0)
+	for i := range r.Values {
+		use = append(use, &r.Values[i])
+	}
+	return use
 }
 
 func NewReturn(fun *Func, values []IValue) *Return {
@@ -534,8 +570,45 @@ func NewReturn(fun *Func, values []IValue) *Return {
 		}
 	}
 	return &Return{
-		BaseInstr: *NewBaseInstr(nil),
-		Func:      fun,
-		Values:    values,
+		Func:   fun,
+		Values: values,
 	}
+}
+
+type Phi struct {
+	BaseInstr
+	ValList []IValue
+	BBToVal map[*BasicBlock]*IValue
+	Result  IValue
+}
+
+func NewPhi(operands map[*BasicBlock]IValue, result IValue) *Phi {
+	p := &Phi{
+		ValList: make([]IValue, len(operands)),
+		BBToVal: make(map[*BasicBlock]*IValue),
+		Result:  result,
+	}
+	i := 0
+	for bb, val := range operands {
+		if !val.GetType().IsIdentical(result.GetType()) {
+			panic(NewIRError(
+				fmt.Sprintf("type of operand %s is incompatible with result %s",
+					val.ToString(), result.ToString()),
+			))
+		}
+		p.ValList[i] = val
+		p.BBToVal[bb] = &p.ValList[i]
+		i++
+	}
+	return p
+}
+
+func (p *Phi) GetDef() []*IValue { return []*IValue{&p.Result} }
+
+func (p *Phi) GetUse() []*IValue {
+	use := make([]*IValue, 0)
+	for _, ptr := range p.BBToVal {
+		use = append(use, ptr)
+	}
+	return use
 }

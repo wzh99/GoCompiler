@@ -62,21 +62,10 @@ func (p *Printer) VisitFunc(fun *Func) interface{} {
 	}
 	p.write("): \n")
 
-	// Print basic blocks with breath first traversal
-	queue := []*BasicBlock{fun.Enter}
-	visited := make(map[*BasicBlock]bool)
-	for len(queue) > 0 {
-		top := queue[0]
-		queue = queue[1:] // dequeue an element
-		if visited[top] {
-			continue
-		}
-		p.VisitBasicBlock(top)
-		visited[top] = true // mark as visited
-		for _, bb := range top.Exit {
-			queue = append(queue, bb)
-		}
-	}
+	// Print basic blocks with BFS
+	fun.Enter.Accept(func(block *BasicBlock) {
+		p.VisitBasicBlock(block)
+	}, BreadthFirst)
 	p.write("\n")
 
 	return nil
@@ -151,7 +140,7 @@ func (p *Printer) VisitStore(instr *Store) interface{} {
 }
 
 func (p *Printer) VisitMalloc(instr *Malloc) interface{} {
-	p.writeInstr("malloc", instr.Return, NewI64Imm(instr.Size))
+	p.writeInstr("malloc", instr.Result, NewI64Imm(instr.Result.GetType().GetSize()))
 	return nil
 }
 

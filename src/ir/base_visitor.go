@@ -40,7 +40,7 @@ func (v *BaseVisitor) VisitReturn(instr *Return) interface{} { return nil }
 
 func (v *BaseVisitor) VisitValue(val IValue) interface{} { return nil }
 
-func (v *BaseVisitor) VisitSymbolValue(val *SymbolValue) interface{} { return nil }
+func (v *BaseVisitor) VisitSymbolValue(val *Variable) interface{} { return nil }
 
 func (v *BaseVisitor) VisitImmValue(val *ImmValue) interface{} { return nil }
 

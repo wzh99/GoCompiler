@@ -21,20 +21,20 @@ func (v *BaseValue) GetType() IType { return v.Type }
 
 func (v *BaseValue) ToString() string { return "" }
 
-// Values stored in symbol table of scopes
-type SymbolValue struct {
+// Variables, whose related symbols should be stored in scopes
+type Variable struct {
 	BaseValue
 	Symbol *Symbol
 }
 
-func NewSymbolValue(symbol *Symbol) *SymbolValue {
-	return &SymbolValue{
+func NewVariable(symbol *Symbol) *Variable {
+	return &Variable{
 		BaseValue: *NewBaseValue(symbol.Type),
 		Symbol:    symbol,
 	}
 }
 
-func (v *SymbolValue) ToString() string {
+func (v *Variable) ToString() string {
 	return fmt.Sprintf("%s: %s", v.Symbol.ToString(), v.Type.ToString())
 }
 
@@ -98,7 +98,7 @@ type Func struct {
 	Name string
 	// A function has one entrance block, but can have several exit blocks
 	Enter *BasicBlock
-	Exit  []*BasicBlock
+	Exit  map[*BasicBlock]bool
 	// Base scope of current function, may have nested scopes
 	Scope *Scope
 }
@@ -107,12 +107,12 @@ func NewFunc(tp *FuncType, name string, scope *Scope) *Func {
 	return &Func{
 		BaseValue: *NewBaseValue(tp),
 		Name:      name,
-		Enter:     nil,                    // to be assigned later
-		Exit:      make([]*BasicBlock, 0), // to be assigned later
+		Enter:     nil,                        // to be assigned later
+		Exit:      make(map[*BasicBlock]bool), // to be assigned later
 		Scope:     scope,
 	}
 }
 
-func (f *Func) AddExitBlock(exit *BasicBlock) { f.Exit = append(f.Exit, exit) }
+func (f *Func) AddExitBlock(exit *BasicBlock) { f.Exit[exit] = true }
 
 func (f *Func) ToString() string { return f.Name }

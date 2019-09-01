@@ -219,12 +219,12 @@ func (b *Builder) VisitBlockStmt(stmt *ast.BlockStmt) interface{} {
 	return nil
 }
 
-func (b *Builder) emit(instr IInstr) { b.bb.Append(instr) }
+func (b *Builder) emit(instr IInstr) { b.bb.PushBack(instr) }
 
 func (b *Builder) VisitAssignStmt(stmt *ast.AssignStmt) interface{} {
 	// Deal with function returns
 	if stmt.Rhs[0].GetType().GetTypeEnum() == ast.Tuple {
-		ret := b.VisitFuncCallExpr(stmt.Rhs[0].(*ast.FuncCallExpr)).(*SymbolValue)
+		ret := b.VisitFuncCallExpr(stmt.Rhs[0].(*ast.FuncCallExpr)).(*Variable)
 		for i := range ret.GetType().(*StructType).Field {
 			fieldVal := b.loadField(ret, i)
 			b.moveToDst(stmt.Lhs[i], fieldVal) // move to destination
@@ -305,11 +305,11 @@ func (b *Builder) moveToDst(dstNode ast.IExprNode, inter IValue) {
 	}
 }
 
-func (b *Builder) newTempSymbol(tp IType) *SymbolValue {
+func (b *Builder) newTempSymbol(tp IType) *Variable {
 	name := fmt.Sprintf("_t%d", b.prg.nTmp)
 	b.prg.nTmp++
 	sym := b.fun.Scope.AddTemp(name, tp)
-	return NewSymbolValue(sym)
+	return NewVariable(sym)
 }
 
 func (b *Builder) VisitIncDecStmt(stmt *ast.IncDecStmt) interface{} {
@@ -321,8 +321,8 @@ func (b *Builder) VisitIncDecStmt(stmt *ast.IncDecStmt) interface{} {
 		op = SUB
 	}
 	switch exprRet.(type) {
-	case *SymbolValue:
-		val := exprRet.(*SymbolValue)
+	case *Variable:
+		val := exprRet.(*Variable)
 		b.emit(NewBinary(op, val, NewI64Imm(1), val))
 	case *GetPtr:
 		instr := exprRet.(*GetPtr)
@@ -497,11 +497,11 @@ func (b *Builder) VisitFuncLit(expr *ast.FuncLit) interface{} {
 
 	// Load captured values to local variables
 	// This make captured values behave like normal local variables.
-	listPtr := NewSymbolValue(params[len(params)-1])
+	listPtr := NewVariable(params[len(params)-1])
 	for i := range capList.symbols {
 		valPtr := b.newTempSymbol(NewPtrType(NewBaseType(Void)))
 		b.emit(NewPtrOffset(listPtr, valPtr, capList.tp.Field[i].Offset))
-		b.emit(NewLoad(valPtr, NewSymbolValue(capList.symbols[i])))
+		b.emit(NewLoad(valPtr, NewVariable(capList.symbols[i])))
 	}
 
 	// Visit statements and build IR
@@ -528,7 +528,7 @@ func (b *Builder) VisitFuncLit(expr *ast.FuncLit) interface{} {
 	for i, s := range capList.symbols {
 		elemPtr := b.newTempSymbol(NewPtrType(s.Type))
 		b.emit(NewPtrOffset(mallocRet, elemPtr, capList.tp.Field[i].Offset))
-		b.emit(NewStore(NewSymbolValue(s), elemPtr))
+		b.emit(NewStore(NewVariable(s), elemPtr))
 	}
 	// Store environment pointer as the second field of closure
 	envPtrPtr := b.newTempSymbol(NewPtrType(closureType.Field[1].Type))
@@ -563,7 +563,7 @@ func (b *Builder) VisitIdExpr(expr *ast.IdExpr) interface{} {
 		if symbol == nil {
 			symbol = b.prg.Global.astToIr[expr.Symbol]
 		}
-		return NewSymbolValue(symbol)
+		return NewVariable(symbol)
 	case ast.FuncEntry:
 		return b.funcTable[expr.Symbol.Val.(*ast.FuncDecl)]
 	}
@@ -593,7 +593,7 @@ func (b *Builder) VisitFuncCallExpr(expr *ast.FuncCallExpr) interface{} {
 	return ret
 }
 
-func (b *Builder) loadField(value IValue, index int) *SymbolValue {
+func (b *Builder) loadField(value IValue, index int) *Variable {
 	structType := value.GetType().(*StructType)
 	ptr := b.newTempSymbol(NewPtrType(structType.Field[index].Type))
 	b.emit(NewGetPtr(value, ptr, []IValue{NewI64Imm(index)}))
@@ -636,8 +636,8 @@ func asAstStructType(tp ast.IType) *ast.StructType {
 func (b *Builder) appendIndex(instr *GetPtr, index IValue, elemType IType) *GetPtr {
 	prevRes := instr.Result
 	switch prevRes.(type) {
-	case *SymbolValue:
-		symVal := prevRes.(*SymbolValue)
+	case *Variable:
+		symVal := prevRes.(*Variable)
 		ptrType := NewPtrType(elemType)
 		symVal.Type = ptrType
 		symVal.Symbol.Type = ptrType
@@ -688,10 +688,10 @@ func (b *Builder) shortCircuitEval(expr ast.IExprNode) interface{} {
 	result := b.newTempSymbol(NewBaseType(I1))
 	nextBB := b.newBasicBlock("ShortCircuitNext")
 	setTrue := b.newBasicBlock("SetTrue")
-	setTrue.Append(NewMove(NewI1Imm(true), result))
+	setTrue.PushBack(NewMove(NewI1Imm(true), result))
 	setTrue.JumpTo(nextBB)
 	setFalse := b.newBasicBlock("SetFalse")
-	setFalse.Append(NewMove(NewI1Imm(false), result))
+	setFalse.PushBack(NewMove(NewI1Imm(false), result))
 	setFalse.JumpTo(nextBB)
 
 	// Main recursion
