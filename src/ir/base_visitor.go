@@ -38,6 +38,8 @@ func (v *BaseVisitor) VisitCall(instr *Call) interface{} { return nil }
 
 func (v *BaseVisitor) VisitReturn(instr *Return) interface{} { return nil }
 
+func (v *BaseVisitor) VisitPhi(instr *Phi) interface{} { return nil }
+
 func (v *BaseVisitor) VisitValue(val IValue) interface{} { return nil }
 
 func (v *BaseVisitor) VisitVariable(val *Variable) interface{} { return nil }

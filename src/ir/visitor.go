@@ -20,6 +20,7 @@ type IVisitor interface {
 	VisitBranch(instr *Branch) interface{}
 	VisitCall(instr *Call) interface{}
 	VisitReturn(instr *Return) interface{}
+	VisitPhi(instr *Phi) interface{}
 
 	VisitValue(val IValue) interface{}
 	VisitVariable(val *Variable) interface{}

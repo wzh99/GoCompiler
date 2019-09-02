@@ -37,7 +37,7 @@ func (b *BasicBlock) PushFront(instr IInstr) {
 		return
 	}
 	instr.SetNext(b.Head) // instr -> prev_head
-	b.Head.SetNext(instr) // instr <-> prev_head
+	b.Head.SetPrev(instr) // instr <-> prev_head
 	b.Head = instr        // head -> instr
 }
 
@@ -170,6 +170,20 @@ func (b *BasicBlock) AcceptAsTreeNode(pre, post func(*BasicBlock)) {
 		child.AcceptAsTreeNode(pre, post)
 	}
 	post(b)
+}
+
+func (b *BasicBlock) PrintDomTree() {
+	depth := 0
+	b.AcceptAsTreeNode(func(block *BasicBlock) {
+		for i := 0; i < depth; i++ {
+			fmt.Print("\t")
+		}
+		fmt.Println(block.Name)
+		depth++
+	}, func(block *BasicBlock) {
+		depth--
+	})
+	fmt.Print("\n")
 }
 
 func (b *BasicBlock) Dominates(b2 *BasicBlock) bool {

@@ -11,19 +11,18 @@ import (
 const source = `
 package main
 
-var a = 9
-
-func test3() bool {
-	for i := 0; i < 10; i++ {
-		if a < 12 {
-			a++
-			continue
+func test3() int {
+	i, j, k := 1, 1, 0
+	for k < 100 {
+		if j < 20 {
+			j = i
+			k++
 		} else {
-			a--
-			break
+			j = k
+			k += 2
 		}
 	}
-	return a < 20
+	return j
 }
 `
 
@@ -40,7 +39,7 @@ func TestIRBuild(t *testing.T) {
 	irBuilder := NewBuilder()
 	irPrg := irBuilder.VisitProgram(asTree).(*Program)
 	printer := NewPrinter(os.Stdout)
-	printer.VisitProgram(irPrg)
 	ssa := NewSSAOpt()
 	ssa.Optimize(irPrg)
+	printer.VisitProgram(irPrg)
 }

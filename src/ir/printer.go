@@ -109,6 +109,8 @@ func (p *Printer) VisitInstr(instr IInstr) interface{} {
 		p.VisitCall(instr.(*Call))
 	case *Return:
 		p.VisitReturn(instr.(*Return))
+	case *Phi:
+		p.VisitPhi(instr.(*Phi))
 	}
 	return nil
 }
@@ -198,5 +200,19 @@ func (p *Printer) VisitCall(instr *Call) interface{} {
 
 func (p *Printer) VisitReturn(instr *Return) interface{} {
 	p.write("\treturn %s\n", valueListStr(instr.Values))
+	return nil
+}
+
+func (p *Printer) VisitPhi(instr *Phi) interface{} {
+	p.write("\tphi (")
+	i := 0
+	for bb, val := range instr.BBToVal {
+		if i != 0 {
+			p.write(", ")
+		}
+		p.write("%s -> %s", bb.Name, (*val).ToString())
+		i++
+	}
+	p.write(") => %s\n", instr.Result.ToString())
 	return nil
 }
