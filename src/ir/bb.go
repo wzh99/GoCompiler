@@ -15,7 +15,7 @@ type BasicBlock struct {
 	// Dominance tree can be constructed from CFG.
 	ImmDom   *BasicBlock          // immediate dominator of this block
 	Children map[*BasicBlock]bool // blocks that this immediately dominates
-	serial   [2]int               // pre-order traversal serial [in, out] that help determine dominance
+	serial   [2]int               // pre-order traversal serial [in, out] that determine dominance
 }
 
 func NewBasicBlock(label string, fun *Func) *BasicBlock {
@@ -100,9 +100,9 @@ func (b *BasicBlock) SplitEdgeTo(to, inserted *BasicBlock) { // b: predecessor, 
 	case *Branch:
 		tail := b.Tail.(*Branch)
 		if tail.True == to {
-			tail.True = to
+			tail.True = inserted
 		} else if tail.False == to {
-			tail.False = to
+			tail.False = inserted
 		}
 	}
 	b.ConnectTo(inserted) // predecessor <-> inserted

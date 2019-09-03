@@ -1,12 +1,17 @@
 package ir
 
-type SSAOpt struct{}
+import "fmt"
+
+type SSAOpt struct {
+	prg *Program
+}
 
 func NewSSAOpt() *SSAOpt {
 	return &SSAOpt{}
 }
 
 func (o *SSAOpt) Optimize(prg *Program) {
+	o.prg = prg
 	for _, fun := range prg.Funcs {
 		o.optimize(fun)
 	}
@@ -15,12 +20,33 @@ func (o *SSAOpt) Optimize(prg *Program) {
 // See Chapter 19 of Modern Compiler Implementation in Java, Second Edition.
 func (o *SSAOpt) optimize(fun *Func) {
 	// Convert to SSA form
+	o.splitEdge(fun)
 	o.computeDominators(fun)
 	o.insertPhi(fun)
 	o.renameVar(fun)
 }
 
-// Use Lengauer-Tarjan Algorithm to build domination tree.
+// Transform tp an edge-split CFG
+func (o *SSAOpt) splitEdge(fun *Func) {
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		if len(block.Succ) <= 1 {
+			return
+		}
+		for succ := range block.Succ {
+			if len(succ.Pred) > 1 {
+				block.SplitEdgeTo(succ, o.newBasicBlock("EdgeSplit", fun))
+			}
+		}
+	}, DepthFirst)
+}
+
+func (o *SSAOpt) newBasicBlock(name string, fun *Func) *BasicBlock {
+	tag := fmt.Sprintf("_B%d", o.prg.nBlock)
+	o.prg.nBlock++
+	return NewBasicBlock(fmt.Sprintf("%s_%s", tag, name), fun)
+}
+
+// Use Lengauer-Tarjan Algorithm to build dominator tree.
 // This version has time complexity O(NlogN), not optimal but easier to understand.
 func (o *SSAOpt) computeDominators(fun *Func) {
 	// Define depth first tree node
@@ -76,7 +102,7 @@ func (o *SSAOpt) computeDominators(fun *Func) {
 		}
 		return node.best
 	}
-	o.clearUnreachable(fun)               // unreachable predecessors will cause error
+	o.removeDeadBlocks(fun)               // unreachable predecessors will cause error
 	for i := len(nodes) - 1; i > 0; i-- { // back to forth, ignore root node
 		node := nodes[i]
 		parent := node.parent
@@ -134,7 +160,7 @@ func (o *SSAOpt) computeDominators(fun *Func) {
 	fun.Enter.PrintDomTree()
 }
 
-func (o *SSAOpt) clearUnreachable(fun *Func) {
+func (o *SSAOpt) removeDeadBlocks(fun *Func) {
 	reachable := make(map[*BasicBlock]bool)
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		reachable[block] = true
@@ -247,11 +273,32 @@ func (o *SSAOpt) getDefSymbolSet(block *BasicBlock) map[*Symbol]bool {
 	return defSymSet
 }
 
+type VarVersion struct {
+	latest *Symbol
+	stack  []*Symbol
+}
+
+func (i *VarVersion) push(s *Symbol) { i.stack = append(i.stack, s) }
+
+func (i *VarVersion) top() *Symbol { return i.stack[len(i.stack)-1] }
+
+func (i *VarVersion) pop() { i.stack = i.stack[:len(i.stack)-1] }
+
+func (i *VarVersion) rename() *Symbol {
+	sym := i.latest.Rename()
+	i.latest = sym
+	i.push(sym)
+	return sym
+}
+
 func (o *SSAOpt) renameVar(fun *Func) {
 	// Initialize lookup table for latest variable
-	latest := make(map[string]*Symbol) // original -> latest renamed
+	ver := make(map[string]*VarVersion) // original -> latest renamed
 	for _, sym := range fun.Scope.Symbols {
-		latest[sym.Name] = sym // the original serves as the first version
+		ver[sym.Name] = &VarVersion{
+			latest: sym,
+			stack:  []*Symbol{sym},
+		} // the original serves as the first version
 	}
 
 	// Rename variables
@@ -264,15 +311,14 @@ func (o *SSAOpt) renameVar(fun *Func) {
 			if _, isPhi := instr.(*Phi); !isPhi { // not a phi instruction
 				for _, use := range o.getVarUse(instr) {
 					sym := (*use).(*Variable).Symbol
-					top := latest[sym.Name]
+					top := ver[sym.Name].top()
 					*use = NewVariable(top) // replace use of x with x_i
 				}
 			}
 			// Replace definitions in instructions
 			for _, def := range o.getVarDef(instr) {
 				sym := (*def).(*Variable).Symbol
-				newSym := latest[sym.Name].Rename()
-				latest[sym.Name] = newSym
+				newSym := ver[sym.Name].rename()
 				*def = NewVariable(newSym) // replace definition of x with x_i
 			}
 		} // end instruction iteration loop
@@ -288,7 +334,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 				if sym.Scope.Global {
 					continue
 				}
-				top := latest[sym.Name]
+				top := ver[sym.Name].top()
 				*phi.BBToVal[block] = NewVariable(top)
 			} // end instruction iteration loop
 		} // end successor loop
@@ -296,6 +342,14 @@ func (o *SSAOpt) renameVar(fun *Func) {
 		// Recursively rename variables in children nodes in the dominance tree
 		for child := range block.Children {
 			rename(child)
+		}
+
+		// Remove symbol renamed in this frame
+		for iter := NewInstrIterFromBlock(block); iter.IsValid(); iter.Next() {
+			for _, def := range o.getVarDef(iter.Cur) {
+				sym := (*def).(*Variable).Symbol
+				ver[sym.Name].pop()
+			}
 		}
 	}
 	rename(fun.Enter)
@@ -316,12 +370,12 @@ func (o *SSAOpt) getVarUse(instr IInstr) []*IValue {
 
 func (o *SSAOpt) getVarDef(instr IInstr) []*IValue {
 	defList := make([]*IValue, 0)
-	for _, use := range instr.GetDef() {
-		if v, ok := (*use).(*Variable); ok {
+	for _, def := range instr.GetDef() {
+		if v, ok := (*def).(*Variable); ok {
 			if v.Symbol.Scope.Global {
 				continue
 			}
-			defList = append(defList, use)
+			defList = append(defList, def)
 		}
 	}
 	return defList
