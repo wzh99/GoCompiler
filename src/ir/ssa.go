@@ -481,16 +481,16 @@ func newValueGraph(fun *Func) *ValueGraph {
 	}
 
 	// Visit instructions of SSA form
-	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
 		for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
 			g.processInstr(iter.Cur)
 		}
-	}, DepthFirst)
-	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+	}, func(*BasicBlock) {})
+	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
 		for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
 			g.fixPhi(iter.Cur)
 		}
-	}, DepthFirst)
+	}, func(*BasicBlock) {})
 
 	// Mark unlabelled vertices
 	for v := range g.vertSet {
@@ -665,10 +665,48 @@ TraverseVertSet:
 		}
 		part = append(part, map[*ValueVert]bool{v: true}) // no congruence is found
 	}
-	o.printPartition(part)
-	fmt.Println(workList)
 
 	// Further partition the vertex set until a fixed point is reached
+	for len(workList) > 0 {
+		// Pick up one node set
+		i := o.pickOneIndex(workList)
+		delete(workList, i)
+		set := part[i]
+		// Pick up one vertex and test it against others in the set
+		v := o.pickOneVert(set)
+		newSet := make(map[*ValueVert]bool)
+		for v2 := range set {
+			if v == v2 {
+				continue // one vertex must be congruent to itself
+			}
+			for i := range v.operands {
+				if valNum[v.operands[i]] != valNum[v2.operands[i]] {
+					// Not congruent obviously, move from original set to new one.
+					delete(set, v2)
+					newSet[v2] = true
+					break // no need to test more
+				}
+			}
+		}
+		if len(newSet) > 0 { // another cut made in current set
+			// Update the partition list
+			n := len(part)
+			part = append(part, newSet)
+			part[i] = set
+			// Update value number
+			for v2 := range newSet {
+				valNum[v2] = n
+			}
+			// Add original and new set to work list
+			if len(set) > 1 {
+				workList[i] = true
+			}
+			if len(newSet) > 1 {
+				workList[n] = true
+			}
+		}
+	}
+	o.printPartition(part)
 }
 
 func (o *SSAOpt) pickOneIndex(set map[int]bool) int {
@@ -693,12 +731,4 @@ func (o *SSAOpt) printPartition(part []map[*ValueVert]bool) {
 		fmt.Println()
 	}
 	fmt.Println()
-}
-
-func (o *SSAOpt) copySet(set map[*ValueVert]bool) map[*ValueVert]bool {
-	cp := make(map[*ValueVert]bool)
-	for v := range set {
-		cp[v] = true
-	}
-	return cp
 }
