@@ -20,26 +20,15 @@ type InstrIter struct {
 	BB  *BasicBlock
 }
 
-// Constructed from a existing instruction
-func NewInstrIter(instr IInstr) *InstrIter {
-	if instr == nil {
-		panic(NewIRError("cannot construct iterator from a nil instruction"))
-	}
-	return &InstrIter{
-		Cur: instr,
-		BB:  instr.GetBasicBlock(),
-	}
-}
-
 // Iterate from the first instruction of basic block
-func NewInstrIterFromBlock(bb *BasicBlock) *InstrIter {
+func NewInstrIter(bb *BasicBlock) *InstrIter {
 	return &InstrIter{
 		Cur: bb.Head,
 		BB:  bb,
 	}
 }
 
-func (i *InstrIter) IsValid() bool { return i.Cur != nil }
+func (i *InstrIter) Valid() bool { return i.Cur != nil }
 
 func (i *InstrIter) Next() { i.Cur = i.Cur.GetNext() }
 
@@ -114,6 +103,8 @@ func (i *InstrIter) Remove() {
 	} else {
 		i.BB.Tail = prev
 	}
+	i.Cur.SetPrev(nil)
+	i.Cur.SetNext(nil)
 	i.Cur = next
 }
 
@@ -337,7 +328,7 @@ func (p *PtrOffset) GetDef() []*IValue { return []*IValue{&p.Dst} }
 
 func (p *PtrOffset) GetUse() []*IValue { return []*IValue{&p.Src} }
 
-// Set specified memory space to all zero
+// Set memory content of specified value to all zero
 type Clear struct {
 	BaseInstr
 	Value IValue
@@ -357,6 +348,10 @@ const (
 	NEG UnaryOp = iota // integer, float
 	NOT                // integer
 )
+
+var unaryOpStr = map[UnaryOp]string{
+	NEG: "neg", NOT: "not",
+}
 
 type Unary struct {
 	BaseInstr
@@ -412,10 +407,10 @@ const (
 	GE
 )
 
-const (
-	ArithmeticOp = ADD | SUB | MUL | DIV | AND | OR | XOR | SHL | SHR
-	CompareOp    = EQ | NE | LT | LE | GT | GE
-)
+var binaryOpStr = map[BinaryOp]string{
+	ADD: "add", SUB: "sub", MUL: "mul", DIV: "div", AND: "and", OR: "or", XOR: "xor",
+	SHL: "shl", SHR: "shr", EQ: "eq", NE: "ne", LT: "lt", LE: "le", GT: "gt", GE: "ge",
+}
 
 type Binary struct {
 	BaseInstr

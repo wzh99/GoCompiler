@@ -44,7 +44,7 @@ func (p *Printer) VisitProgram(prg *Program) interface{} {
 }
 
 func (p *Printer) VisitScope(scope *Scope) interface{} {
-	for _, s := range scope.Symbols {
+	for s := range scope.Symbols {
 		p.write("%s: %s\n", s.ToString(), s.Type.ToString())
 	}
 	p.write("\n")
@@ -73,8 +73,8 @@ func (p *Printer) VisitFunc(fun *Func) interface{} {
 
 func (p *Printer) VisitBasicBlock(bb *BasicBlock) interface{} {
 	p.write("%s:\n", bb.Name)
-	iter := NewInstrIterFromBlock(bb)
-	for iter.IsValid() {
+	iter := NewInstrIter(bb)
+	for iter.Valid() {
 		p.VisitInstr(iter.Cur)
 		iter.Next()
 	}
@@ -162,18 +162,9 @@ func (p *Printer) VisitClear(instr *Clear) interface{} {
 	return nil
 }
 
-var unaryOpStr = map[UnaryOp]string{
-	NEG: "neg", NOT: "not",
-}
-
 func (p *Printer) VisitUnary(instr *Unary) interface{} {
 	p.writeInstr(unaryOpStr[instr.Op], instr.Result, instr.Operand)
 	return nil
-}
-
-var binaryOpStr = map[BinaryOp]string{
-	ADD: "add", SUB: "sub", MUL: "mul", DIV: "div", AND: "and", OR: "or", XOR: "xor",
-	SHL: "shl", SHR: "shr", EQ: "eq", NE: "ne", LT: "lt", LE: "le", GT: "gt", GE: "ge",
 }
 
 func (p *Printer) VisitBinary(instr *Binary) interface{} {

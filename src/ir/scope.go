@@ -22,7 +22,7 @@ func (s *Symbol) Rename() *Symbol {
 		Scope: s.Scope,
 		Param: false,
 	}
-	s.Scope.Symbols = append(s.Scope.Symbols, sym)
+	s.Scope.Symbols[sym] = true
 	return sym
 }
 
@@ -39,7 +39,7 @@ func (s *Symbol) ToString() string {
 // Every function has only one scope. No nested scopes.
 type Scope struct {
 	// Linear list of entries
-	Symbols []*Symbol
+	Symbols map[*Symbol]bool
 	// Parameters should be taken special care
 	Params []*Symbol
 	// Map parameters back to its index in parameter list
@@ -52,7 +52,7 @@ type Scope struct {
 
 func NewGlobalScope() *Scope {
 	return &Scope{
-		Symbols:  make([]*Symbol, 0),
+		Symbols:  make(map[*Symbol]bool),
 		Params:   make([]*Symbol, 0),
 		ParamIdx: make(map[*Symbol]int),
 		Global:   true,
@@ -62,7 +62,7 @@ func NewGlobalScope() *Scope {
 
 func NewLocalScope() *Scope {
 	return &Scope{
-		Symbols:  make([]*Symbol, 0),
+		Symbols:  make(map[*Symbol]bool),
 		Params:   make([]*Symbol, 0),
 		ParamIdx: make(map[*Symbol]int),
 		Global:   false,
@@ -78,7 +78,7 @@ func (s *Scope) AddSymbol(name string, tp IType, param bool) *Symbol {
 		Scope: s,
 		Param: param,
 	}
-	s.Symbols = append(s.Symbols, irSym)
+	s.Symbols[irSym] = true
 	if param {
 		index := len(s.Params)
 		s.Params = append(s.Params, irSym)

@@ -1,6 +1,10 @@
 package ir
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+	"os"
+)
 
 type SSAOpt struct {
 	prg *Program
@@ -24,6 +28,9 @@ func (o *SSAOpt) optimize(fun *Func) {
 	o.computeDominators(fun)
 	o.insertPhi(fun)
 	o.renameVar(fun)
+
+	// Apply optimizing transformations to function
+	o.globalValueNumber(fun)
 }
 
 // Transform tp an edge-split CFG
@@ -148,15 +155,7 @@ func (o *SSAOpt) computeDominators(fun *Func) {
 	}
 
 	// Visit dominance tree and mark in and out serial of nodes
-	serial := 0
-	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
-		block.serial[0] = serial
-		serial++
-	}, func(block *BasicBlock) {
-		block.serial[1] = serial
-		serial++
-	})
-
+	fun.Enter.NumberDomTree()
 	fun.Enter.PrintDomTree()
 }
 
@@ -226,15 +225,15 @@ func (o *SSAOpt) insertPhi(fun *Func) {
 			var node *BasicBlock
 			for n := range workList {
 				node = n
-				delete(workList, n)
 				break
 			}
+			delete(workList, node)
 			// Possibly insert phi instructions for each node in dominance frontiers
 			for y := range DF[node] { // for each dominance frontier node
 				if APhi[y] == nil {
 					APhi[y] = make(map[*Symbol]bool)
 				}
-				if APhi[y][a] {
+				if APhi[y][a] { // phi instruction already inserted for a in y
 					continue
 				}
 				// Insert phi instruction at top of block y
@@ -255,8 +254,7 @@ func (o *SSAOpt) insertPhi(fun *Func) {
 
 func (o *SSAOpt) getDefSymbolSet(block *BasicBlock) map[*Symbol]bool {
 	defSymSet := make(map[*Symbol]bool)
-	iter := NewInstrIterFromBlock(block)
-	for iter.IsValid() {
+	for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
 		defList := iter.Cur.GetDef()
 		for _, def := range defList {
 			switch (*def).(type) {
@@ -265,10 +263,9 @@ func (o *SSAOpt) getDefSymbolSet(block *BasicBlock) map[*Symbol]bool {
 				if sym.Scope.Global {
 					continue
 				}
-				defSymSet[(*def).(*Variable).Symbol] = true
+				defSymSet[sym] = true
 			}
 		}
-		iter.Next()
 	}
 	return defSymSet
 }
@@ -293,8 +290,8 @@ func (i *VarVersion) rename() *Symbol {
 
 func (o *SSAOpt) renameVar(fun *Func) {
 	// Initialize lookup table for latest variable
-	ver := make(map[string]*VarVersion) // original -> latest renamed
-	for _, sym := range fun.Scope.Symbols {
+	ver := make(map[string]*VarVersion)
+	for sym := range fun.Scope.Symbols {
 		ver[sym.Name] = &VarVersion{
 			latest: sym,
 			stack:  []*Symbol{sym},
@@ -305,7 +302,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 	var rename func(*BasicBlock)
 	rename = func(block *BasicBlock) {
 		// Replace use and definitions in current block
-		for iter := NewInstrIterFromBlock(block); iter.IsValid(); iter.Next() {
+		for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
 			instr := iter.Cur
 			// Replace use in instructions
 			if _, isPhi := instr.(*Phi); !isPhi { // not a phi instruction
@@ -325,7 +322,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 
 		// Replace use in phi instructions in successors
 		for succ := range block.Succ {
-			for iter := NewInstrIterFromBlock(succ); iter.IsValid(); iter.Next() {
+			for iter := NewInstrIter(succ); iter.Valid(); iter.Next() {
 				phi, isPhi := iter.Cur.(*Phi)
 				if !isPhi {
 					continue
@@ -345,7 +342,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 		}
 
 		// Remove symbol renamed in this frame
-		for iter := NewInstrIterFromBlock(block); iter.IsValid(); iter.Next() {
+		for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
 			for _, def := range o.getVarDef(iter.Cur) {
 				sym := (*def).(*Variable).Symbol
 				ver[sym.Name].pop()
@@ -379,4 +376,246 @@ func (o *SSAOpt) getVarDef(instr IInstr) []*IValue {
 		}
 	}
 	return defList
+}
+
+// Format of labels:
+// Value vertices:
+// param, imm.
+// Instruction vertices:
+// move, load, malloc, getptr, ptroff, clear;
+// neg, not, add, sub, mul, div, mod, and, or, xor, shl, shr, eq, ne, lt, le, gt, ge;
+// call@%s, phi.
+// Store, return, jump and branch don't define values, so they are not included in value graph.
+type ValueVert struct {
+	label    string
+	symbols  map[*Symbol]bool // set of symbols this vertex maps to
+	imm      interface{}      // store immediate
+	operands []*ValueVert
+}
+
+func newValueVert(label string, sym *Symbol, imm interface{}, opd ...*ValueVert) *ValueVert {
+	vert := &ValueVert{
+		label:    label,
+		imm:      imm,
+		symbols:  make(map[*Symbol]bool),
+		operands: opd,
+	}
+	if sym != nil {
+		vert.symbols[sym] = true
+	}
+	return vert
+}
+
+func newTempVert(sym *Symbol) *ValueVert {
+	return &ValueVert{
+		symbols: map[*Symbol]bool{sym: true},
+	}
+}
+
+func (v *ValueVert) appendInfo(label string, imm interface{}, opd ...*ValueVert) {
+	v.label = label
+	v.imm = imm
+	v.operands = append(v.operands, opd...)
+}
+
+func (v *ValueVert) print(writer io.Writer) {
+	str := fmt.Sprintf("{ label: %s, symbols: {", v.label)
+	i := 0
+	for s := range v.symbols {
+		if i != 0 {
+			str += ", "
+		}
+		str += s.ToString()
+		i++
+	}
+	str += "}, operands: {"
+	for i, opd := range v.operands {
+		if i != 0 {
+			str += ", "
+		}
+		str += opd.label
+	}
+	_, err := fmt.Fprintln(writer, str+"} }")
+	if err != nil {
+		panic(NewIRError(fmt.Sprintf("error writing value vertex: %s", err.Error())))
+	}
+}
+
+func (v *ValueVert) hasSameLabel(v2 *ValueVert) bool {
+	if v.label != v2.label {
+		return false
+	}
+	if v.label != "imm" {
+		return true
+	}
+	switch v.imm.(type) { // immediate value should be considered as part of label
+	case bool:
+		return v.imm.(bool) == v2.imm.(bool)
+	case int:
+		return v.imm.(int) == v2.imm.(int)
+	case float64:
+		return v.imm.(float64) == v2.imm.(float64)
+	default:
+		return false
+	}
+}
+
+type ValueGraph struct {
+	vertSet map[*ValueVert]bool // set of all vertices in the graph
+	// edges are stored in vertices, not stored globally
+	symToVert map[*Symbol]*ValueVert // maps symbols to vertices
+}
+
+func newValueGraph(fun *Func) *ValueGraph {
+	// Initialize data structures
+	g := &ValueGraph{
+		vertSet:   make(map[*ValueVert]bool),
+		symToVert: make(map[*Symbol]*ValueVert),
+	}
+
+	// Add symbols as temporary vertices
+	for sym := range fun.Scope.Symbols {
+		if sym.Param {
+			g.addVert(newValueVert("param", sym, nil))
+		} else {
+			g.addVert(newTempVert(sym))
+		}
+	}
+
+	// Visit instructions of SSA form
+	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
+		for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
+			g.processInstr(iter.Cur)
+		}
+	}, func(*BasicBlock) {})
+
+	// Mark unlabelled vertices
+	for v := range g.vertSet {
+		if len(v.label) != 0 { // labelled
+			continue
+		}
+		v.label = "undef"
+	}
+
+	return g
+}
+
+func (g *ValueGraph) print(writer io.Writer) {
+	for vert := range g.vertSet {
+		vert.print(writer)
+	}
+}
+
+func (g *ValueGraph) addVert(vert *ValueVert) {
+	g.vertSet[vert] = true
+	for sym := range vert.symbols {
+		g.symToVert[sym] = vert
+	}
+}
+
+func (g *ValueGraph) addSymbolToVert(sym *Symbol, vert *ValueVert) {
+	if sym == nil {
+		panic(NewIRError("cannot add nil symbol to vertex"))
+	}
+	g.symToVert[sym] = vert
+	vert.symbols[sym] = true
+}
+
+func (g *ValueGraph) mergeVert(target, prey *Symbol) {
+	targVert := g.symToVert[target]
+	preyVert := g.symToVert[prey]
+	g.addSymbolToVert(prey, targVert)
+	delete(g.vertSet, preyVert)
+}
+
+func (g *ValueGraph) appendInfoToVert(sym *Symbol, label string, imm interface{},
+	opd ...*ValueVert) {
+	g.symToVert[sym].appendInfo(label, imm, opd...)
+}
+
+func (g *ValueGraph) processInstr(instr IInstr) {
+	valToVert := func(val IValue) *ValueVert {
+		var vert *ValueVert
+		switch val.(type) {
+		case *ImmValue:
+			vert = newValueVert("imm", nil, val.(*ImmValue).Value)
+		case *Variable:
+			sym := val.(*Variable).Symbol
+			vert = g.symToVert[sym]
+			if vert == nil {
+				panic(NewIRError(fmt.Sprintf("vertex not found for symbol %s",
+					sym.ToString())))
+			}
+		}
+		return vert
+	}
+
+	switch instr.(type) {
+	case *Move:
+		move := instr.(*Move)
+		dst := move.Dst.(*Variable)
+		switch move.Src.(type) {
+		case *ImmValue:
+			imm := move.Src.(*ImmValue).Value
+			g.appendInfoToVert(dst.Symbol, "imm", imm)
+		case *Variable:
+			src := move.Src.(*Variable)
+			g.mergeVert(src.Symbol, dst.Symbol)
+		}
+
+	case *Load:
+		load := instr.(*Load)
+		dst := load.Dst.(*Variable)
+		g.appendInfoToVert(dst.Symbol, "load", nil, valToVert(load.Src))
+
+	case *Malloc:
+		malloc := instr.(*Malloc)
+		dst := malloc.Result.(*Variable)
+		g.appendInfoToVert(dst.Symbol, "malloc", nil)
+
+	case *GetPtr:
+		getptr := instr.(*GetPtr)
+		dst := getptr.Result.(*Variable)
+		opd := []*ValueVert{valToVert(getptr.Base)}
+		for _, val := range getptr.Indices {
+			opd = append(opd, valToVert(val))
+		}
+		g.appendInfoToVert(dst.Symbol, "getptr", nil, opd...)
+
+	case *PtrOffset:
+		ptroff := instr.(*PtrOffset)
+		dst := ptroff.Dst.(*Variable)
+		g.appendInfoToVert(dst.Symbol, "ptroff", nil, valToVert(ptroff.Src))
+
+	case *Clear:
+		clear := instr.(*Clear)
+		val := clear.Value.(*Variable)
+		g.appendInfoToVert(val.Symbol, "clear", nil)
+
+	case *Unary:
+		unary := instr.(*Unary)
+		opd := unary.Operand.(*Variable)
+		result := unary.Result.(*Variable)
+		g.appendInfoToVert(result.Symbol, unaryOpStr[unary.Op], nil, valToVert(opd))
+
+	case *Binary:
+		binary := instr.(*Binary)
+		result := binary.Result.(*Variable)
+		g.appendInfoToVert(result.Symbol, binaryOpStr[binary.Op], nil,
+			valToVert(binary.Left), valToVert(binary.Right))
+
+	case *Phi:
+		phi := instr.(*Phi)
+		result := phi.Result.(*Variable)
+		opd := make([]*ValueVert, 0)
+		for _, val := range phi.ValList {
+			opd = append(opd, valToVert(val))
+		}
+		g.appendInfoToVert(result.Symbol, "phi", nil, opd...)
+	}
+}
+
+func (o *SSAOpt) globalValueNumber(fun *Func) {
+	graph := newValueGraph(fun)
+	graph.print(os.Stdout)
 }

@@ -186,6 +186,18 @@ func (b *BasicBlock) PrintDomTree() {
 	fmt.Print("\n")
 }
 
+// Number dominance with serials to enable O(1) parent-child judgement
+func (b *BasicBlock) NumberDomTree() {
+	serial := 0
+	b.AcceptAsTreeNode(func(block *BasicBlock) {
+		block.serial[0] = serial
+		serial++
+	}, func(block *BasicBlock) {
+		block.serial[1] = serial
+		serial++
+	})
+}
+
 func (b *BasicBlock) Dominates(b2 *BasicBlock) bool {
 	return b.serial[0] < b2.serial[0] && b.serial[1] > b2.serial[1]
 }
