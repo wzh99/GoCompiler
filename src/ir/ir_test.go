@@ -11,15 +11,15 @@ import (
 const source = `
 package main
 
-func test3() int {
-	i, j, k := 1, 1, 0
-	for k < 100 {
-		if j < 20 {
-			j = i
-			k++
+func test3(n int) int {
+	i, j := 1, 1
+	for j > n {
+		if i % 2 == 0 {
+			i++
+			j++
 		} else {
-			j = k
-			k += 2
+			i += 3
+			j += 3
 		}
 	}
 	return j

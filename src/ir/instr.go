@@ -408,7 +408,7 @@ const (
 )
 
 var binaryOpStr = map[BinaryOp]string{
-	ADD: "add", SUB: "sub", MUL: "mul", DIV: "div", AND: "and", OR: "or", XOR: "xor",
+	ADD: "add", SUB: "sub", MUL: "mul", DIV: "div", MOD: "mod", AND: "and", OR: "or", XOR: "xor",
 	SHL: "shl", SHR: "shr", EQ: "eq", NE: "ne", LT: "lt", LE: "le", GT: "gt", GE: "ge",
 }
 

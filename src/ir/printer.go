@@ -44,6 +44,9 @@ func (p *Printer) VisitProgram(prg *Program) interface{} {
 }
 
 func (p *Printer) VisitScope(scope *Scope) interface{} {
+	if len(scope.Symbols) == 0 {
+		return nil
+	}
 	for s := range scope.Symbols {
 		p.write("%s: %s\n", s.ToString(), s.Type.ToString())
 	}

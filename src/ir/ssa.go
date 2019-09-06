@@ -435,10 +435,7 @@ func (v *ValueVert) print(writer io.Writer) {
 		}
 		str += opd.label
 	}
-	_, err := fmt.Fprintln(writer, str+"} }")
-	if err != nil {
-		panic(NewIRError(fmt.Sprintf("error writing value vertex: %s", err.Error())))
-	}
+	_, _ = fmt.Fprintln(writer, str+"} }")
 }
 
 func (v *ValueVert) hasSameLabel(v2 *ValueVert) bool {
@@ -491,10 +488,9 @@ func newValueGraph(fun *Func) *ValueGraph {
 
 	// Mark unlabelled vertices
 	for v := range g.vertSet {
-		if len(v.label) != 0 { // labelled
-			continue
+		if len(v.label) == 0 { // labelled
+			v.label = "undef"
 		}
-		v.label = "undef"
 	}
 
 	return g
@@ -504,6 +500,7 @@ func (g *ValueGraph) print(writer io.Writer) {
 	for vert := range g.vertSet {
 		vert.print(writer)
 	}
+	_, _ = fmt.Fprintln(writer)
 }
 
 func (g *ValueGraph) addVert(vert *ValueVert) {
@@ -615,7 +612,126 @@ func (g *ValueGraph) processInstr(instr IInstr) {
 	}
 }
 
+// Partition vertices in value graph so that each vertex in a set shares one value number.
+// See Fig. 12.21 and 12.22 of Advanced Compiler Design and Implementation
 func (o *SSAOpt) globalValueNumber(fun *Func) {
+	// Build value graph out of SSA
 	graph := newValueGraph(fun)
-	graph.print(os.Stdout)
+
+	// Initialize vertex partition and work list
+	B := make([]map[*ValueVert]bool, 0) // partition result: array of sets
+	pickOneVert := func(set map[*ValueVert]bool) *ValueVert {
+		for v := range set {
+			return v
+		}
+		return nil
+	}
+	copySet := func(set map[*ValueVert]bool) map[*ValueVert]bool {
+		cp := make(map[*ValueVert]bool)
+		for v := range set {
+			cp[v] = true
+		}
+		return cp
+	}
+	setEqual := func(s1, s2 map[*ValueVert]bool) bool {
+		if len(s1) != len(s2) {
+			return false
+		}
+		for v := range s1 {
+			if !s2[v] {
+				return false
+			}
+		}
+		return true
+	}
+
+	workList := make(map[int]bool, 0) // sets to be further partitioned in B
+	pickOneIndex := func(set map[int]bool) int {
+		for i := range set {
+			return i
+		}
+		return -1
+	}
+
+TraverseVertSet:
+	for v := range graph.vertSet {
+		// Create the first set
+		if len(B) == 0 {
+			B = append(B, map[*ValueVert]bool{v: true})
+			continue
+		}
+		// Test whether there is congruence
+		for i := 0; i < len(B); i++ {
+			if v.hasSameLabel(pickOneVert(B[i])) { // may be congruent
+				B[i][v] = true
+				if len(v.operands) > 0 && len(B[i]) > 1 { // depends on operands
+					workList[i] = true
+				}
+				continue TraverseVertSet
+			}
+		}
+		B = append(B, map[*ValueVert]bool{v: true}) // no congruence is found
+	}
+
+	// Further partition the vertex set until a fixed point is reached
+	for len(workList) > 0 {
+		i := pickOneIndex(workList)
+		delete(workList, i)
+		m := pickOneVert(B[i])
+		// Attempt to subdivide each nontrivial partition
+		for j, j1 := range m.operands {
+			S := copySet(B[i])
+			delete(S, m)
+			for len(S) > 0 {
+				x := pickOneVert(S)
+				delete(S, x)
+				if x.operands[j] != j1 {
+					B = append(B, map[*ValueVert]bool{m: true})
+					delete(B[i], m)
+					for len(S) > 0 {
+						z := pickOneVert(S)
+						delete(S, z)
+						for k := range pickOneVert(B[i]).operands {
+							k1 := m.operands[k]
+							if k1 != z.operands[k] {
+								B[len(B)-1][z] = true
+								delete(B[i], z)
+							}
+						} // end B[i] operand loop
+					} // end partition set loop
+					if len(B[i]) > 1 {
+						workList[i] = true
+					}
+					if len(B[len(B)-1]) > 1 {
+						workList[len(B)-1] = true
+					}
+				} // end x operand loop
+			} // end partition set loop
+		} // end m operand loop
+	} // end work list loop
+
+	// Remove repeated set
+	repeated := make([]bool, len(B))
+	for i, v := range B {
+		if repeated[i] { // don't test if this set is already known to be repeated
+			continue
+		}
+		for j := i + 1; j < len(B); j++ {
+			if setEqual(v, B[j]) {
+				repeated[j] = true
+			}
+		}
+	}
+	partition := make([]map[*ValueVert]bool, 0)
+	for i, b := range B {
+		if !repeated[i] {
+			partition = append(partition, b)
+		}
+	}
+	for _, set := range partition {
+		for s := range set {
+			s.print(os.Stdout)
+		}
+		fmt.Println()
+	}
 }
