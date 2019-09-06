@@ -570,6 +570,11 @@ func NewReturn(fun *Func, values []IValue) *Return {
 	}
 }
 
+type PhiOpd struct {
+	pred *BasicBlock
+	val  IValue
+}
+
 type Phi struct {
 	BaseInstr
 	ValList []IValue
@@ -577,14 +582,16 @@ type Phi struct {
 	Result  IValue
 }
 
-func NewPhi(operands map[*BasicBlock]IValue, result IValue) *Phi {
+func NewPhi(operands []PhiOpd, result IValue) *Phi {
 	p := &Phi{
 		ValList: make([]IValue, len(operands)),
 		BBToVal: make(map[*BasicBlock]*IValue),
 		Result:  result,
 	}
 	i := 0
-	for bb, val := range operands {
+	for _, entry := range operands {
+		bb := entry.pred
+		val := entry.val
 		if !val.GetType().IsIdentical(result.GetType()) {
 			panic(NewIRError(
 				fmt.Sprintf("type of operand %s is incompatible with result %s",

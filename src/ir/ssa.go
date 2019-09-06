@@ -237,9 +237,12 @@ func (o *SSAOpt) insertPhi(fun *Func) {
 					continue
 				}
 				// Insert phi instruction at top of block y
-				bbToSym := make(map[*BasicBlock]IValue)
+				bbToSym := make([]PhiOpd, 0)
 				for pred := range y.Pred {
-					bbToSym[pred] = NewVariable(a)
+					bbToSym = append(bbToSym, PhiOpd{
+						pred: pred,
+						val:  NewVariable(a),
+					})
 				}
 				y.PushFront(NewPhi(bbToSym, NewVariable(a)))
 				APhi[y][a] = true
@@ -418,7 +421,7 @@ func (v *ValueVert) appendInfo(label string, imm interface{}, opd ...*ValueVert)
 	v.operands = append(v.operands, opd...)
 }
 
-func (v *ValueVert) print(writer io.Writer) {
+func (v *ValueVert) print(writer io.Writer, valNum map[*ValueVert]int) {
 	str := fmt.Sprintf("{ label: %s, symbols: {", v.label)
 	i := 0
 	for s := range v.symbols {
@@ -433,7 +436,7 @@ func (v *ValueVert) print(writer io.Writer) {
 		if i != 0 {
 			str += ", "
 		}
-		str += opd.label
+		str += fmt.Sprintf("%d", valNum[opd])
 	}
 	_, _ = fmt.Fprintln(writer, str+"} }")
 }
@@ -502,9 +505,9 @@ func newValueGraph(fun *Func) *ValueGraph {
 	return g
 }
 
-func (g *ValueGraph) print(writer io.Writer) {
+func (g *ValueGraph) print(writer io.Writer, valNum map[*ValueVert]int) {
 	for vert := range g.vertSet {
-		vert.print(writer)
+		vert.print(writer, valNum)
 	}
 	_, _ = fmt.Fprintln(writer)
 }
@@ -541,6 +544,7 @@ func (g *ValueGraph) valToVert(val IValue) *ValueVert {
 	switch val.(type) {
 	case *ImmValue:
 		vert = newValueVert("imm", nil, val.(*ImmValue).Value)
+		g.addVert(vert)
 	case *Variable:
 		sym := val.(*Variable).Symbol
 		vert = g.symToVert[sym]
@@ -650,6 +654,7 @@ TraverseVertSet:
 		// Create the first set
 		if len(part) == 0 {
 			part = append(part, map[*ValueVert]bool{v: true})
+			valNum[v] = 0
 			continue
 		}
 		// Test whether there is congruence
@@ -663,15 +668,18 @@ TraverseVertSet:
 				continue TraverseVertSet
 			}
 		}
-		part = append(part, map[*ValueVert]bool{v: true}) // no congruence is found
+		// No congruence is found, add to new set
+		n := len(part)
+		valNum[v] = n
+		part = append(part, map[*ValueVert]bool{v: true})
 	}
 
 	// Further partition the vertex set until a fixed point is reached
 	for len(workList) > 0 {
 		// Pick up one node set
-		i := o.pickOneIndex(workList)
-		delete(workList, i)
-		set := part[i]
+		wi := o.pickOneIndex(workList)
+		delete(workList, wi)
+		set := part[wi]
 		// Pick up one vertex and test it against others in the set
 		v := o.pickOneVert(set)
 		newSet := make(map[*ValueVert]bool)
@@ -681,7 +689,7 @@ TraverseVertSet:
 			}
 			for i := range v.operands {
 				if valNum[v.operands[i]] != valNum[v2.operands[i]] {
-					// Not congruent obviously, move from original set to new one.
+					// Not congruent, move to new one.
 					delete(set, v2)
 					newSet[v2] = true
 					break // no need to test more
@@ -689,24 +697,23 @@ TraverseVertSet:
 			}
 		}
 		if len(newSet) > 0 { // another cut made in current set
-			// Update the partition list
+			// Update the partition list and value number
 			n := len(part)
-			part = append(part, newSet)
-			part[i] = set
-			// Update value number
 			for v2 := range newSet {
 				valNum[v2] = n
 			}
+			part = append(part, newSet)
+			part[wi] = set
 			// Add original and new set to work list
 			if len(set) > 1 {
-				workList[i] = true
+				workList[wi] = true
 			}
 			if len(newSet) > 1 {
 				workList[n] = true
 			}
 		}
 	}
-	o.printPartition(part)
+	o.printPartition(part, valNum)
 }
 
 func (o *SSAOpt) pickOneIndex(set map[int]bool) int {
@@ -723,10 +730,10 @@ func (o *SSAOpt) pickOneVert(set map[*ValueVert]bool) *ValueVert {
 	return nil
 }
 
-func (o *SSAOpt) printPartition(part []map[*ValueVert]bool) {
+func (o *SSAOpt) printPartition(part []map[*ValueVert]bool, valNum map[*ValueVert]int) {
 	for _, set := range part {
 		for s := range set {
-			s.print(os.Stdout)
+			s.print(os.Stdout, valNum)
 		}
 		fmt.Println()
 	}
