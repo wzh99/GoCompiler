@@ -442,19 +442,20 @@ func (v *ValueVert) hasSameLabel(v2 *ValueVert) bool {
 	if v.label != v2.label {
 		return false
 	}
-	if v.label != "imm" {
-		return true
+	switch v.label {
+	case "imm":
+		switch v.imm.(type) { // immediate value should be considered as part of label
+		case bool:
+			return v.imm.(bool) == v2.imm.(bool)
+		case int:
+			return v.imm.(int) == v2.imm.(int)
+		case float64:
+			return v.imm.(float64) == v2.imm.(float64)
+		default:
+			return false
+		}
 	}
-	switch v.imm.(type) { // immediate value should be considered as part of label
-	case bool:
-		return v.imm.(bool) == v2.imm.(bool)
-	case int:
-		return v.imm.(int) == v2.imm.(int)
-	case float64:
-		return v.imm.(float64) == v2.imm.(float64)
-	default:
-		return false
-	}
+	return true
 }
 
 type ValueGraph struct {
@@ -480,15 +481,20 @@ func newValueGraph(fun *Func) *ValueGraph {
 	}
 
 	// Visit instructions of SSA form
-	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
 			g.processInstr(iter.Cur)
 		}
-	}, func(*BasicBlock) {})
+	}, DepthFirst)
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
+			g.fixPhi(iter.Cur)
+		}
+	}, DepthFirst)
 
 	// Mark unlabelled vertices
 	for v := range g.vertSet {
-		if len(v.label) == 0 { // labelled
+		if len(v.label) == 0 { // unlabelled
 			v.label = "undef"
 		}
 	}
@@ -530,23 +536,23 @@ func (g *ValueGraph) appendInfoToVert(sym *Symbol, label string, imm interface{}
 	g.symToVert[sym].appendInfo(label, imm, opd...)
 }
 
-func (g *ValueGraph) processInstr(instr IInstr) {
-	valToVert := func(val IValue) *ValueVert {
-		var vert *ValueVert
-		switch val.(type) {
-		case *ImmValue:
-			vert = newValueVert("imm", nil, val.(*ImmValue).Value)
-		case *Variable:
-			sym := val.(*Variable).Symbol
-			vert = g.symToVert[sym]
-			if vert == nil {
-				panic(NewIRError(fmt.Sprintf("vertex not found for symbol %s",
-					sym.ToString())))
-			}
+func (g *ValueGraph) valToVert(val IValue) *ValueVert {
+	var vert *ValueVert
+	switch val.(type) {
+	case *ImmValue:
+		vert = newValueVert("imm", nil, val.(*ImmValue).Value)
+	case *Variable:
+		sym := val.(*Variable).Symbol
+		vert = g.symToVert[sym]
+		if vert == nil {
+			panic(NewIRError(fmt.Sprintf("vertex not found for symbol %s",
+				sym.ToString())))
 		}
-		return vert
 	}
+	return vert
+}
 
+func (g *ValueGraph) processInstr(instr IInstr) {
 	switch instr.(type) {
 	case *Move:
 		move := instr.(*Move)
@@ -563,7 +569,7 @@ func (g *ValueGraph) processInstr(instr IInstr) {
 	case *Load:
 		load := instr.(*Load)
 		dst := load.Dst.(*Variable)
-		g.appendInfoToVert(dst.Symbol, "load", nil, valToVert(load.Src))
+		g.appendInfoToVert(dst.Symbol, "load", nil, g.valToVert(load.Src))
 
 	case *Malloc:
 		malloc := instr.(*Malloc)
@@ -573,16 +579,16 @@ func (g *ValueGraph) processInstr(instr IInstr) {
 	case *GetPtr:
 		getptr := instr.(*GetPtr)
 		dst := getptr.Result.(*Variable)
-		opd := []*ValueVert{valToVert(getptr.Base)}
+		opd := []*ValueVert{g.valToVert(getptr.Base)}
 		for _, val := range getptr.Indices {
-			opd = append(opd, valToVert(val))
+			opd = append(opd, g.valToVert(val))
 		}
 		g.appendInfoToVert(dst.Symbol, "getptr", nil, opd...)
 
 	case *PtrOffset:
 		ptroff := instr.(*PtrOffset)
 		dst := ptroff.Dst.(*Variable)
-		g.appendInfoToVert(dst.Symbol, "ptroff", nil, valToVert(ptroff.Src))
+		g.appendInfoToVert(dst.Symbol, "ptroff", nil, g.valToVert(ptroff.Src))
 
 	case *Clear:
 		clear := instr.(*Clear)
@@ -593,22 +599,38 @@ func (g *ValueGraph) processInstr(instr IInstr) {
 		unary := instr.(*Unary)
 		opd := unary.Operand.(*Variable)
 		result := unary.Result.(*Variable)
-		g.appendInfoToVert(result.Symbol, unaryOpStr[unary.Op], nil, valToVert(opd))
+		g.appendInfoToVert(result.Symbol, unaryOpStr[unary.Op], nil, g.valToVert(opd))
 
 	case *Binary:
 		binary := instr.(*Binary)
 		result := binary.Result.(*Variable)
 		g.appendInfoToVert(result.Symbol, binaryOpStr[binary.Op], nil,
-			valToVert(binary.Left), valToVert(binary.Right))
+			g.valToVert(binary.Left), g.valToVert(binary.Right))
 
 	case *Phi:
 		phi := instr.(*Phi)
 		result := phi.Result.(*Variable)
 		opd := make([]*ValueVert, 0)
 		for _, val := range phi.ValList {
-			opd = append(opd, valToVert(val))
+			opd = append(opd, g.valToVert(val))
 		}
-		g.appendInfoToVert(result.Symbol, "phi", nil, opd...)
+		g.appendInfoToVert(result.Symbol, fmt.Sprintf("phi@%s", phi.BB.Name),
+			nil, opd...)
+	}
+}
+
+// Update operands in phi instructions with latest vertices
+func (g *ValueGraph) fixPhi(instr IInstr) {
+	switch instr.(type) {
+	case *Phi:
+		phi := instr.(*Phi)
+		result := phi.Result.(*Variable)
+		vert := g.symToVert[result.Symbol]
+		for i, opd := range vert.operands {
+			if len(opd.label) == 0 {
+				vert.operands[i] = g.valToVert(phi.ValList[i])
+			}
+		}
 	}
 }
 
@@ -619,119 +641,64 @@ func (o *SSAOpt) globalValueNumber(fun *Func) {
 	graph := newValueGraph(fun)
 
 	// Initialize vertex partition and work list
-	B := make([]map[*ValueVert]bool, 0) // partition result: array of sets
-	pickOneVert := func(set map[*ValueVert]bool) *ValueVert {
-		for v := range set {
-			return v
-		}
-		return nil
-	}
-	copySet := func(set map[*ValueVert]bool) map[*ValueVert]bool {
-		cp := make(map[*ValueVert]bool)
-		for v := range set {
-			cp[v] = true
-		}
-		return cp
-	}
-	setEqual := func(s1, s2 map[*ValueVert]bool) bool {
-		if len(s1) != len(s2) {
-			return false
-		}
-		for v := range s1 {
-			if !s2[v] {
-				return false
-			}
-		}
-		return true
-	}
-
-	workList := make(map[int]bool, 0) // sets to be further partitioned in B
-	pickOneIndex := func(set map[int]bool) int {
-		for i := range set {
-			return i
-		}
-		return -1
-	}
+	part := make([]map[*ValueVert]bool, 0) // partition result: array of sets
+	valNum := make(map[*ValueVert]int)     // map vertices to value number
+	workList := make(map[int]bool, 0)      // sets to be further partitioned in B
 
 TraverseVertSet:
 	for v := range graph.vertSet {
 		// Create the first set
-		if len(B) == 0 {
-			B = append(B, map[*ValueVert]bool{v: true})
+		if len(part) == 0 {
+			part = append(part, map[*ValueVert]bool{v: true})
 			continue
 		}
 		// Test whether there is congruence
-		for i := 0; i < len(B); i++ {
-			if v.hasSameLabel(pickOneVert(B[i])) { // may be congruent
-				B[i][v] = true
-				if len(v.operands) > 0 && len(B[i]) > 1 { // depends on operands
+		for i := 0; i < len(part); i++ {
+			if v.hasSameLabel(o.pickOneVert(part[i])) { // may be congruent
+				part[i][v] = true
+				valNum[v] = i
+				if len(v.operands) > 0 && len(part[i]) > 1 { // depends on operands
 					workList[i] = true
 				}
 				continue TraverseVertSet
 			}
 		}
-		B = append(B, map[*ValueVert]bool{v: true}) // no congruence is found
+		part = append(part, map[*ValueVert]bool{v: true}) // no congruence is found
 	}
+	o.printPartition(part)
+	fmt.Println(workList)
 
 	// Further partition the vertex set until a fixed point is reached
-	for len(workList) > 0 {
-		i := pickOneIndex(workList)
-		delete(workList, i)
-		m := pickOneVert(B[i])
-		// Attempt to subdivide each nontrivial partition
-		for j, j1 := range m.operands {
-			S := copySet(B[i])
-			delete(S, m)
-			for len(S) > 0 {
-				x := pickOneVert(S)
-				delete(S, x)
-				if x.operands[j] != j1 {
-					B = append(B, map[*ValueVert]bool{m: true})
-					delete(B[i], m)
-					for len(S) > 0 {
-						z := pickOneVert(S)
-						delete(S, z)
-						for k := range pickOneVert(B[i]).operands {
-							k1 := m.operands[k]
-							if k1 != z.operands[k] {
-								B[len(B)-1][z] = true
-								delete(B[i], z)
-							}
-						} // end B[i] operand loop
-					} // end partition set loop
-					if len(B[i]) > 1 {
-						workList[i] = true
-					}
-					if len(B[len(B)-1]) > 1 {
-						workList[len(B)-1] = true
-					}
-				} // end x operand loop
-			} // end partition set loop
-		} // end m operand loop
-	} // end work list loop
+}
 
-	// Remove repeated set
-	repeated := make([]bool, len(B))
-	for i, v := range B {
-		if repeated[i] { // don't test if this set is already known to be repeated
-			continue
-		}
-		for j := i + 1; j < len(B); j++ {
-			if setEqual(v, B[j]) {
-				repeated[j] = true
-			}
-		}
+func (o *SSAOpt) pickOneIndex(set map[int]bool) int {
+	for i := range set {
+		return i
 	}
-	partition := make([]map[*ValueVert]bool, 0)
-	for i, b := range B {
-		if !repeated[i] {
-			partition = append(partition, b)
-		}
+	return -1
+}
+
+func (o *SSAOpt) pickOneVert(set map[*ValueVert]bool) *ValueVert {
+	for v := range set {
+		return v
 	}
-	for _, set := range partition {
+	return nil
+}
+
+func (o *SSAOpt) printPartition(part []map[*ValueVert]bool) {
+	for _, set := range part {
 		for s := range set {
 			s.print(os.Stdout)
 		}
 		fmt.Println()
 	}
+	fmt.Println()
+}
+
+func (o *SSAOpt) copySet(set map[*ValueVert]bool) map[*ValueVert]bool {
+	cp := make(map[*ValueVert]bool)
+	for v := range set {
+		cp[v] = true
+	}
+	return cp
 }
