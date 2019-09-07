@@ -7,11 +7,16 @@ import (
 )
 
 type SSAOpt struct {
-	prg *Program
+	prg   *Program
+	graph *ValueGraph
+	// Representative symbol lookup table
+	repSym map[*Symbol]*Symbol
 }
 
 func NewSSAOpt() *SSAOpt {
-	return &SSAOpt{}
+	return &SSAOpt{
+		repSym: make(map[*Symbol]*Symbol),
+	}
 }
 
 func (o *SSAOpt) Optimize(prg *Program) {
@@ -642,7 +647,7 @@ func (g *ValueGraph) fixPhi(instr IInstr) {
 // See Fig. 12.21 and 12.22 of Advanced Compiler Design and Implementation
 func (o *SSAOpt) globalValueNumber(fun *Func) {
 	// Build value graph out of SSA
-	graph := newValueGraph(fun)
+	o.graph = newValueGraph(fun)
 
 	// Initialize vertex partition and work list
 	part := make([]map[*ValueVert]bool, 0) // partition result: array of sets
@@ -650,7 +655,7 @@ func (o *SSAOpt) globalValueNumber(fun *Func) {
 	workList := make(map[int]bool, 0)      // sets to be further partitioned in B
 
 TraverseVertSet:
-	for v := range graph.vertSet {
+	for v := range o.graph.vertSet {
 		// Create the first set
 		if len(part) == 0 {
 			part = append(part, map[*ValueVert]bool{v: true})
@@ -714,6 +719,85 @@ TraverseVertSet:
 		}
 	}
 	o.printPartition(part, valNum)
+
+	// Build representative symbol lookup table
+	o.repSym = make(map[*Symbol]*Symbol)
+TraversePartition:
+	for _, set := range part {
+		var rep *Symbol
+		for vert := range set {
+			if vert.label == "param" {
+				continue TraversePartition // parameters cannot be merged
+			}
+			for sym := range vert.symbols {
+				if rep == nil {
+					rep = sym
+				}
+				o.repSym[sym] = rep
+			}
+		}
+	}
+
+	// Transform IR according to representative set
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		phiSymSet := make(map[*Symbol]bool)
+		for iter := NewInstrIter(block); iter.Valid(); {
+			remove := o.simplifyWithGVN(iter.Cur, phiSymSet)
+			if remove {
+				iter.Remove() // directly point to next instruction
+			} else {
+				iter.Next()
+			}
+		}
+	}, DepthFirst)
+}
+
+func (o *SSAOpt) simplifyWithGVN(instr IInstr, phiSymSet map[*Symbol]bool) bool {
+	// Replace symbols in use and define list with their representative symbols
+	defList := instr.GetDef()
+	for _, def := range defList {
+		switch (*def).(type) {
+		case *Variable:
+			sym := (*def).(*Variable).Symbol
+			if o.repSym[sym] != sym { // duplicated definition
+				return true
+			}
+		}
+	}
+	useList := instr.GetUse()
+	for _, use := range useList {
+		switch (*use).(type) {
+		case *Variable:
+			sym := (*use).(*Variable).Symbol
+			if o.repSym[sym] != nil {
+				*use = NewVariable(o.repSym[sym])
+			}
+		}
+	}
+
+	// Remove an instruction if it is redundant
+	switch instr.(type) {
+	case *Move:
+		move := instr.(*Move)
+		dst := move.Dst.(*Variable)
+		switch move.Src.(type) {
+		case *Variable:
+			src := move.Src.(*Variable)
+			if src.Symbol == dst.Symbol { // redundant move
+				return true
+			}
+		}
+	case *Phi:
+		phi := instr.(*Phi)
+		dst := phi.Result.(*Variable)
+		if phiSymSet[dst.Symbol] { // remove if a phi instruction already defined
+			return true
+		} else {
+			phiSymSet[dst.Symbol] = true
+		}
+	}
+
+	return false
 }
 
 func (o *SSAOpt) pickOneIndex(set map[int]bool) int {
