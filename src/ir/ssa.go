@@ -740,9 +740,8 @@ TraversePartition:
 
 	// Transform IR according to representative set
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
-		phiSymSet := make(map[*Symbol]bool)
 		for iter := NewInstrIter(block); iter.Valid(); {
-			remove := o.simplifyWithGVN(iter.Cur, phiSymSet)
+			remove := o.simplifyWithGVN(iter.Cur)
 			if remove {
 				iter.Remove() // directly point to next instruction
 			} else {
@@ -752,7 +751,7 @@ TraversePartition:
 	}, DepthFirst)
 }
 
-func (o *SSAOpt) simplifyWithGVN(instr IInstr, phiSymSet map[*Symbol]bool) bool {
+func (o *SSAOpt) simplifyWithGVN(instr IInstr) bool {
 	// Replace symbols in use and define list with their representative symbols
 	defList := instr.GetDef()
 	for _, def := range defList {
@@ -786,14 +785,6 @@ func (o *SSAOpt) simplifyWithGVN(instr IInstr, phiSymSet map[*Symbol]bool) bool 
 			if src.Symbol == dst.Symbol { // redundant move
 				return true
 			}
-		}
-	case *Phi:
-		phi := instr.(*Phi)
-		dst := phi.Result.(*Variable)
-		if phiSymSet[dst.Symbol] { // remove if a phi instruction already defined
-			return true
-		} else {
-			phiSymSet[dst.Symbol] = true
 		}
 	}
 
