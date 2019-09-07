@@ -76,7 +76,7 @@ func (p *Printer) VisitFunc(fun *Func) interface{} {
 
 func (p *Printer) VisitBasicBlock(bb *BasicBlock) interface{} {
 	p.write("%s:\n", bb.Name)
-	iter := NewInstrIter(bb)
+	iter := NewIterFromBlock(bb)
 	for iter.Valid() {
 		p.VisitInstr(iter.Cur)
 		iter.Next()

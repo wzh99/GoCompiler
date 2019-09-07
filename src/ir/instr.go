@@ -21,10 +21,17 @@ type InstrIter struct {
 }
 
 // Iterate from the first instruction of basic block
-func NewInstrIter(bb *BasicBlock) *InstrIter {
+func NewIterFromBlock(bb *BasicBlock) *InstrIter {
 	return &InstrIter{
 		Cur: bb.Head,
 		BB:  bb,
+	}
+}
+
+func NewIterFromInstr(instr IInstr) *InstrIter {
+	return &InstrIter{
+		Cur: instr,
+		BB:  instr.GetBasicBlock(),
 	}
 }
 

@@ -161,7 +161,6 @@ func (o *SSAOpt) computeDominators(fun *Func) {
 
 	// Visit dominance tree and mark in and out serial of nodes
 	fun.Enter.NumberDomTree()
-	fun.Enter.PrintDomTree()
 }
 
 func (o *SSAOpt) removeDeadBlocks(fun *Func) {
@@ -262,7 +261,7 @@ func (o *SSAOpt) insertPhi(fun *Func) {
 
 func (o *SSAOpt) getDefSymbolSet(block *BasicBlock) map[*Symbol]bool {
 	defSymSet := make(map[*Symbol]bool)
-	for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
+	for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
 		defList := iter.Cur.GetDef()
 		for _, def := range defList {
 			switch (*def).(type) {
@@ -310,7 +309,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 	var rename func(*BasicBlock)
 	rename = func(block *BasicBlock) {
 		// Replace use and definitions in current block
-		for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
 			instr := iter.Cur
 			// Replace use in instructions
 			if _, isPhi := instr.(*Phi); !isPhi { // not a phi instruction
@@ -330,7 +329,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 
 		// Replace use in phi instructions in successors
 		for succ := range block.Succ {
-			for iter := NewInstrIter(succ); iter.Valid(); iter.Next() {
+			for iter := NewIterFromBlock(succ); iter.Valid(); iter.Next() {
 				phi, isPhi := iter.Cur.(*Phi)
 				if !isPhi {
 					continue
@@ -350,7 +349,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 		}
 
 		// Remove symbol renamed in this frame
-		for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
 			for _, def := range o.getVarDef(iter.Cur) {
 				sym := (*def).(*Variable).Symbol
 				ver[sym.Name].pop()
@@ -490,12 +489,12 @@ func newValueGraph(fun *Func) *ValueGraph {
 
 	// Visit instructions of SSA form
 	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
-		for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
 			g.processInstr(iter.Cur)
 		}
 	}, func(*BasicBlock) {})
 	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
-		for iter := NewInstrIter(block); iter.Valid(); iter.Next() {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
 			g.fixPhi(iter.Cur)
 		}
 	}, func(*BasicBlock) {})
@@ -643,6 +642,30 @@ func (g *ValueGraph) fixPhi(instr IInstr) {
 	}
 }
 
+func (o *SSAOpt) pickOneIndex(set map[int]bool) int {
+	for i := range set {
+		return i
+	}
+	return -1
+}
+
+func (o *SSAOpt) pickOneVert(set map[*ValueVert]bool) *ValueVert {
+	for v := range set {
+		return v
+	}
+	return nil
+}
+
+func (o *SSAOpt) printPartition(part []map[*ValueVert]bool, valNum map[*ValueVert]int) {
+	for _, set := range part {
+		for s := range set {
+			s.print(os.Stdout, valNum)
+		}
+		fmt.Println()
+	}
+	fmt.Println()
+}
+
 // Partition vertices in value graph so that each vertex in a set shares one value number.
 // See Fig. 12.21 and 12.22 of Advanced Compiler Design and Implementation
 func (o *SSAOpt) globalValueNumber(fun *Func) {
@@ -718,7 +741,6 @@ TraverseVertSet:
 			}
 		}
 	}
-	o.printPartition(part, valNum)
 
 	// Build representative symbol lookup table
 	o.repSym = make(map[*Symbol]*Symbol)
@@ -740,7 +762,7 @@ TraversePartition:
 
 	// Transform IR according to representative set
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
-		for iter := NewInstrIter(block); iter.Valid(); {
+		for iter := NewIterFromBlock(block); iter.Valid(); {
 			remove := o.simplifyWithGVN(iter.Cur)
 			if remove {
 				iter.Remove() // directly point to next instruction
@@ -749,10 +771,11 @@ TraversePartition:
 			}
 		}
 	}, DepthFirst)
+	o.eliminateDeadCode(fun)
 }
 
 func (o *SSAOpt) simplifyWithGVN(instr IInstr) bool {
-	// Replace symbols in use and define list with their representative symbols
+	// Remove redefinitions
 	defList := instr.GetDef()
 	for _, def := range defList {
 		switch (*def).(type) {
@@ -763,6 +786,8 @@ func (o *SSAOpt) simplifyWithGVN(instr IInstr) bool {
 			}
 		}
 	}
+
+	// Replace symbols in use list with their representative symbols
 	useList := instr.GetUse()
 	for _, use := range useList {
 		switch (*use).(type) {
@@ -774,7 +799,7 @@ func (o *SSAOpt) simplifyWithGVN(instr IInstr) bool {
 		}
 	}
 
-	// Remove an instruction if it is redundant
+	// Remove an instruction if it satisfy other conditions
 	switch instr.(type) {
 	case *Move:
 		move := instr.(*Move)
@@ -791,26 +816,73 @@ func (o *SSAOpt) simplifyWithGVN(instr IInstr) bool {
 	return false
 }
 
-func (o *SSAOpt) pickOneIndex(set map[int]bool) int {
-	for i := range set {
-		return i
+// Dead Code Elimination algorithm. Can be used as a subroutine in multiple passes.
+// See Algorithm 19.12 of Modern Compiler Implementation in Java, Second Edition
+func (o *SSAOpt) eliminateDeadCode(fun *Func) {
+	// Initialize work list and def-use info from scope
+	type DefUseInfo struct {
+		def    IInstr // only one definition for each symbol in SSA form
+		useSet map[IInstr]bool
 	}
-	return -1
+	workList := make(map[*Symbol]bool)
+	defUse := make(map[*Symbol]*DefUseInfo)
+	for sym := range fun.Scope.Symbols {
+		workList[sym] = true
+		defUse[sym] = &DefUseInfo{
+			def:    nil,
+			useSet: make(map[IInstr]bool),
+		}
+	}
+
+	// Build definition and def-use info for symbols
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
+			instr := iter.Cur
+			defList := instr.GetDef()
+			if len(defList) > 0 {
+				def := (*defList[0]).(*Variable)
+				defUse[def.Symbol].def = instr
+			}
+			for _, use := range instr.GetUse() {
+				switch (*use).(type) {
+				case *Variable:
+					sym := (*use).(*Variable).Symbol
+					defUse[sym].useSet[instr] = true
+				}
+			}
+		}
+	}, DepthFirst)
+
+	// Iteratively eliminate dead code and symbols in function scope
+	for len(workList) > 0 {
+		sym := o.pickOneSymbol(workList)
+		delete(workList, sym)
+		dUInfo := defUse[sym]
+		if len(dUInfo.useSet) > 0 { // still being used
+			continue
+		}
+		if !sym.Param { // remove this symbol from scope if it is not a parameter
+			delete(fun.Scope.Symbols, sym)
+		}
+		defInstr := dUInfo.def
+		if defInstr == nil { // no instruction defined this symbol
+			continue
+		}
+		NewIterFromInstr(defInstr).Remove() // remove this instruction from function
+		for _, use := range defInstr.GetUse() {
+			switch (*use).(type) {
+			case *Variable:
+				x := (*use).(*Variable).Symbol
+				delete(defUse[x].useSet, defInstr)
+				workList[x] = true
+			}
+		}
+	}
 }
 
-func (o *SSAOpt) pickOneVert(set map[*ValueVert]bool) *ValueVert {
-	for v := range set {
-		return v
+func (o *SSAOpt) pickOneSymbol(set map[*Symbol]bool) *Symbol {
+	for s := range set {
+		return s
 	}
 	return nil
-}
-
-func (o *SSAOpt) printPartition(part []map[*ValueVert]bool, valNum map[*ValueVert]int) {
-	for _, set := range part {
-		for s := range set {
-			s.print(os.Stdout, valNum)
-		}
-		fmt.Println()
-	}
-	fmt.Println()
 }
