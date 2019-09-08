@@ -3,6 +3,7 @@ package ir
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 // Global Value Numbering
@@ -96,11 +97,17 @@ TraversePartition:
 			if vert.label == "param" {
 				continue TraversePartition // parameters cannot be merged
 			}
+			for sym := range vert.symbols { // choose non-temporary symbol first for readability
+				if strings.HasPrefix(sym.Name, "_s") && rep == nil {
+					rep = sym
+					break
+				}
+			}
 			for sym := range vert.symbols {
-				if rep == nil {
+				if rep == nil { // only temporary symbols
 					rep = sym
 				}
-				repSym[sym] = rep
+				repSym[sym] = rep // map this symbol to representative one
 			}
 		}
 	}
@@ -121,8 +128,8 @@ TraversePartition:
 
 func (o *GVNOpt) simplify(instr IInstr, repSym map[*Symbol]*Symbol) bool {
 	// Remove redefinitions
-	defList := instr.GetDef()
-	for _, def := range defList {
+	def := instr.GetDef()
+	if def != nil {
 		switch (*def).(type) {
 		case *Variable:
 			sym := (*def).(*Variable).Symbol

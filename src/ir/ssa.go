@@ -258,16 +258,17 @@ func (o *SSAOpt) insertPhi(fun *Func) {
 func (o *SSAOpt) getDefSymbolSet(block *BasicBlock) map[*Symbol]bool {
 	defSymSet := make(map[*Symbol]bool)
 	for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
-		defList := iter.Cur.GetDef()
-		for _, def := range defList {
-			switch (*def).(type) {
-			case *Variable: // only variables could be defined
-				sym := (*def).(*Variable).Symbol
-				if sym.Scope.Global {
-					continue
-				}
-				defSymSet[sym] = true
+		def := iter.Cur.GetDef()
+		if def == nil {
+			continue
+		}
+		switch (*def).(type) {
+		case *Variable: // only variables could be defined
+			sym := (*def).(*Variable).Symbol
+			if sym.Scope.Global {
+				continue
 			}
+			defSymSet[sym] = true
 		}
 	}
 	return defSymSet
@@ -316,11 +317,13 @@ func (o *SSAOpt) renameVar(fun *Func) {
 				}
 			}
 			// Replace definitions in instructions
-			for _, def := range o.getVarDef(instr) {
+			def := o.getVarDef(instr)
+			if def != nil {
 				sym := (*def).(*Variable).Symbol
 				newSym := ver[sym.Name].rename()
 				*def = NewVariable(newSym) // replace definition of x with x_i
 			}
+
 		} // end instruction iteration loop
 
 		// Replace use in phi instructions in successors
@@ -346,7 +349,8 @@ func (o *SSAOpt) renameVar(fun *Func) {
 
 		// Remove symbol renamed in this frame
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
-			for _, def := range o.getVarDef(iter.Cur) {
+			def := o.getVarDef(iter.Cur)
+			if def != nil {
 				sym := (*def).(*Variable).Symbol
 				ver[sym.Name].pop()
 			}
@@ -368,17 +372,19 @@ func (o *SSAOpt) getVarUse(instr IInstr) []*IValue {
 	return useList
 }
 
-func (o *SSAOpt) getVarDef(instr IInstr) []*IValue {
-	defList := make([]*IValue, 0)
-	for _, def := range instr.GetDef() {
-		if v, ok := (*def).(*Variable); ok {
-			if v.Symbol.Scope.Global {
-				continue
-			}
-			defList = append(defList, def)
-		}
+func (o *SSAOpt) getVarDef(instr IInstr) *IValue {
+	def := instr.GetDef()
+	if def == nil {
+		return nil
 	}
-	return defList
+	if v, ok := (*def).(*Variable); ok {
+		if v.Symbol.Scope.Global {
+			return nil
+		}
+		return def
+	} else {
+		return nil
+	}
 }
 
 type DefUseInfo struct {
@@ -400,10 +406,9 @@ func (o *SSAOpt) getDefUseInfo(fun *Func) map[*Symbol]*DefUseInfo {
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
 			instr := iter.Cur
-			defList := instr.GetDef()
-			if len(defList) > 0 {
-				def := (*defList[0]).(*Variable)
-				defUse[def.Symbol].def = instr
+			def := instr.GetDef()
+			if def != nil {
+				defUse[(*def).(*Variable).Symbol].def = instr
 			}
 			for _, use := range instr.GetUse() {
 				switch (*use).(type) {

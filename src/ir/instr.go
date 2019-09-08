@@ -10,7 +10,7 @@ type IInstr interface {
 	GetBasicBlock() *BasicBlock
 	SetBasicBlock(bb *BasicBlock)
 	// Values may be changed by other functions, pointers should be returned
-	GetDef() []*IValue
+	GetDef() *IValue
 	GetUse() []*IValue
 }
 
@@ -134,7 +134,7 @@ func (i *BaseInstr) GetBasicBlock() *BasicBlock { return i.BB }
 
 func (i *BaseInstr) SetBasicBlock(bb *BasicBlock) { i.BB = bb }
 
-func (i *BaseInstr) GetDef() []*IValue { return nil }
+func (i *BaseInstr) GetDef() *IValue { return nil }
 
 func (i *BaseInstr) GetUse() []*IValue { return nil }
 
@@ -161,7 +161,7 @@ func NewMove(src, dst IValue) *Move {
 	}
 }
 
-func (m *Move) GetDef() []*IValue { return []*IValue{&m.Dst} }
+func (m *Move) GetDef() *IValue { return &m.Dst }
 
 func (m *Move) GetUse() []*IValue { return []*IValue{&m.Src} }
 
@@ -187,7 +187,7 @@ func NewLoad(src, dst IValue) *Load {
 	}
 }
 
-func (l *Load) GetDef() []*IValue { return []*IValue{&l.Dst} }
+func (l *Load) GetDef() *IValue { return &l.Dst }
 
 func (l *Load) GetUse() []*IValue { return []*IValue{&l.Src} }
 
@@ -235,7 +235,7 @@ func NewMalloc(ret IValue) *Malloc {
 	}
 }
 
-func (m *Malloc) GetDef() []*IValue { return []*IValue{&m.Result} }
+func (m *Malloc) GetDef() *IValue { return &m.Result }
 
 // Get pointer to elements in data aggregate (array or struct)
 type GetPtr struct {
@@ -300,7 +300,7 @@ func (p *GetPtr) AppendIndex(index IValue, result IValue) *GetPtr {
 	return NewGetPtr(p.Base, result, append(p.Indices, index))
 }
 
-func (p *GetPtr) GetDef() []*IValue { return []*IValue{&p.Result} }
+func (p *GetPtr) GetDef() *IValue { return &p.Result }
 
 func (p *GetPtr) GetUse() []*IValue {
 	use := []*IValue{&p.Base}
@@ -331,7 +331,7 @@ func NewPtrOffset(src, dst IValue, offset int) *PtrOffset {
 	}
 }
 
-func (p *PtrOffset) GetDef() []*IValue { return []*IValue{&p.Dst} }
+func (p *PtrOffset) GetDef() *IValue { return &p.Dst }
 
 func (p *PtrOffset) GetUse() []*IValue { return []*IValue{&p.Src} }
 
@@ -347,7 +347,7 @@ func NewClear(value IValue) *Clear {
 	}
 }
 
-func (c *Clear) GetDef() []*IValue { return []*IValue{&c.Value} }
+func (c *Clear) GetDef() *IValue { return &c.Value }
 
 type UnaryOp int
 
@@ -389,7 +389,7 @@ func NewUnary(op UnaryOp, operand, result IValue) *Unary {
 	}
 }
 
-func (u *Unary) GetDef() []*IValue { return []*IValue{&u.Result} }
+func (u *Unary) GetDef() *IValue { return &u.Result }
 
 func (u *Unary) GetUse() []*IValue { return []*IValue{&u.Operand} }
 
@@ -467,7 +467,7 @@ func NewBinary(op BinaryOp, left, right, result IValue) *Binary {
 	}
 }
 
-func (b *Binary) GetDef() []*IValue { return []*IValue{&b.Result} }
+func (b *Binary) GetDef() *IValue { return &b.Result }
 
 func (b *Binary) GetUse() []*IValue { return []*IValue{&b.Left, &b.Right} }
 
@@ -627,7 +627,7 @@ func NewPhi(operands []PhiOpd, result IValue) *Phi {
 	return p
 }
 
-func (p *Phi) GetDef() []*IValue { return []*IValue{&p.Result} }
+func (p *Phi) GetDef() *IValue { return &p.Result }
 
 func (p *Phi) GetUse() []*IValue {
 	use := make([]*IValue, 0)
