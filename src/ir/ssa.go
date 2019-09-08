@@ -2,21 +2,14 @@ package ir
 
 import (
 	"fmt"
-	"io"
-	"os"
 )
 
 type SSAOpt struct {
-	prg   *Program
-	graph *ValueGraph
-	// Representative symbol lookup table
-	repSym map[*Symbol]*Symbol
+	prg *Program
 }
 
 func NewSSAOpt() *SSAOpt {
-	return &SSAOpt{
-		repSym: make(map[*Symbol]*Symbol),
-	}
+	return &SSAOpt{}
 }
 
 func (o *SSAOpt) Optimize(prg *Program) {
@@ -34,8 +27,11 @@ func (o *SSAOpt) optimize(fun *Func) {
 	o.insertPhi(fun)
 	o.renameVar(fun)
 
-	// Apply optimizing transformations to function
-	o.globalValueNumber(fun)
+	// Apply optimizations to each function
+	gvn := GVNOpt{opt: o} // global value numbering
+	gvn.optimize(fun)
+	sccp := SCCPOpt{opt: o} // sparse conditional constant propagation
+	sccp.optimize(fun)
 }
 
 // Transform tp an edge-split CFG
@@ -385,456 +381,22 @@ func (o *SSAOpt) getVarDef(instr IInstr) []*IValue {
 	return defList
 }
 
-// Format of labels:
-// Value vertices:
-// param, imm.
-// Instruction vertices:
-// move, load, malloc, getptr, ptroff, clear;
-// neg, not, add, sub, mul, div, mod, and, or, xor, shl, shr, eq, ne, lt, le, gt, ge;
-// call@%s, phi.
-// Store, return, jump and branch don't define values, so they are not included in value graph.
-type ValueVert struct {
-	label    string
-	symbols  map[*Symbol]bool // set of symbols this vertex maps to
-	imm      interface{}      // store immediate
-	operands []*ValueVert
+type DefUseInfo struct {
+	def    IInstr          // in SSA form, each value is defined only once
+	useSet map[IInstr]bool // a value may be used in different places
 }
 
-func newValueVert(label string, sym *Symbol, imm interface{}, opd ...*ValueVert) *ValueVert {
-	vert := &ValueVert{
-		label:    label,
-		imm:      imm,
-		symbols:  make(map[*Symbol]bool),
-		operands: opd,
-	}
-	if sym != nil {
-		vert.symbols[sym] = true
-	}
-	return vert
-}
-
-func newTempVert(sym *Symbol) *ValueVert {
-	return &ValueVert{
-		symbols: map[*Symbol]bool{sym: true},
-	}
-}
-
-func (v *ValueVert) appendInfo(label string, imm interface{}, opd ...*ValueVert) {
-	v.label = label
-	v.imm = imm
-	v.operands = append(v.operands, opd...)
-}
-
-func (v *ValueVert) print(writer io.Writer, valNum map[*ValueVert]int) {
-	str := fmt.Sprintf("{ label: %s, symbols: {", v.label)
-	i := 0
-	for s := range v.symbols {
-		if i != 0 {
-			str += ", "
-		}
-		str += s.ToString()
-		i++
-	}
-	str += "}, operands: {"
-	for i, opd := range v.operands {
-		if i != 0 {
-			str += ", "
-		}
-		str += fmt.Sprintf("%d", valNum[opd])
-	}
-	_, _ = fmt.Fprintln(writer, str+"} }")
-}
-
-func (v *ValueVert) hasSameLabel(v2 *ValueVert) bool {
-	if v.label != v2.label {
-		return false
-	}
-	switch v.label {
-	case "imm":
-		switch v.imm.(type) { // immediate value should be considered as part of label
-		case bool:
-			return v.imm.(bool) == v2.imm.(bool)
-		case int:
-			return v.imm.(int) == v2.imm.(int)
-		case float64:
-			return v.imm.(float64) == v2.imm.(float64)
-		default:
-			return false
-		}
-	}
-	return true
-}
-
-type ValueGraph struct {
-	vertSet map[*ValueVert]bool // set of all vertices in the graph
-	// edges are stored in vertices, not stored globally
-	symToVert map[*Symbol]*ValueVert // maps symbols to vertices
-}
-
-func newValueGraph(fun *Func) *ValueGraph {
-	// Initialize data structures
-	g := &ValueGraph{
-		vertSet:   make(map[*ValueVert]bool),
-		symToVert: make(map[*Symbol]*ValueVert),
-	}
-
-	// Add symbols as temporary vertices
-	for sym := range fun.Scope.Symbols {
-		if sym.Param {
-			g.addVert(newValueVert("param", sym, nil))
-		} else {
-			g.addVert(newTempVert(sym))
-		}
-	}
-
-	// Visit instructions of SSA form
-	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
-		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
-			g.processInstr(iter.Cur)
-		}
-	}, func(*BasicBlock) {})
-	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
-		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
-			g.fixPhi(iter.Cur)
-		}
-	}, func(*BasicBlock) {})
-
-	// Mark unlabelled vertices
-	for v := range g.vertSet {
-		if len(v.label) == 0 { // unlabelled
-			v.label = "undef"
-		}
-	}
-
-	return g
-}
-
-func (g *ValueGraph) print(writer io.Writer, valNum map[*ValueVert]int) {
-	for vert := range g.vertSet {
-		vert.print(writer, valNum)
-	}
-	_, _ = fmt.Fprintln(writer)
-}
-
-func (g *ValueGraph) addVert(vert *ValueVert) {
-	g.vertSet[vert] = true
-	for sym := range vert.symbols {
-		g.symToVert[sym] = vert
-	}
-}
-
-func (g *ValueGraph) addSymbolToVert(sym *Symbol, vert *ValueVert) {
-	if sym == nil {
-		panic(NewIRError("cannot add nil symbol to vertex"))
-	}
-	g.symToVert[sym] = vert
-	vert.symbols[sym] = true
-}
-
-func (g *ValueGraph) mergeVert(target, prey *Symbol) {
-	targVert := g.symToVert[target]
-	preyVert := g.symToVert[prey]
-	g.addSymbolToVert(prey, targVert)
-	delete(g.vertSet, preyVert)
-}
-
-func (g *ValueGraph) appendInfoToVert(sym *Symbol, label string, imm interface{},
-	opd ...*ValueVert) {
-	g.symToVert[sym].appendInfo(label, imm, opd...)
-}
-
-func (g *ValueGraph) valToVert(val IValue) *ValueVert {
-	var vert *ValueVert
-	switch val.(type) {
-	case *ImmValue:
-		vert = newValueVert("imm", nil, val.(*ImmValue).Value)
-		g.addVert(vert)
-	case *Variable:
-		sym := val.(*Variable).Symbol
-		vert = g.symToVert[sym]
-		if vert == nil {
-			panic(NewIRError(fmt.Sprintf("vertex not found for symbol %s",
-				sym.ToString())))
-		}
-	}
-	return vert
-}
-
-func (g *ValueGraph) processInstr(instr IInstr) {
-	switch instr.(type) {
-	case *Move:
-		move := instr.(*Move)
-		dst := move.Dst.(*Variable)
-		switch move.Src.(type) {
-		case *ImmValue:
-			imm := move.Src.(*ImmValue).Value
-			g.appendInfoToVert(dst.Symbol, "imm", imm)
-		case *Variable:
-			src := move.Src.(*Variable)
-			g.mergeVert(src.Symbol, dst.Symbol)
-		}
-
-	case *Load:
-		load := instr.(*Load)
-		dst := load.Dst.(*Variable)
-		g.appendInfoToVert(dst.Symbol, "load", nil, g.valToVert(load.Src))
-
-	case *Malloc:
-		malloc := instr.(*Malloc)
-		dst := malloc.Result.(*Variable)
-		g.appendInfoToVert(dst.Symbol, "malloc", nil)
-
-	case *GetPtr:
-		getptr := instr.(*GetPtr)
-		dst := getptr.Result.(*Variable)
-		opd := []*ValueVert{g.valToVert(getptr.Base)}
-		for _, val := range getptr.Indices {
-			opd = append(opd, g.valToVert(val))
-		}
-		g.appendInfoToVert(dst.Symbol, "getptr", nil, opd...)
-
-	case *PtrOffset:
-		ptroff := instr.(*PtrOffset)
-		dst := ptroff.Dst.(*Variable)
-		g.appendInfoToVert(dst.Symbol, "ptroff", nil, g.valToVert(ptroff.Src))
-
-	case *Clear:
-		clear := instr.(*Clear)
-		val := clear.Value.(*Variable)
-		g.appendInfoToVert(val.Symbol, "clear", nil)
-
-	case *Unary:
-		unary := instr.(*Unary)
-		opd := unary.Operand.(*Variable)
-		result := unary.Result.(*Variable)
-		g.appendInfoToVert(result.Symbol, unaryOpStr[unary.Op], nil, g.valToVert(opd))
-
-	case *Binary:
-		binary := instr.(*Binary)
-		result := binary.Result.(*Variable)
-		g.appendInfoToVert(result.Symbol, binaryOpStr[binary.Op], nil,
-			g.valToVert(binary.Left), g.valToVert(binary.Right))
-
-	case *Phi:
-		phi := instr.(*Phi)
-		result := phi.Result.(*Variable)
-		opd := make([]*ValueVert, 0)
-		for _, val := range phi.ValList {
-			opd = append(opd, g.valToVert(val))
-		}
-		g.appendInfoToVert(result.Symbol, fmt.Sprintf("phi@%s", phi.BB.Name),
-			nil, opd...)
-	}
-}
-
-// Update operands in phi instructions with latest vertices
-func (g *ValueGraph) fixPhi(instr IInstr) {
-	switch instr.(type) {
-	case *Phi:
-		phi := instr.(*Phi)
-		result := phi.Result.(*Variable)
-		vert := g.symToVert[result.Symbol]
-		for i, opd := range vert.operands {
-			if len(opd.label) == 0 {
-				vert.operands[i] = g.valToVert(phi.ValList[i])
-			}
-		}
-	}
-}
-
-func (o *SSAOpt) pickOneIndex(set map[int]bool) int {
-	for i := range set {
-		return i
-	}
-	return -1
-}
-
-func (o *SSAOpt) pickOneVert(set map[*ValueVert]bool) *ValueVert {
-	for v := range set {
-		return v
-	}
-	return nil
-}
-
-func (o *SSAOpt) printPartition(part []map[*ValueVert]bool, valNum map[*ValueVert]int) {
-	for _, set := range part {
-		for s := range set {
-			s.print(os.Stdout, valNum)
-		}
-		fmt.Println()
-	}
-	fmt.Println()
-}
-
-// Partition vertices in value graph so that each vertex in a set shares one value number.
-// See Fig. 12.21 and 12.22 of Advanced Compiler Design and Implementation
-func (o *SSAOpt) globalValueNumber(fun *Func) {
-	// Build value graph out of SSA
-	o.graph = newValueGraph(fun)
-
-	// Initialize vertex partition and work list
-	part := make([]map[*ValueVert]bool, 0) // partition result: array of sets
-	valNum := make(map[*ValueVert]int)     // map vertices to value number
-	workList := make(map[int]bool, 0)      // sets to be further partitioned in B
-
-TraverseVertSet:
-	for v := range o.graph.vertSet {
-		// Create the first set
-		if len(part) == 0 {
-			part = append(part, map[*ValueVert]bool{v: true})
-			valNum[v] = 0
-			continue
-		}
-		// Test whether there is congruence
-		for i := 0; i < len(part); i++ {
-			if v.hasSameLabel(o.pickOneVert(part[i])) { // may be congruent
-				part[i][v] = true
-				valNum[v] = i
-				if len(v.operands) > 0 && len(part[i]) > 1 { // depends on operands
-					workList[i] = true
-				}
-				continue TraverseVertSet
-			}
-		}
-		// No congruence is found, add to new set
-		n := len(part)
-		valNum[v] = n
-		part = append(part, map[*ValueVert]bool{v: true})
-	}
-
-	// Further partition the vertex set until a fixed point is reached
-	for len(workList) > 0 {
-		// Pick up one node set
-		wi := o.pickOneIndex(workList)
-		delete(workList, wi)
-		set := part[wi]
-		// Pick up one vertex and test it against others in the set
-		v := o.pickOneVert(set)
-		newSet := make(map[*ValueVert]bool)
-		for v2 := range set {
-			if v == v2 {
-				continue // one vertex must be congruent to itself
-			}
-			for i := range v.operands {
-				if valNum[v.operands[i]] != valNum[v2.operands[i]] {
-					// Not congruent, move to new one.
-					delete(set, v2)
-					newSet[v2] = true
-					break // no need to test more
-				}
-			}
-		}
-		if len(newSet) > 0 { // another cut made in current set
-			// Update the partition list and value number
-			n := len(part)
-			for v2 := range newSet {
-				valNum[v2] = n
-			}
-			part = append(part, newSet)
-			part[wi] = set
-			// Add original and new set to work list
-			if len(set) > 1 {
-				workList[wi] = true
-			}
-			if len(newSet) > 1 {
-				workList[n] = true
-			}
-		}
-	}
-
-	// Build representative symbol lookup table
-	o.repSym = make(map[*Symbol]*Symbol)
-TraversePartition:
-	for _, set := range part {
-		var rep *Symbol
-		for vert := range set {
-			if vert.label == "param" {
-				continue TraversePartition // parameters cannot be merged
-			}
-			for sym := range vert.symbols {
-				if rep == nil {
-					rep = sym
-				}
-				o.repSym[sym] = rep
-			}
-		}
-	}
-
-	// Transform IR according to representative set
-	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
-		for iter := NewIterFromBlock(block); iter.Valid(); {
-			remove := o.simplifyWithGVN(iter.Cur)
-			if remove {
-				iter.Remove() // directly point to next instruction
-			} else {
-				iter.Next()
-			}
-		}
-	}, DepthFirst)
-	o.eliminateDeadCode(fun)
-}
-
-func (o *SSAOpt) simplifyWithGVN(instr IInstr) bool {
-	// Remove redefinitions
-	defList := instr.GetDef()
-	for _, def := range defList {
-		switch (*def).(type) {
-		case *Variable:
-			sym := (*def).(*Variable).Symbol
-			if o.repSym[sym] != sym { // duplicated definition
-				return true
-			}
-		}
-	}
-
-	// Replace symbols in use list with their representative symbols
-	useList := instr.GetUse()
-	for _, use := range useList {
-		switch (*use).(type) {
-		case *Variable:
-			sym := (*use).(*Variable).Symbol
-			if o.repSym[sym] != nil {
-				*use = NewVariable(o.repSym[sym])
-			}
-		}
-	}
-
-	// Remove an instruction if it satisfy other conditions
-	switch instr.(type) {
-	case *Move:
-		move := instr.(*Move)
-		dst := move.Dst.(*Variable)
-		switch move.Src.(type) {
-		case *Variable:
-			src := move.Src.(*Variable)
-			if src.Symbol == dst.Symbol { // redundant move
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
-// Dead Code Elimination algorithm. Can be used as a subroutine in multiple passes.
-// See Algorithm 19.12 of Modern Compiler Implementation in Java, Second Edition
-func (o *SSAOpt) eliminateDeadCode(fun *Func) {
-	// Initialize work list and def-use info from scope
-	type DefUseInfo struct {
-		def    IInstr // only one definition for each symbol in SSA form
-		useSet map[IInstr]bool
-	}
-	workList := make(map[*Symbol]bool)
+func (o *SSAOpt) getDefUseInfo(fun *Func) map[*Symbol]*DefUseInfo {
+	// Initialize def-use lookup table
 	defUse := make(map[*Symbol]*DefUseInfo)
 	for sym := range fun.Scope.Symbols {
-		workList[sym] = true
 		defUse[sym] = &DefUseInfo{
 			def:    nil,
 			useSet: make(map[IInstr]bool),
 		}
 	}
 
-	// Build definition and def-use info for symbols
+	// Visit instructions and fill in the table
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
 			instr := iter.Cur
@@ -852,6 +414,19 @@ func (o *SSAOpt) eliminateDeadCode(fun *Func) {
 			}
 		}
 	}, DepthFirst)
+
+	return defUse
+}
+
+// Dead Code Elimination algorithm. Can be used as a subroutine in multiple passes.
+// See Algorithm 19.12 of Modern Compiler Implementation in Java, Second Edition
+func (o *SSAOpt) eliminateDeadCode(fun *Func) {
+	// Initialize work list and def-use info from scope
+	workList := make(map[*Symbol]bool)
+	for sym := range fun.Scope.Symbols {
+		workList[sym] = true
+	}
+	defUse := o.getDefUseInfo(fun)
 
 	// Iteratively eliminate dead code and symbols in function scope
 	for len(workList) > 0 {
