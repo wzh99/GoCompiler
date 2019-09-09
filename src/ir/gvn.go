@@ -113,9 +113,10 @@ TraversePartition:
 	}
 
 	// Transform IR according to representative set
+	definedSym := make(map[*Symbol]bool)
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); {
-			remove := o.simplify(iter.Cur, repSym)
+			remove := o.simplify(iter.Cur, repSym, definedSym)
 			if remove {
 				iter.Remove() // directly point to next instruction
 			} else {
@@ -126,22 +127,10 @@ TraversePartition:
 	o.opt.eliminateDeadCode(fun)
 }
 
-func (o *GVNOpt) simplify(instr IInstr, repSym map[*Symbol]*Symbol) bool {
-	// Remove redefinitions
-	def := instr.GetDef()
-	if def != nil {
-		switch (*def).(type) {
-		case *Variable:
-			sym := (*def).(*Variable).Symbol
-			if repSym[sym] != sym { // duplicated definition
-				return true
-			}
-		}
-	}
-
-	// Replace symbols in use list with their representative symbols
-	useList := instr.GetUse()
-	for _, use := range useList {
+func (o *GVNOpt) simplify(instr IInstr, repSym map[*Symbol]*Symbol,
+	defined map[*Symbol]bool) bool {
+	// Replace operands with representative symbols
+	for _, use := range instr.GetOpd() {
 		switch (*use).(type) {
 		case *Variable:
 			sym := (*use).(*Variable).Symbol
@@ -151,19 +140,17 @@ func (o *GVNOpt) simplify(instr IInstr, repSym map[*Symbol]*Symbol) bool {
 		}
 	}
 
-	// Remove an instruction if it satisfy other conditions
-	switch instr.(type) {
-	case *Move:
-		move := instr.(*Move)
-		dst := move.Dst.(*Variable)
-		switch move.Src.(type) {
-		case *Variable:
-			src := move.Src.(*Variable)
-			if src.Symbol == dst.Symbol { // redundant move
-				return true
-			}
-		}
+	// Replace definitions with representative symbols and remove redefinitions
+	def := instr.GetDef()
+	if def == nil {
+		return false
 	}
+	rep := repSym[(*def).(*Variable).Symbol]
+	if defined[rep] {
+		return true
+	}
+	*def = NewVariable(rep)
+	defined[rep] = true
 
 	return false
 }

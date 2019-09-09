@@ -30,8 +30,8 @@ func (o *SSAOpt) optimize(fun *Func) {
 	// Apply optimizations to each function
 	gvn := GVNOpt{opt: o} // global value numbering
 	gvn.optimize(fun)
-	sccp := SCCPOpt{opt: o} // sparse conditional constant propagation
-	sccp.optimize(fun)
+	//sccp := SCCPOpt{opt: o} // sparse conditional constant propagation
+	//sccp.optimize(fun)
 }
 
 // Transform tp an edge-split CFG
@@ -166,9 +166,10 @@ func (o *SSAOpt) removeDeadBlocks(fun *Func) {
 	}, DepthFirst)
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for pred := range block.Pred {
-			if !reachable[pred] {
-				pred.DisconnectTo(block)
+			if reachable[pred] {
+				continue
 			}
+			pred.DisconnectTo(block)
 		}
 	}, DepthFirst)
 }
@@ -361,7 +362,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 
 func (o *SSAOpt) getVarUse(instr IInstr) []*IValue {
 	useList := make([]*IValue, 0)
-	for _, use := range instr.GetUse() {
+	for _, use := range instr.GetOpd() {
 		if v, ok := (*use).(*Variable); ok {
 			if v.Symbol.Scope.Global {
 				continue
@@ -410,7 +411,7 @@ func (o *SSAOpt) getDefUseInfo(fun *Func) map[*Symbol]*DefUseInfo {
 			if def != nil {
 				defUse[(*def).(*Variable).Symbol].def = instr
 			}
-			for _, use := range instr.GetUse() {
+			for _, use := range instr.GetOpd() {
 				switch (*use).(type) {
 				case *Variable:
 					sym := (*use).(*Variable).Symbol
@@ -435,7 +436,7 @@ func (o *SSAOpt) eliminateDeadCode(fun *Func) {
 
 	// Iteratively eliminate dead code and symbols in function scope
 	for len(workList) > 0 {
-		sym := o.pickOneSymbol(workList)
+		sym := pickOneSymbol(workList)
 		delete(workList, sym)
 		dUInfo := defUse[sym]
 		if len(dUInfo.useSet) > 0 { // still being used
@@ -449,7 +450,7 @@ func (o *SSAOpt) eliminateDeadCode(fun *Func) {
 			continue
 		}
 		NewIterFromInstr(defInstr).Remove() // remove this instruction from function
-		for _, use := range defInstr.GetUse() {
+		for _, use := range defInstr.GetOpd() {
 			switch (*use).(type) {
 			case *Variable:
 				x := (*use).(*Variable).Symbol
@@ -460,7 +461,7 @@ func (o *SSAOpt) eliminateDeadCode(fun *Func) {
 	}
 }
 
-func (o *SSAOpt) pickOneSymbol(set map[*Symbol]bool) *Symbol {
+func pickOneSymbol(set map[*Symbol]bool) *Symbol {
 	for s := range set {
 		return s
 	}

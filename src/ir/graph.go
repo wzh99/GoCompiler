@@ -89,19 +89,31 @@ func (v *SSAVert) hasSameLabel(v2 *SSAVert) bool {
 		return false
 	}
 	switch v.label {
-	case "imm":
-		switch v.imm.(type) { // immediate value should be considered as part of label
-		case bool:
-			return v.imm.(bool) == v2.imm.(bool)
-		case int:
-			return v.imm.(int) == v2.imm.(int)
-		case float64:
-			return v.imm.(float64) == v2.imm.(float64)
-		default:
-			return false
-		}
+	case "imm": // immediate value should be considered as part of label
+		return immEq(v.imm, v2.imm)
 	}
 	return true
+}
+
+func immEq(i1, i2 interface{}) bool {
+	switch i1.(type) { // immediate value should be considered as part of label
+	case bool:
+		switch i2.(type) {
+		case bool:
+			return i1.(bool) == i2.(bool)
+		}
+	case int:
+		switch i2.(type) {
+		case int:
+			return i1.(int) == i2.(int)
+		}
+	case float64:
+		switch i2.(type) {
+		case float64:
+			return i1.(float64) == i2.(float64)
+		}
+	}
+	return false
 }
 
 type SSAGraph struct {
@@ -141,7 +153,7 @@ func newSSAGraph(fun *Func) *SSAGraph {
 	// Mark unlabelled vertices
 	for v := range g.vertSet {
 		if len(v.label) == 0 { // unlabelled
-			v.label = "undef"
+			v.label = "undef_" + pickOneSymbol(v.symbols).Type.ToString()
 		}
 	}
 

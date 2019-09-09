@@ -11,7 +11,7 @@ type IInstr interface {
 	SetBasicBlock(bb *BasicBlock)
 	// Values may be changed by other functions, pointers should be returned
 	GetDef() *IValue
-	GetUse() []*IValue
+	GetOpd() []*IValue
 }
 
 // Instruction iterator
@@ -136,7 +136,7 @@ func (i *BaseInstr) SetBasicBlock(bb *BasicBlock) { i.BB = bb }
 
 func (i *BaseInstr) GetDef() *IValue { return nil }
 
-func (i *BaseInstr) GetUse() []*IValue { return nil }
+func (i *BaseInstr) GetOpd() []*IValue { return nil }
 
 // Move data from one operand to another
 type Move struct {
@@ -163,7 +163,7 @@ func NewMove(src, dst IValue) *Move {
 
 func (m *Move) GetDef() *IValue { return &m.Dst }
 
-func (m *Move) GetUse() []*IValue { return []*IValue{&m.Src} }
+func (m *Move) GetOpd() []*IValue { return []*IValue{&m.Src} }
 
 // Load value from pointer to an operand
 type Load struct {
@@ -189,7 +189,7 @@ func NewLoad(src, dst IValue) *Load {
 
 func (l *Load) GetDef() *IValue { return &l.Dst }
 
-func (l *Load) GetUse() []*IValue { return []*IValue{&l.Src} }
+func (l *Load) GetOpd() []*IValue { return []*IValue{&l.Src} }
 
 // Store the value in an operand to a pointer
 type Store struct {
@@ -214,7 +214,7 @@ func NewStore(src, dst IValue) *Store {
 }
 
 // Only focus the value destination pointer, not the memory content it points to.
-func (s *Store) GetUse() []*IValue { return []*IValue{&s.Src, &s.Dst} }
+func (s *Store) GetOpd() []*IValue { return []*IValue{&s.Src, &s.Dst} }
 
 // Allocate memory in heap space
 type Malloc struct {
@@ -302,7 +302,7 @@ func (p *GetPtr) AppendIndex(index IValue, result IValue) *GetPtr {
 
 func (p *GetPtr) GetDef() *IValue { return &p.Result }
 
-func (p *GetPtr) GetUse() []*IValue {
+func (p *GetPtr) GetOpd() []*IValue {
 	use := []*IValue{&p.Base}
 	for i := range p.Indices {
 		use = append(use, &p.Indices[i])
@@ -333,7 +333,7 @@ func NewPtrOffset(src, dst IValue, offset int) *PtrOffset {
 
 func (p *PtrOffset) GetDef() *IValue { return &p.Dst }
 
-func (p *PtrOffset) GetUse() []*IValue { return []*IValue{&p.Src} }
+func (p *PtrOffset) GetOpd() []*IValue { return []*IValue{&p.Src} }
 
 // Set memory content of specified value to all zero
 type Clear struct {
@@ -391,7 +391,7 @@ func NewUnary(op UnaryOp, operand, result IValue) *Unary {
 
 func (u *Unary) GetDef() *IValue { return &u.Result }
 
-func (u *Unary) GetUse() []*IValue { return []*IValue{&u.Operand} }
+func (u *Unary) GetOpd() []*IValue { return []*IValue{&u.Operand} }
 
 type BinaryOp int
 
@@ -469,7 +469,7 @@ func NewBinary(op BinaryOp, left, right, result IValue) *Binary {
 
 func (b *Binary) GetDef() *IValue { return &b.Result }
 
-func (b *Binary) GetUse() []*IValue { return []*IValue{&b.Left, &b.Right} }
+func (b *Binary) GetOpd() []*IValue { return []*IValue{&b.Left, &b.Right} }
 
 type Jump struct {
 	BaseInstr
@@ -499,7 +499,7 @@ func NewBranch(cond IValue, bTrue, bFalse *BasicBlock) *Branch {
 	}
 }
 
-func (b *Branch) GetUse() []*IValue { return []*IValue{&b.Cond} }
+func (b *Branch) GetOpd() []*IValue { return []*IValue{&b.Cond} }
 
 type Call struct {
 	BaseInstr
@@ -550,7 +550,7 @@ type Return struct {
 	Values []IValue
 }
 
-func (r *Return) GetUse() []*IValue {
+func (r *Return) GetOpd() []*IValue {
 	use := make([]*IValue, 0)
 	for i := range r.Values {
 		use = append(use, &r.Values[i])
@@ -629,7 +629,7 @@ func NewPhi(operands []PhiOpd, result IValue) *Phi {
 
 func (p *Phi) GetDef() *IValue { return &p.Result }
 
-func (p *Phi) GetUse() []*IValue {
+func (p *Phi) GetOpd() []*IValue {
 	use := make([]*IValue, 0)
 	for _, ptr := range p.BBToVal {
 		use = append(use, ptr)
