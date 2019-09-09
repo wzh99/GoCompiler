@@ -446,8 +446,8 @@ func (o *SSAOpt) eliminateDeadCode(fun *Func) {
 			delete(fun.Scope.Symbols, sym)
 		}
 		defInstr := dUInfo.def
-		if defInstr == nil { // no instruction defined this symbol
-			continue
+		if defInstr == nil { // an undefined symbol
+			continue // skip removing its defining instruction
 		}
 		NewIterFromInstr(defInstr).Remove() // remove this instruction from function
 		for _, use := range defInstr.GetOpd() {
@@ -459,6 +459,13 @@ func (o *SSAOpt) eliminateDeadCode(fun *Func) {
 			}
 		}
 	}
+}
+
+func pickOneInstr(set map[IInstr]bool) IInstr {
+	for i := range set {
+		return i
+	}
+	return nil
 }
 
 func pickOneSymbol(set map[*Symbol]bool) *Symbol {
