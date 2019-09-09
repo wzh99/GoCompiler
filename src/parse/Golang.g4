@@ -34,7 +34,7 @@ grammar Golang;
 
 //SourceFile       = PackageClause ";" { ImportDecl ";" } { TopLevelDecl ";" } .
 sourceFile
-    : LINE_FEED+ packageClause LINE_FEED+ ( importDecl LINE_FEED+ )* ( topLevelDecl LINE_FEED+ )* EOF
+    : LINE_FEED* packageClause LINE_FEED+ ( importDecl LINE_FEED+ )* ( topLevelDecl LINE_FEED+ )* EOF
     ;
 
 //PackageClause  = "package" PackageName .

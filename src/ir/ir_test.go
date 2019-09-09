@@ -3,31 +3,15 @@ package ir
 import (
 	"ast"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"io/ioutil"
 	"os"
 	"parse"
 	"testing"
 )
 
-const source = `
-package main
-
-func test3(n int) int {
-	i, j := 1, 1
-	for j > n {
-		if i % 2 == 0 {
-			i++
-			j++
-		} else {
-			i += 3
-			j += 3
-		}
-	}
-	return j
-}
-`
-
 func TestIRBuild(t *testing.T) {
-	input := antlr.NewInputStream(source)
+	source, _ := ioutil.ReadFile("_source.go")
+	input := antlr.NewInputStream(string(source))
 	lexer := parse.NewGolangLexer(input)
 	tokens := antlr.NewCommonTokenStream(lexer, antlr.LexerDefaultTokenChannel)
 	parser := parse.NewGolangParser(tokens)

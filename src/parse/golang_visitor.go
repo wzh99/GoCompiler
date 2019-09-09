@@ -1,4 +1,4 @@
-// Code generated from /Users/littlefrog/GoCompiler/src/parse/Golang.g4 by ANTLR 4.7.2. DO NOT EDIT.
+// Code generated from D:/Projects/Go/GoCompiler/src/parse\Golang.g4 by ANTLR 4.7.2. DO NOT EDIT.
 
 package parse // Golang
 
