@@ -1,7 +1,7 @@
-package ir
+package main
 
 /*
-func test() {
+func test1() {
 	a, d := 3, 2
 	for {
 		f := a + d
@@ -16,7 +16,7 @@ func test() {
 	}
 }*/
 
-func test() int {
+func test2() int {
 	i, j := 1, 1
 	for j%2 != 0 {
 		if j > 4 {

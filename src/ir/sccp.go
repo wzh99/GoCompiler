@@ -1,7 +1,5 @@
 package ir
 
-import "fmt"
-
 // Sparse Conditional Constant Propagation
 // See Figure 10.9 of Engineering a Compiler, Second Edition and Advanced Compiler
 // Implementation and Design, Second Edition.
@@ -65,8 +63,6 @@ func (o *SCCPOpt) optimize(fun *Func) {
 			if instr == nil { // point to an empty block
 				goto AccessSSAList
 			}
-
-			// Test whether this instruction has been visited before
 			if o.instrExec[instr] {
 				goto AccessSSAList
 			}
@@ -113,13 +109,13 @@ func (o *SCCPOpt) optimize(fun *Func) {
 	}
 
 	// Print result
-	for vert, val := range o.value {
+	/*for vert, val := range o.value {
 		if len(vert.symbols) == 0 {
 			continue
 		}
 		fmt.Printf("%s: %d, %s\n", pickOneSymbol(vert.symbols).ToString(), val,
 			vert.imm)
-	}
+	}*/
 
 	// Transform original instructions, if possible.
 	blockWL := map[*BasicBlock]bool{fun.Enter: true}
