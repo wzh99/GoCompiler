@@ -160,18 +160,29 @@ func (o *SSAOpt) computeDominators(fun *Func) {
 }
 
 func (o *SSAOpt) removeDeadBlocks(fun *Func) {
-	reachable := make(map[*BasicBlock]bool)
+	// Mark blocks that is sure to be reachable
+	reached := make(map[*BasicBlock]bool)
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
-		reachable[block] = true
+		reached[block] = true
 	}, DepthFirst)
+	// Remove all unreachable predecessors to reachable blocks
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for pred := range block.Pred {
-			if reachable[pred] {
-				continue
+			if !reached[block] {
+				pred.DisconnectTo(block)
 			}
-			pred.DisconnectTo(block)
 		}
 	}, DepthFirst)
+}
+
+func removeOneBlock(set map[*BasicBlock]bool) *BasicBlock {
+	var block *BasicBlock
+	for b := range set {
+		block = b
+		break
+	}
+	delete(set, block)
+	return block
 }
 
 func (o *SSAOpt) insertPhi(fun *Func) {

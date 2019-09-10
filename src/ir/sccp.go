@@ -94,8 +94,6 @@ func (o *SCCPOpt) optimize(fun *Func) {
 			vert := edge.use
 			instr := vert.instr
 			if !o.instrExec[instr] {
-				// if a basic block is unreachable, then its every instruction cannot be
-				// reachable.
 				continue
 			}
 
@@ -116,6 +114,66 @@ func (o *SCCPOpt) optimize(fun *Func) {
 		fmt.Printf("%s: %d, %s\n", pickOneSymbol(vert.symbols).ToString(), val,
 			vert.imm)
 	}
+
+	// Transform original instructions, if possible.
+	blockWL := map[*BasicBlock]bool{fun.Enter: true}
+	visited := make(map[*BasicBlock]bool)
+	for len(blockWL) > 0 {
+		block := removeOneBlock(blockWL)
+		if visited[block] {
+			continue
+		}
+		visited[block] = true
+
+		// Replace use with constants
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
+			instr := iter.Cur
+			for _, opd := range instr.GetOpd() {
+				switch (*opd).(type) {
+				case *Variable:
+					sym := (*opd).(*Variable).Symbol
+					vert := o.ssaGraph.symToVert[sym]
+					if o.value[vert] != CONST {
+						continue
+					}
+					imm := vert.imm
+					switch imm.(type) {
+					case bool:
+						*opd = NewI1Imm(imm.(bool))
+					case int:
+						*opd = NewI64Imm(imm.(int))
+					case float64:
+						*opd = NewF64Imm(imm.(float64))
+					}
+				}
+			}
+		}
+
+		// Remove unreachable branch
+		iter := NewIterFromInstr(block.Tail)
+		switch iter.Cur.(type) {
+		case *Branch:
+			branch := iter.Cur.(*Branch)
+			switch branch.Cond.(type) {
+			case *ImmValue:
+				imm := branch.Cond.(*ImmValue)
+				target := branch.True
+				if !imm.Value.(bool) {
+					target = branch.False
+				}
+				iter.Remove()
+				block.JumpTo(target)
+			}
+		}
+
+		// Add successors to work list
+		for succ := range block.Succ {
+			blockWL[succ] = true
+		}
+	}
+
+	o.opt.removeDeadBlocks(fun)
+	o.opt.eliminateDeadCode(fun)
 }
 
 func (o *SCCPOpt) removeOneCFGEdge() CFGEdge {

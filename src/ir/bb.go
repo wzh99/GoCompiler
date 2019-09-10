@@ -63,12 +63,14 @@ func (b *BasicBlock) PushBack(instr IInstr) {
 // Automatically create a jump instruction in the receiver block, and create edges in
 // two blocks.
 func (b *BasicBlock) JumpTo(b2 *BasicBlock) {
+	b.Succ = make(map[*BasicBlock]bool) // clear successors
 	instr := NewJump(b2)
 	b.PushBack(instr)
 	b.ConnectTo(b2)
 }
 
 func (b *BasicBlock) BranchTo(cond IValue, trueBB, falseBB *BasicBlock) {
+	b.Succ = make(map[*BasicBlock]bool) // clear successors
 	instr := NewBranch(cond, trueBB, falseBB)
 	b.PushBack(instr)
 	b.ConnectTo(trueBB)

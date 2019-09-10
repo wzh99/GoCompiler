@@ -115,6 +115,26 @@ func (i *InstrIter) Remove() {
 	i.Cur = next
 }
 
+func (i *InstrIter) Replace(instr IInstr) {
+	if i.Cur == nil {
+		return // no instruction to remove
+	}
+	prev, next := i.Cur.GetPrev(), i.Cur.GetNext()
+	if prev != nil { // not the first node
+		prev.SetNext(instr)
+	} else {
+		i.BB.Head = instr
+	}
+	if next != nil { // not the last node
+		next.SetPrev(instr)
+	} else {
+		i.BB.Tail = instr
+	}
+	instr.SetPrev(prev)
+	instr.SetNext(next)
+	i.Cur = instr
+}
+
 type BaseInstr struct {
 	// an instruction also serves as a node in the linked list of a basic block
 	Prev, Next IInstr
