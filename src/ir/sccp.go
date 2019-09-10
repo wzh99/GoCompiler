@@ -62,19 +62,22 @@ func (o *SCCPOpt) optimize(fun *Func) {
 			}
 			instr := edge.to
 			o.edgeExec[edge] = true
-			firstNonPhi := o.evalAllPhis(instr)
+			if instr == nil { // point to an empty block
+				goto AccessSSAList
+			}
 
 			// Test whether this instruction has been visited before
 			if o.instrExec[instr] {
 				goto AccessSSAList
 			}
-			o.instrExec[instr] = true
 
-			// Visit all non-phi instructions in the basic block
+			// Visit all phi instructions and one other instruction in the block
+			firstNonPhi := o.evalAllPhis(instr)
 			if firstNonPhi == nil {
 				goto AccessSSAList
 			}
 			instr = firstNonPhi
+			o.instrExec[instr] = true
 			switch instr.(type) {
 			case *Jump:
 				jump := instr.(*Jump)
@@ -111,6 +114,9 @@ func (o *SCCPOpt) optimize(fun *Func) {
 
 	// Print result
 	for vert, val := range o.value {
+		if len(vert.symbols) == 0 {
+			continue
+		}
 		fmt.Printf("%s: %d, %s\n", pickOneSymbol(vert.symbols).ToString(), val,
 			vert.imm)
 	}
@@ -484,8 +490,8 @@ func (o *SCCPOpt) evalPhi(phi *Phi) {
 		return // lattice value not changed, nothing to do
 	}
 	o.value[rVert], rVert.imm = lat, imm
-	for _, v := range rVert.opd {
-		o.ssaWL[SSAEdge{def: v, use: rVert}] = true
+	for u := range rVert.use {
+		o.ssaWL[SSAEdge{def: rVert, use: u}] = true
 	}
 }
 
@@ -497,6 +503,7 @@ func (o *SCCPOpt) evalAllPhis(instr IInstr) IInstr {
 		if !ok {
 			break
 		}
+		o.instrExec[phi] = true
 		o.evalPhi(phi)
 		iter.Next()
 	}

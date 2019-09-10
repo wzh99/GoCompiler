@@ -1,5 +1,6 @@
 package ir
 
+/*
 func test() {
 	a, d := 3, 2
 	for {
@@ -13,11 +14,11 @@ func test() {
 		}
 		d = 2
 	}
-}
+}*/
 
-/*func test() {
+func test() int {
 	i, j := 1, 1
-	for j%2 == 0 {
+	for j%2 != 0 {
 		if j > 4 {
 			i++
 			j++
@@ -26,5 +27,5 @@ func test() {
 			j += 2
 		}
 	}
-	return
-}*/
+	return i + j
+}
