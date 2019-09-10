@@ -30,8 +30,8 @@ func (o *SSAOpt) optimize(fun *Func) {
 	// Apply optimizations to each function
 	gvn := GVNOpt{opt: o} // global value numbering
 	gvn.optimize(fun)
-	//sccp := SCCPOpt{opt: o} // sparse conditional constant propagation
-	//sccp.optimize(fun)
+	sccp := SCCPOpt{opt: o} // sparse conditional constant propagation
+	sccp.optimize(fun)
 }
 
 // Transform tp an edge-split CFG

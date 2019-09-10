@@ -22,9 +22,9 @@ func TestIRBuild(t *testing.T) {
 	sema.VisitProgram(asTree)
 	irBuilder := NewBuilder()
 	irPrg := irBuilder.VisitProgram(asTree).(*Program)
-	irFile, _ := os.Create("_out.ir")
-	printer := NewPrinter(irFile)
 	ssa := NewSSAOpt()
 	ssa.Optimize(irPrg)
+	irFile, _ := os.Create("_out.ir")
+	printer := NewPrinter(irFile)
 	printer.VisitProgram(irPrg)
 }

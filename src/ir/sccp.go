@@ -3,23 +3,22 @@ package ir
 import "fmt"
 
 // Sparse Conditional Constant Propagation
-// See Figure 10.9 of Engineering a Compiler, Second Edition.
+// See Figure 10.9 of Engineering a Compiler, Second Edition and Advanced Compiler
+// Implementation and Design, Second Edition.
 type SCCPOpt struct {
-	opt      *SSAOpt
-	ssaGraph *SSAGraph
-	cfgWL    map[CFGEdge]bool
-	ssaWL    map[SSAEdge]bool
-	value    map[*SSAVert]LatValue
-	edgeExec map[CFGEdge]bool
+	opt       *SSAOpt
+	ssaGraph  *SSAGraph
+	cfgWL     map[CFGEdge]bool
+	ssaWL     map[SSAEdge]bool
+	value     map[*SSAVert]LatValue
+	edgeExec  map[CFGEdge]bool
+	instrExec map[IInstr]bool
 }
 
-// In SCCP, it's assumed that one basic block only contain one assignment, along with
-// some possible phi instructions. However, a basic block containing several assignment
-// does not interfere with the algorithm. Therefore, it's fairly enough to only store
-// edges that connect actual basic blocks, and ignore those between linearly executed
-// instructions.
+// In SCCP, it's assumed that one basic block only contain one assignment along with
+// several phi instructions.
 type CFGEdge struct {
-	from, to *BasicBlock
+	from, to IInstr
 }
 
 type SSAEdge struct {
@@ -37,12 +36,15 @@ const (
 
 func (o *SCCPOpt) optimize(fun *Func) {
 	// Initialize data structures
+	if fun.Enter.Head == nil { // empty function, no need to optimize
+		return
+	}
 	o.ssaGraph = newSSAGraph(fun)
-	o.cfgWL = map[CFGEdge]bool{CFGEdge{from: nil, to: fun.Enter}: true}
+	o.cfgWL = map[CFGEdge]bool{CFGEdge{from: nil, to: fun.Enter.Head}: true}
 	o.ssaWL = make(map[SSAEdge]bool)
 	o.value = make(map[*SSAVert]LatValue) // default to TOP
 	o.edgeExec = make(map[CFGEdge]bool)
-	blockExec := make(map[*BasicBlock]bool)
+	o.instrExec = make(map[IInstr]bool)
 	for vert := range o.ssaGraph.vertSet {
 		if vert.imm != nil {
 			o.value[vert] = CONST // mark constant vertices in value table
@@ -52,49 +54,46 @@ func (o *SCCPOpt) optimize(fun *Func) {
 	// Propagate constants iteratively with help of CFG and SSA work lists
 	for len(o.cfgWL) > 0 || len(o.ssaWL) > 0 {
 		if len(o.cfgWL) > 0 {
-			// Possible visit phi instruction depending on whether this edge has been visited
+			// Possible visit phi instruction depending on whether this edge has been
+			// visited
 			edge := o.removeOneCFGEdge()
 			if o.edgeExec[edge] { // don't execute this edge
-				goto AccessSSAWorkList
+				goto AccessSSAList
 			}
-			block := edge.to
+			instr := edge.to
 			o.edgeExec[edge] = true
-			firstNonPhi := o.evalAllPhis(block)
+			firstNonPhi := o.evalAllPhis(instr)
 
-			// Test whether this block has been visited before
-			if blockExec[block] {
-				goto AccessSSAWorkList
+			// Test whether this instruction has been visited before
+			if o.instrExec[instr] {
+				goto AccessSSAList
 			}
+			o.instrExec[instr] = true
 
 			// Visit all non-phi instructions in the basic block
-			// Here we allow multiple non-phi instructions, thus saving the compiler
-			// from visiting every edge between linearly executed instructions.
 			if firstNonPhi == nil {
-				goto AccessSSAWorkList
+				goto AccessSSAList
 			}
-			for iter := NewIterFromInstr(firstNonPhi); iter.Valid(); iter.Next() {
-				instr := iter.Cur
-				switch instr.(type) {
-				case *Jump:
-					jump := instr.(*Jump)
-					// an actual block encountered, add it to work list
-					o.cfgWL[CFGEdge{from: block, to: jump.Target}] = true
-				case *Branch:
-					o.evalBranch(instr.(*Branch))
-				default:
-					o.evalAssign(instr)
-				}
+			instr = firstNonPhi
+			switch instr.(type) {
+			case *Jump:
+				jump := instr.(*Jump)
+				o.cfgWL[CFGEdge{from: instr, to: jump.Target.Head}] = true
+			case *Branch:
+				o.evalBranch(instr.(*Branch))
+			default:
+				o.cfgWL[CFGEdge{from: instr, to: instr.GetNext()}] = true
+				o.evalAssign(instr)
 			} // end instruction iteration
 		}
 
-	AccessSSAWorkList:
+	AccessSSAList:
 		if len(o.ssaWL) > 0 {
 			// Skip instruction that cannot be proved to be reachable
 			edge := o.removeOneSSAEdge()
 			vert := edge.use
 			instr := vert.instr
-			block := instr.GetBasicBlock()
-			if !blockExec[block] {
+			if !o.instrExec[instr] {
 				// if a basic block is unreachable, then its every instruction cannot be
 				// reachable.
 				continue
@@ -104,9 +103,6 @@ func (o *SCCPOpt) optimize(fun *Func) {
 			switch instr.(type) {
 			case *Phi:
 				o.evalPhi(instr.(*Phi))
-			case *Jump:
-				jump := instr.(*Jump)
-				o.cfgWL[CFGEdge{from: block, to: jump.Target}] = true
 			case *Branch:
 				o.evalBranch(instr.(*Branch))
 			default:
@@ -117,7 +113,8 @@ func (o *SCCPOpt) optimize(fun *Func) {
 
 	// Print result
 	for vert, val := range o.value {
-		fmt.Printf("%s: %d, %s\n", vert.label, val, vert.imm)
+		fmt.Printf("%s: %d, %s\n", pickOneSymbol(vert.symbols).ToString(), val,
+			vert.imm)
 	}
 }
 
@@ -399,8 +396,8 @@ func (o *SCCPOpt) evalBranch(branch *Branch) {
 		}
 	}
 
-	trueEdge := CFGEdge{from: branch.BB, to: branch.True}
-	falseEdge := CFGEdge{from: branch.BB, to: branch.False}
+	trueEdge := CFGEdge{from: branch, to: branch.True.Head}
+	falseEdge := CFGEdge{from: branch, to: branch.False.Head}
 	if imm != nil {
 		// Only choose the corresponding block if condition is constant
 		if imm.(bool) {
@@ -416,53 +413,6 @@ func (o *SCCPOpt) evalBranch(branch *Branch) {
 }
 
 func (o *SCCPOpt) evalPhi(phi *Phi) {
-	o.evalOperands(phi)
-	o.evalResult(phi)
-}
-
-// Evaluate all phi instruction in a basic block, and return the first non-phi instruction
-func (o *SCCPOpt) evalAllPhis(block *BasicBlock) IInstr {
-	iter := NewIterFromBlock(block)
-	for { // visit operands of all phi instructions
-		phi, ok := iter.Cur.(*Phi)
-		if !ok {
-			break
-		}
-		o.evalOperands(phi)
-		iter.Next()
-	}
-	for { // visit result of all phi instructions
-		phi, ok := iter.Cur.(*Phi)
-		if !ok {
-			break
-		}
-		o.evalResult(phi)
-		iter.Next()
-	}
-	return iter.Cur
-}
-
-// Propagate result of phi instruction to its operand
-func (o *SCCPOpt) evalOperands(phi *Phi) {
-	result := phi.Result.(*Variable)
-	rVert := o.ssaGraph.symToVert[result.Symbol]
-	if o.value[rVert] == BOTTOM {
-		return // cannot propagate
-	}
-	for pred, valPtr := range phi.BBToVal {
-		edge := CFGEdge{from: pred, to: phi.BB}
-		if !o.edgeExec[edge] { // don't propagate on unreachable edge
-			continue
-		}
-		switch (*valPtr).(type) {
-		case *Variable:
-			pVert := o.ssaGraph.symToVert[(*valPtr).(*Variable).Symbol]
-			o.value[pVert], pVert.imm = o.value[rVert], rVert.imm
-		}
-	}
-}
-
-func (o *SCCPOpt) evalResult(phi *Phi) {
 	result := phi.Result.(*Variable)
 	rVert := o.ssaGraph.symToVert[result.Symbol]
 	if o.value[rVert] == BOTTOM {
@@ -481,17 +431,31 @@ func (o *SCCPOpt) evalResult(phi *Phi) {
 	}
 }
 
+// Evaluate all phi instruction in a basic block, and return the first non-phi instruction
+func (o *SCCPOpt) evalAllPhis(instr IInstr) IInstr {
+	iter := NewIterFromInstr(instr)
+	for { // visit result of all phi instructions
+		phi, ok := iter.Cur.(*Phi)
+		if !ok {
+			break
+		}
+		o.evalPhi(phi)
+		iter.Next()
+	}
+	return iter.Cur
+}
+
 func (o *SCCPOpt) meet(v1 LatValue, i1 interface{}, v2 LatValue, i2 interface{}) (
 	lat LatValue, imm interface{}) {
 	hasOne := func(v LatValue) bool {
 		return v == v1 || v == v2
 	}
 	if hasOne(TOP) {
-		other := v2
-		if other == TOP { // try to find lower one
-			other = v1
+		otherVal, otherImm := v2, i2
+		if otherVal == TOP { // try to find lower one
+			otherVal, otherImm = v1, i1
 		}
-		return other, nil
+		return otherVal, otherImm
 	}
 	if hasOne(BOTTOM) {
 		return BOTTOM, nil

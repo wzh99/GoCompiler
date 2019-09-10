@@ -1,6 +1,6 @@
 package ir
 
-/*func test() int {
+func test() {
 	a, d := 3, 2
 	for {
 		f := a + d
@@ -9,13 +9,13 @@ package ir
 		if f <= g {
 			f = g + 1
 		} else if g >= a {
-			return g
+			return
 		}
 		d = 2
 	}
-}*/
+}
 
-func test() {
+/*func test() {
 	i, j := 1, 1
 	for j%2 == 0 {
 		if j > 4 {
@@ -27,4 +27,4 @@ func test() {
 		}
 	}
 	return
-}
+}*/
