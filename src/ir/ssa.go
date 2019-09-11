@@ -116,8 +116,8 @@ func (o *SSAOpt) computeDominators(fun *Func) {
 		parent := node.parent
 		semi := parent
 		for v := range node.bb.Pred {
-			// Predecessors of vertices are visited. If a predecessor is unreachable, it will not
-			// be visited in DFS, and it cannot be found in the map.
+			// Predecessors of vertices are visited. If a predecessor is unreachable, it will
+			// not be visited in DFS, and it cannot be found in the map.
 			pred := bbToNode[v]
 			var newSemi *DFTreeNode
 			if pred.dfNum <= node.dfNum { // use semi-dominator theorem
@@ -258,7 +258,8 @@ func (o *SSAOpt) insertPhi(fun *Func) {
 				}
 				y.PushFront(NewPhi(bbToSym, NewVariable(a)))
 				APhi[y][a] = true
-				// Add to work list if variable a is defined in a block that it previously was not
+				// Add to work list if variable a is defined in a block that it previously
+				// was not
 				if !AOrig[y][a] {
 					workList[y] = true
 				}
@@ -470,13 +471,6 @@ func (o *SSAOpt) eliminateDeadCode(fun *Func) {
 			}
 		}
 	}
-}
-
-func pickOneInstr(set map[IInstr]bool) IInstr {
-	for i := range set {
-		return i
-	}
-	return nil
 }
 
 func pickOneSymbol(set map[*Symbol]bool) *Symbol {

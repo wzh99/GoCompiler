@@ -113,6 +113,4 @@ func NewFunc(tp *FuncType, name string, scope *Scope) *Func {
 	}
 }
 
-func (f *Func) AddExitBlock(exit *BasicBlock) { f.Exit[exit] = true }
-
 func (f *Func) ToString() string { return f.Name }

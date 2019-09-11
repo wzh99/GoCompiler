@@ -2,29 +2,30 @@ program main
 
 func _global(): 
 _B0_Start:
+	return 
 
-func test(_env: *void): 
+func test2(_env: *void): 
 _B1_Start:
 	jump _B5_ForCond
 _B5_ForCond:
-	phi (_B1_Start -> 1: i64, _B3_ForPost -> $_s1_i.4: i64) => $_s1_i.2: i64
-	mod $_s1_i.2: i64, 2: i64 => $_t2.2: i64
+	phi (_B1_Start -> 1: i64, _B3_ForPost -> $_s1_j.4: i64) => $_s1_j.2: i64
+	mod $_s1_j.2: i64, 2: i64 => $_t2.2: i64
 	ne $_t2.2: i64, 0: i64 => $_t3.2: i1
 	branch $_t3.2: i1 ? _B2_ForBody : _B4_ForNext
 _B2_ForBody:
-	gt $_s1_i.2: i64, 4: i64 => $_t4.2: i1
+	gt $_s1_j.2: i64, 4: i64 => $_t4.2: i1
 	branch $_t4.2: i1 ? _B6_IfThen : _B8_IfFalse
 _B4_ForNext:
-	add $_s1_i.2: i64, $_s1_i.2: i64 => $_t9.1: i64
+	add $_s1_j.2: i64, $_s1_j.2: i64 => $_t9.1: i64
 	return $_t9.1: i64
 _B6_IfThen:
-	add $_s1_i.2: i64, 1: i64 => $_s1_i.5: i64
+	add $_s1_j.2: i64, 1: i64 => $_s1_i.5: i64
 	jump _B7_IfNext
 _B8_IfFalse:
-	add $_s1_i.2: i64, 2: i64 => $_s1_i.3: i64
+	add $_s1_j.2: i64, 2: i64 => $_s1_i.3: i64
 	jump _B7_IfNext
 _B7_IfNext:
-	phi (_B6_IfThen -> $_s1_i.5: i64, _B8_IfFalse -> $_s1_i.3: i64) => $_s1_i.4: i64
+	phi (_B6_IfThen -> $_s1_i.5: i64, _B8_IfFalse -> $_s1_i.3: i64) => $_s1_j.4: i64
 	jump _B3_ForPost
 _B3_ForPost:
 	jump _B5_ForCond

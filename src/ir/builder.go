@@ -86,6 +86,7 @@ func (b *Builder) VisitProgram(node *ast.ProgramNode) interface{} {
 }
 
 func (b *Builder) VisitFuncDecl(decl *ast.FuncDecl) interface{} {
+	// Build CFG IR
 	b.fun.Scope = NewLocalScope() // build function scope
 	if !decl.Scope.Global {
 		b.VisitScope(decl.Scope) // global scope has already been visited
@@ -95,6 +96,29 @@ func (b *Builder) VisitFuncDecl(decl *ast.FuncDecl) interface{} {
 	for _, stmt := range decl.Stmts {
 		b.VisitStmt(stmt)
 	}
+
+	// Determine exit blocks of function
+	b.fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		ret := b.fun.Type.(*FuncType).Return
+		if len(block.Succ) > 0 { // blocks in the middle
+			return
+		}
+		tail := block.Tail
+		switch tail.(type) {
+		case *Return:
+			b.fun.Exit[block] = true // is an exit block
+		default:
+			if len(ret.Field) == 0 { // don't return values
+				block.PushBack(NewReturn(b.fun, []IValue{}))
+			} else {
+				panic(NewIRError(fmt.Sprintf(
+					"missing return instruction at the end of exit block %s",
+					block.Name),
+				))
+			}
+		}
+	}, DepthFirst)
+
 	return nil
 }
 
@@ -273,10 +297,12 @@ func (b *Builder) moveToDst(dstNode ast.IExprNode, inter IValue) {
 		dstRet := b.VisitExpr(unary.Expr)
 
 		switch dstRet.(type) {
-		case IValue: // an symbol value, must be a pointer type (*p = s)
+		case IValue:
+			// an symbol value, must be a pointer type (*p = s)
 			b.emit(NewStore(inter, dstRet.(IValue))) // store to the pointer
 
-		case *GetPtr: // an get pointer instruction (*p.f = s)
+		case *GetPtr:
+			// an get pointer instruction (*p.f = s)
 			getPtr := dstRet.(*GetPtr)
 			b.emit(getPtr)            // emit that instruction
 			fieldPtr := getPtr.Result // get pointer to that pointer field

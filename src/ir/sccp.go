@@ -1,8 +1,8 @@
 package ir
 
 // Sparse Conditional Constant Propagation
-// See Figure 10.9 of Engineering a Compiler, Second Edition and Advanced Compiler
-// Implementation and Design, Second Edition.
+// See Figure 10.9 of Engineering a Compiler, Second Edition and Figure 12.31 of
+// Advanced Compiler Implementation and Design, Second Edition.
 type SCCPOpt struct {
 	opt       *SSAOpt
 	ssaGraph  *SSAGraph
@@ -211,10 +211,9 @@ func (o *SCCPOpt) evalAssign(instr IInstr) {
 	}
 
 	// Propagate constant according to instruction type
-	// Computed values are stored in vertices, and they will later be reflected on
-	// instructions.
-	// Since there is injective mapping from instruction type to vertex type, using
-	// instruction type in switch clause is much safer.
+	// Computed values are stored in vertices, and they will later be reflected on instructions.
+	// Since there is injective mapping from instruction type to vertex type, using instruction
+	// type in switch clause is much safer.
 	prevVal, prevImm := o.value[vert], vert.imm
 	switch instr.(type) {
 	case *Load, *Malloc, *GetPtr, *PtrOffset:
