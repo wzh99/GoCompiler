@@ -15,7 +15,7 @@ type BasicBlock struct {
 	// Dominance tree can be constructed from CFG.
 	ImmDom   *BasicBlock          // immediate dominator of this block
 	Children map[*BasicBlock]bool // blocks that this immediately dominates
-	serial   [2]int               // pre-order traversal serial [in, out] that determine dominance
+	serial   [2]int               // pre-order serial [in, out] that determine dominance
 }
 
 func NewBasicBlock(label string, fun *Func) *BasicBlock {
@@ -45,9 +45,8 @@ func (b *BasicBlock) PushFront(instr IInstr) {
 func (b *BasicBlock) PushBack(instr IInstr) {
 	switch b.Tail.(type) {
 	case *Branch, *Jump:
-		panic(NewIRError(
-			fmt.Sprintf("cannot add to block %s ended with jump or branch instruction",
-				b.Name),
+		panic(NewIRError(fmt.Sprintf(
+			"cannot add to block %s ended with jump or branch instruction", b.Name),
 		))
 	}
 	instr.SetBasicBlock(b)
@@ -89,25 +88,30 @@ func (b *BasicBlock) DisconnectTo(to *BasicBlock) {
 	delete(to.Pred, b)
 }
 
-func (b *BasicBlock) SplitEdgeTo(to, inserted *BasicBlock) { // b: predecessor, to: successor
-	if b.Succ[to] == false {
-		panic(NewIRError(fmt.Sprintf("%s is not successor of %s", b.Name, to.Name)))
+// Change successor to a new block, and modify target in jump or branch instruction
+func (b *BasicBlock) ChangeSuccTo(prev, new *BasicBlock) {
+	if b.Succ[prev] == false {
+		panic(NewIRError(fmt.Sprintf("%s is not successor of %s", b.Name, new.Name)))
 	}
-	b.DisconnectTo(to)  // predecessor -X- successor
-	inserted.JumpTo(to) // inserted <-> successor
+	b.DisconnectTo(prev) // predecessor -X- successor
+	b.ConnectTo(new)     // predecessor <-> inserted
 	switch b.Tail.(type) {
 	case *Jump:
 		tail := b.Tail.(*Jump)
-		tail.Target = inserted
+		tail.Target = new
 	case *Branch:
 		tail := b.Tail.(*Branch)
-		if tail.True == to {
-			tail.True = inserted
-		} else if tail.False == to {
-			tail.False = inserted
+		if tail.True == prev {
+			tail.True = new
+		} else if tail.False == prev {
+			tail.False = new
 		}
 	}
-	b.ConnectTo(inserted) // predecessor <-> inserted
+}
+
+func (b *BasicBlock) SplitEdgeTo(to, inserted *BasicBlock) {
+	b.ChangeSuccTo(to, inserted)
+	inserted.JumpTo(to) // inserted <-> successor
 }
 
 type GraphTrav int
@@ -115,6 +119,8 @@ type GraphTrav int
 const (
 	DepthFirst GraphTrav = iota
 	BreadthFirst
+	PostOrder
+	ReversePostOrder
 )
 
 // Accept current basic block as vertex in a graph
@@ -124,6 +130,10 @@ func (b *BasicBlock) AcceptAsVert(action func(*BasicBlock), method GraphTrav) {
 		b.depthFirst(action)
 	case BreadthFirst:
 		b.breadthFirst(action)
+	case PostOrder:
+		b.postOrder(action)
+	case ReversePostOrder:
+		b.reversePostOrder(action)
 	}
 }
 
@@ -158,6 +168,32 @@ func (b *BasicBlock) breadthFirst(action func(*BasicBlock)) {
 		for bb := range top.Succ {
 			queue = append(queue, bb)
 		}
+	}
+}
+
+func (b *BasicBlock) postOrder(action func(*BasicBlock)) {
+	visited := make(map[*BasicBlock]bool)
+	var visit func(*BasicBlock)
+	visit = func(block *BasicBlock) {
+		if visited[block] {
+			return
+		}
+		visited[block] = true
+		for succ := range block.Succ {
+			visit(succ)
+		}
+		action(block)
+	}
+	visit(b)
+}
+
+func (b *BasicBlock) reversePostOrder(action func(*BasicBlock)) {
+	postOrder := make([]*BasicBlock, 0)
+	b.postOrder(func(block *BasicBlock) {
+		postOrder = append(postOrder, block)
+	})
+	for i := len(postOrder) - 1; i >= 0; i-- {
+		action(postOrder[i])
 	}
 }
 

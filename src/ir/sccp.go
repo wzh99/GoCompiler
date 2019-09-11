@@ -60,9 +60,6 @@ func (o *SCCPOpt) optimize(fun *Func) {
 			}
 			instr := edge.to
 			o.edgeExec[edge] = true
-			if instr == nil { // point to an empty block
-				goto AccessSSAList
-			}
 			if o.instrExec[instr] {
 				goto AccessSSAList
 			}
@@ -81,7 +78,9 @@ func (o *SCCPOpt) optimize(fun *Func) {
 			case *Branch:
 				o.evalBranch(instr.(*Branch))
 			default:
-				o.cfgWL[CFGEdge{from: instr, to: instr.GetNext()}] = true
+				if next := instr.GetNext(); next != nil {
+					o.cfgWL[CFGEdge{from: instr, to: next}] = true
+				}
 				o.evalAssign(instr)
 			} // end instruction iteration
 		}
@@ -305,7 +304,7 @@ func (o *SCCPOpt) evalBinary(op BinaryOp, left, right *SSAVert) (lat LatValue,
 		} else {
 			cVert = right
 		}
-		// Only those operators which support short circuit evaluation returns a constant
+		// Only those operators which support short circuit evaluation return a constant
 		switch op {
 		case MUL:
 			switch tp {

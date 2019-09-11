@@ -154,20 +154,20 @@ func (o *GVNOpt) simplify(instr IInstr, repSym map[*Symbol]*Symbol,
 	defined[rep] = true
 
 	// Break phi-phi cycle
+	// For some vertices a, b, x, y in graph, a = phi(b, x), b = phi(a, y)
 	// Vertices of temporary variables may create a phi-phi cycle in SSA graph.
 	// The two phi instructions are redundant, so they should be eliminated.
 	vert := o.graph.symToVert[rep]
-	if strings.HasPrefix(vert.label, "phi") {
-		for u1 := range vert.use {
-			if !strings.HasPrefix(u1.label, "phi") {
-				continue
-			}
-			for u2 := range u1.use {
-				if u2 == vert {
-					return true
-				}
-			}
-		}
+	if !strings.HasPrefix(vert.label, "phi") || len(vert.use) != 1 {
+		return false
+	}
+	phi1 := o.pickOneSSAVert(vert.use)
+	if !strings.HasPrefix(phi1.label, "phi") || len(phi1.use) != 1 {
+		return false
+	}
+	phi2 := o.pickOneSSAVert(phi1.use)
+	if phi2 == vert {
+		return true
 	}
 
 	return false

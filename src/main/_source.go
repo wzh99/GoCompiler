@@ -18,13 +18,10 @@ func test1() {
 
 func test2() int {
 	i, j := 1, 1
-	for j%2 != 0 {
-		if j > 4 {
+	for i%2 != 0 {
+		if j < 4 {
 			i++
 			j++
-		} else {
-			i += 2
-			j += 2
 		}
 	}
 	return i + j
