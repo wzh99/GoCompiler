@@ -1,8 +1,7 @@
 package ir
 
 // Sparse Conditional Constant Propagation
-// See Figure 10.9 of Engineering a Compiler, Second Edition and Figure 12.31 of
-// Advanced Compiler Implementation and Design, Second Edition.
+// See Figure 10.9 of EAC and Figure 12.31 of The Whale Book.
 type SCCPOpt struct {
 	opt       *SSAOpt
 	ssaGraph  *SSAGraph

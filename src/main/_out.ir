@@ -4,28 +4,28 @@ func _global():
 _B0_Start:
 	return 
 
-func test2(_env: *void): 
+func test3(_s1_a: i64, _s1_x: i64, _s1_y: i64, _env: *void): 
 _B1_Start:
-	jump _B5_ForCond
-_B5_ForCond:
-	phi (_B1_Start -> 1: i64, _B3_ForPost -> $_s1_j.4: i64) => $_s1_i.2: i64
-	mod $_s1_i.2: i64, 2: i64 => $_t2.2: i64
-	ne $_t2.2: i64, 0: i64 => $_t3.2: i1
-	branch $_t3.2: i1 ? _B2_ForBody : _B4_ForNext
-_B2_ForBody:
-	lt $_s1_i.2: i64, 4: i64 => $_t4.2: i1
-	branch $_t4.2: i1 ? _B6_IfThen : _B8_EdgeSplit
-_B4_ForNext:
-	add $_s1_i.2: i64, $_s1_i.2: i64 => $_t5.1: i64
-	return $_t5.1: i64
-_B6_IfThen:
-	add $_s1_i.2: i64, 1: i64 => $_s1_i.3: i64
-	jump _B7_IfNext
-_B8_EdgeSplit:
-	jump _B7_IfNext
-_B7_IfNext:
-	phi (_B8_EdgeSplit -> $_s1_i.2: i64, _B6_IfThen -> $_s1_i.3: i64) => $_s1_j.4: i64
-	jump _B3_ForPost
-_B3_ForPost:
-	jump _B5_ForCond
+	add $_s1_a.0: i64, 1: i64 => $_s1_z.1: i64
+	gt $_s1_x.0: i64, 3: i64 => $_t2.1: i1
+	branch $_t2.1: i1 ? _B2_IfThen : _B4_IfFalse
+_B2_IfThen:
+	mul $_s1_x.0: i64, $_s1_y.0: i64 => $_s5_b.1: i64
+	lt $_s1_y.0: i64, 5: i64 => $_t5.1: i1
+	branch $_t5.1: i1 ? _B5_IfThen : _B6_IfNext
+_B4_IfFalse:
+	lt $_s1_z.1: i64, 7: i64 => $_t9.1: i1
+	branch $_t9.1: i1 ? _B7_IfThen : _B8_IfNext
+_B5_IfThen:
+	add $_s5_b.1: i64, $_s5_b.1: i64 => $_t8.1: i64
+	return $_t8.1: i64
+_B6_IfNext:
+	jump _B3_IfNext
+_B7_IfThen:
+	return $_s1_z.1: i64
+_B8_IfNext:
+	jump _B3_IfNext
+_B3_IfNext:
+	mul $_s1_x.0: i64, $_s1_y.0: i64 => $_s5_b.1: i64
+	return $_s5_b.1: i64
 

@@ -32,6 +32,7 @@ func (o *SSAOpt) optimize(fun *Func) {
 	gvn.optimize(fun)
 	sccp := SCCPOpt{opt: o} // sparse conditional constant propagation
 	sccp.optimize(fun)
+	//_ := PREOpt{opt: o}
 }
 
 // Transform tp an edge-split CFG

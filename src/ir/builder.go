@@ -393,11 +393,15 @@ func (b *Builder) VisitIfStmt(stmt *ast.IfStmt) interface{} {
 	// Build IR in then and else clause
 	b.bb = trueBB
 	b.VisitBlockStmt(stmt.Then)
-	b.bb.JumpTo(nextBB)
+	if !b.bb.Terminates() {
+		b.bb.JumpTo(nextBB)
+	}
 	if hasElse {
 		b.bb = falseBB
 		b.VisitStmt(stmt.Else)
-		b.bb.JumpTo(nextBB)
+		if !b.bb.Terminates() {
+			b.bb.JumpTo(nextBB)
+		}
 	}
 	b.bb = nextBB
 
@@ -420,7 +424,7 @@ func (b *Builder) VisitForClauseStmt(stmt *ast.ForClauseStmt) interface{} {
 		condBB := b.newBasicBlock("ForCond")
 		newIteBB = condBB
 		initBB.JumpTo(condBB)                         // init -> cond
-		b.bb = condBB                                 // instructions must all be in a new block
+		b.bb = condBB                                 // must all be in a new block
 		b.shortCircuitCtrl(stmt.Cond, bodyBB, nextBB) // cond ? body : next
 	} else {
 		newIteBB = bodyBB

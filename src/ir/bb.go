@@ -76,6 +76,15 @@ func (b *BasicBlock) BranchTo(cond IValue, trueBB, falseBB *BasicBlock) {
 	b.ConnectTo(falseBB)
 }
 
+func (b *BasicBlock) Terminates() bool {
+	switch b.Tail.(type) {
+	case *Jump, *Branch, *Return:
+		return true
+	default:
+		return false
+	}
+}
+
 // This method only modifies the predecessor and successor set, and has nothing to do with
 // instructions in the blocks.
 func (b *BasicBlock) ConnectTo(to *BasicBlock) {

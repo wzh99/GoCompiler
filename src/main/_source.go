@@ -16,7 +16,7 @@ func test1() {
 	}
 }*/
 
-func test2() int {
+/*func test2() int {
 	i, j := 1, 1
 	for i%2 != 0 {
 		if j < 4 {
@@ -25,4 +25,19 @@ func test2() int {
 		}
 	}
 	return i + j
+}*/
+
+func test3(a, x, y int) int {
+	z := a + 1
+	if x > 3 {
+		a = x * y
+		if y < 5 {
+			b := x * y
+			return a + b
+		}
+	} else if z < 7 {
+		return z
+	}
+	c := x * y
+	return c
 }

@@ -8,7 +8,7 @@ import (
 
 // Global Value Numbering
 // Partition vertices in value graph so that each vertex in a set shares one value number.
-// See Fig. 12.21 and 12.22 of Advanced Compiler Design and Implementation
+// See Fig. 12.21 and 12.22 in The Whale Book.
 type GVNOpt struct {
 	opt   *SSAOpt
 	graph *SSAGraph
@@ -112,18 +112,30 @@ TraversePartition:
 		}
 	}
 
-	// Transform IR according to representative set
-	definedSym := make(map[*Symbol]bool)
-	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+	// Build defined symbol set of each block
+	defOut := make(map[*BasicBlock]map[*Symbol]bool)
+	copySet := func(set map[*Symbol]bool) map[*Symbol]bool {
+		cp := make(map[*Symbol]bool)
+		for s := range set {
+			cp[s] = true
+		}
+		return cp
+	}
+	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
+		if block.ImmDom == nil {
+			defOut[block] = make(map[*Symbol]bool)
+		} else {
+			defOut[block] = copySet(defOut[block.ImmDom])
+		}
 		for iter := NewIterFromBlock(block); iter.Valid(); {
-			remove := o.simplify(iter.Cur, repSym, definedSym)
+			remove := o.simplify(iter.Cur, repSym, defOut[block])
 			if remove {
 				iter.Remove() // directly point to next instruction
 			} else {
 				iter.Next()
 			}
 		}
-	}, DepthFirst)
+	}, func(*BasicBlock) {})
 
 	o.opt.eliminateDeadCode(fun)
 }
