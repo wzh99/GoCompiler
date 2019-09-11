@@ -5,34 +5,32 @@ import (
 )
 
 type SSAOpt struct {
+	opt []IOpt
 	prg *Program
 }
 
-func NewSSAOpt() *SSAOpt {
-	return &SSAOpt{}
+func NewSSAOpt(opt ...IOpt) *SSAOpt {
+	return &SSAOpt{opt: opt}
 }
 
 func (o *SSAOpt) Optimize(prg *Program) {
 	o.prg = prg
 	for _, fun := range prg.Funcs {
-		o.optimize(fun)
+		// Convert to SSA form
+		o.splitEdge(fun)
+		computeDominators(fun)
+		o.insertPhi(fun)
+		o.renameVar(fun)
+
+		// Apply optimizations to each function
+		for _, opt := range o.opt {
+			opt.Optimize(fun)
+		}
 	}
 }
 
-// See Chapter 19 of Modern Compiler Implementation in Java, Second Edition.
-func (o *SSAOpt) optimize(fun *Func) {
-	// Convert to SSA form
-	o.splitEdge(fun)
-	o.computeDominators(fun)
-	o.insertPhi(fun)
-	o.renameVar(fun)
-
-	// Apply optimizations to each function
-	gvn := GVNOpt{opt: o} // global value numbering
-	gvn.optimize(fun)
-	sccp := SCCPOpt{opt: o} // sparse conditional constant propagation
-	sccp.optimize(fun)
-	//_ := PREOpt{opt: o}
+type IOpt interface {
+	Optimize(*Func)
 }
 
 // Transform tp an edge-split CFG
@@ -57,7 +55,7 @@ func (o *SSAOpt) newBasicBlock(name string, fun *Func) *BasicBlock {
 
 // Use Lengauer-Tarjan Algorithm to build dominator tree.
 // This version has time complexity O(NlogN), not optimal but easier to understand.
-func (o *SSAOpt) computeDominators(fun *Func) {
+func computeDominators(fun *Func) {
 	// Define depth first tree node
 	type DFTreeNode struct {
 		bb       *BasicBlock
@@ -75,6 +73,11 @@ func (o *SSAOpt) computeDominators(fun *Func) {
 	// Build depth first tree
 	var dfs func(parent, cur *BasicBlock)
 	dfs = func(parent, cur *BasicBlock) {
+		// Initialize dominance tree members in basic block
+		cur.ImmDom = nil
+		cur.Children = make(map[*BasicBlock]bool)
+
+		// Build depth first tree node
 		node := &DFTreeNode{
 			bb:       cur,
 			dfNum:    len(nodes),
@@ -87,6 +90,8 @@ func (o *SSAOpt) computeDominators(fun *Func) {
 		}
 		nodes = append(nodes, node)
 		bbToNode[cur] = node
+
+		// Recursively build children nodes
 		for s := range cur.Succ {
 			if bbToNode[s] == nil {
 				dfs(cur, s)
@@ -111,7 +116,7 @@ func (o *SSAOpt) computeDominators(fun *Func) {
 		}
 		return node.best
 	}
-	o.removeDeadBlocks(fun)               // unreachable predecessors will cause error
+	removeDeadBlocks(fun) // unreachable predecessors will cause error
 	for i := len(nodes) - 1; i > 0; i-- { // back to forth, ignore root node
 		node := nodes[i]
 		parent := node.parent
@@ -137,7 +142,7 @@ func (o *SSAOpt) computeDominators(fun *Func) {
 		node.best = node
 		for v := range parent.bucket {
 			anc := ancestorWithLowestSemi(v) // link into spanning forest
-			if anc.semi == v.semi {          // use dominator theorem
+			if anc.semi == v.semi { // use dominator theorem
 				v.bb.SetImmDom(parent.bb)
 			} else { // defer until dominator is known
 				v.sameDom = anc
@@ -160,7 +165,7 @@ func (o *SSAOpt) computeDominators(fun *Func) {
 	fun.Enter.NumberDomTree()
 }
 
-func (o *SSAOpt) removeDeadBlocks(fun *Func) {
+func removeDeadBlocks(fun *Func) {
 	// Mark blocks that is sure to be reachable
 	reached := make(map[*BasicBlock]bool)
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
@@ -169,7 +174,7 @@ func (o *SSAOpt) removeDeadBlocks(fun *Func) {
 	// Remove all unreachable predecessors to reachable blocks
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for pred := range block.Pred {
-			if !reached[block] {
+			if !reached[pred] {
 				pred.DisconnectTo(block)
 			}
 		}
@@ -271,7 +276,7 @@ func (o *SSAOpt) insertPhi(fun *Func) {
 
 func (o *SSAOpt) getDefSymbolSet(block *BasicBlock) map[*Symbol]bool {
 	defSymSet := make(map[*Symbol]bool)
-	for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
+	for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 		def := iter.Cur.GetDef()
 		if def == nil {
 			continue
@@ -320,7 +325,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 	var rename func(*BasicBlock)
 	rename = func(block *BasicBlock) {
 		// Replace use and definitions in current block
-		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			instr := iter.Cur
 			// Replace use in instructions
 			if _, isPhi := instr.(*Phi); !isPhi { // not a phi instruction
@@ -342,7 +347,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 
 		// Replace use in phi instructions in successors
 		for succ := range block.Succ {
-			for iter := NewIterFromBlock(succ); iter.Valid(); iter.Next() {
+			for iter := NewIterFromBlock(succ); iter.Valid(); iter.MoveNext() {
 				phi, isPhi := iter.Cur.(*Phi)
 				if !isPhi {
 					continue
@@ -362,7 +367,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 		}
 
 		// Remove symbol renamed in this frame
-		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			def := o.getVarDef(iter.Cur)
 			if def != nil {
 				sym := (*def).(*Variable).Symbol
@@ -406,7 +411,7 @@ type DefUseInfo struct {
 	useSet map[IInstr]bool // a value may be used in different places
 }
 
-func (o *SSAOpt) getDefUseInfo(fun *Func) map[*Symbol]*DefUseInfo {
+func getDefUseInfo(fun *Func) map[*Symbol]*DefUseInfo {
 	// Initialize def-use lookup table
 	defUse := make(map[*Symbol]*DefUseInfo)
 	for sym := range fun.Scope.Symbols {
@@ -418,7 +423,7 @@ func (o *SSAOpt) getDefUseInfo(fun *Func) map[*Symbol]*DefUseInfo {
 
 	// Visit instructions and fill in the table
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
-		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			instr := iter.Cur
 			def := instr.GetDef()
 			if def != nil {
@@ -438,14 +443,14 @@ func (o *SSAOpt) getDefUseInfo(fun *Func) map[*Symbol]*DefUseInfo {
 }
 
 // Dead Code Elimination algorithm. Can be used as a subroutine in multiple passes.
-// See Algorithm 19.12 of Modern Compiler Implementation in Java, Second Edition
-func (o *SSAOpt) eliminateDeadCode(fun *Func) {
+// See Algorithm 19.12 of The Tiger Book.
+func eliminateDeadCode(fun *Func) {
 	// Initialize work list and def-use info from scope
 	workList := make(map[*Symbol]bool)
 	for sym := range fun.Scope.Symbols {
 		workList[sym] = true
 	}
-	defUse := o.getDefUseInfo(fun)
+	defUse := getDefUseInfo(fun)
 
 	// Iteratively eliminate dead code and symbols in function scope
 	for len(workList) > 0 {

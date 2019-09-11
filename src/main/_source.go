@@ -1,6 +1,6 @@
 package main
 
-/*
+
 func test1() {
 	a, d := 3, 2
 	for {
@@ -14,9 +14,10 @@ func test1() {
 		}
 		d = 2
 	}
-}*/
+}
 
-/*func test2() int {
+/*
+func test2() int {
 	i, j := 1, 1
 	for i%2 != 0 {
 		if j < 4 {
@@ -25,19 +26,19 @@ func test1() {
 		}
 	}
 	return i + j
-}*/
+}
 
 func test3(a, x, y int) int {
-	z := a + 1
-	if x > 3 {
-		a = x * y
+	z := -a
+	if x > 2 {
+		a = x * 2
 		if y < 5 {
-			b := x * y
+			b := x * 2
 			return a + b
 		}
 	} else if z < 7 {
 		return z
 	}
-	c := x * y
+	c := x * 2
 	return c
-}
+}*/

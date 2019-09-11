@@ -29,17 +29,17 @@ type SSAVert struct {
 }
 
 func newSSAVert(instr IInstr, label string, sym *Symbol, imm interface{},
-	use ...*SSAVert) *SSAVert {
+	opd ...*SSAVert) *SSAVert {
 	vert := &SSAVert{
 		instr:   instr,
 		label:   label,
 		imm:     imm,
 		symbols: make(map[*Symbol]bool),
-		opd:     use,
+		opd:     opd,
 		use:     make(map[*SSAVert]bool),
 	}
-	for _, u := range use {
-		u.use[vert] = true
+	for _, v2 := range opd { // add use point to operands
+		v2.use[vert] = true
 	}
 	if sym != nil {
 		vert.symbols[sym] = true
@@ -58,9 +58,9 @@ func (v *SSAVert) appendInfo(instr IInstr, label string, imm interface{}, opd ..
 	v.instr = instr
 	v.label = label
 	v.imm = imm
-	v.opd = append(v.opd, opd...)
-	for _, val := range opd {
-		val.use[v] = true
+	v.opd = opd
+	for _, v2 := range opd { // add use point to operands
+		v2.use[v] = true
 	}
 }
 
@@ -122,7 +122,7 @@ type SSAGraph struct {
 	symToVert map[*Symbol]*SSAVert // maps symbols to vertices
 }
 
-func newSSAGraph(fun *Func) *SSAGraph {
+func NewSSAGraph(fun *Func) *SSAGraph {
 	// Initialize data structures
 	g := &SSAGraph{
 		vertSet:   make(map[*SSAVert]bool),
@@ -139,16 +139,16 @@ func newSSAGraph(fun *Func) *SSAGraph {
 	}
 
 	// Visit instructions of SSA form
-	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
-		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			g.processInstr(iter.Cur)
 		}
-	}, func(*BasicBlock) {})
-	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
-		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
+	}, DepthFirst)
+	/*fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			g.fixPhi(iter.Cur)
 		}
-	}, func(*BasicBlock) {})
+	}, func(*BasicBlock) {})*/
 
 	// Mark unlabelled vertices
 	for v := range g.vertSet {
@@ -290,6 +290,43 @@ func (g *SSAGraph) fixPhi(instr IInstr) {
 				opd := g.valToVert(phi.ValList[i])
 				vert.opd[i] = opd
 				opd.use[vert] = true
+			}
+		}
+	}
+}
+
+// Merge vertices with equal immediate value
+func (g *SSAGraph) MergeImm() {
+	workList := make(map[*SSAVert]bool)
+	for v := range g.vertSet {
+		workList[v] = true
+	}
+	for len(workList) > 0 {
+		v1 := pickOneSSAVert(workList)
+		delete(workList, v1)
+		for v2 := range g.vertSet {
+			if v1 == v2 || v1.label != "imm" || v2.label != "imm" {
+				continue
+			}
+			if immEq(v1.imm, v2.imm) {
+				g.mergeTwoImm(v1, v2)
+				delete(workList, v2)
+				delete(g.vertSet, v2)
+			}
+		}
+	}
+}
+
+func (g *SSAGraph) mergeTwoImm(v1, v2 *SSAVert) {
+	for s := range v2.symbols {
+		v1.symbols[s] = true // union of two symbol set
+		g.symToVert[s] = v1  // map to the the first vertex
+	}
+	for use := range v2.use {
+		v1.use[use] = true // union of two use set
+		for i, opd := range use.opd { // change operands in use to merged vertex
+			if opd == v2 {
+				use.opd[i] = v1
 			}
 		}
 	}

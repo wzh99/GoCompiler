@@ -3,7 +3,6 @@ package ir
 // Sparse Conditional Constant Propagation
 // See Figure 10.9 of EAC and Figure 12.31 of The Whale Book.
 type SCCPOpt struct {
-	opt       *SSAOpt
 	ssaGraph  *SSAGraph
 	cfgWL     map[CFGEdge]bool
 	ssaWL     map[SSAEdge]bool
@@ -31,12 +30,12 @@ const (
 	BOTTOM                 // variable (assigned more than once during execution)
 )
 
-func (o *SCCPOpt) optimize(fun *Func) {
+func (o *SCCPOpt) Optimize(fun *Func) {
 	// Initialize data structures
 	if fun.Enter.Head == nil { // empty function, no need to optimize
 		return
 	}
-	o.ssaGraph = newSSAGraph(fun)
+	o.ssaGraph = NewSSAGraph(fun)
 	o.cfgWL = map[CFGEdge]bool{CFGEdge{from: nil, to: fun.Enter.Head}: true}
 	o.ssaWL = make(map[SSAEdge]bool)
 	o.value = make(map[*SSAVert]LatValue) // default to TOP
@@ -126,7 +125,7 @@ func (o *SCCPOpt) optimize(fun *Func) {
 		visited[block] = true
 
 		// Replace use with constants
-		for iter := NewIterFromBlock(block); iter.Valid(); iter.Next() {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			instr := iter.Cur
 			for _, opd := range instr.GetOpd() {
 				switch (*opd).(type) {
@@ -157,11 +156,12 @@ func (o *SCCPOpt) optimize(fun *Func) {
 			switch branch.Cond.(type) {
 			case *ImmValue:
 				imm := branch.Cond.(*ImmValue)
-				target := branch.True
+				target, removed := branch.True, branch.False
 				if !imm.Value.(bool) {
-					target = branch.False
+					target, removed = branch.False, branch.True
 				}
 				iter.Remove()
+				block.DisconnectTo(removed)
 				block.JumpTo(target)
 			}
 		}
@@ -172,8 +172,8 @@ func (o *SCCPOpt) optimize(fun *Func) {
 		}
 	}
 
-	o.opt.removeDeadBlocks(fun)
-	o.opt.eliminateDeadCode(fun)
+	eliminateDeadCode(fun)
+	computeDominators(fun) // override dominators, since control flow may be changed
 }
 
 func (o *SCCPOpt) removeOneCFGEdge() CFGEdge {
@@ -498,7 +498,7 @@ func (o *SCCPOpt) evalAllPhis(instr IInstr) IInstr {
 		}
 		o.instrExec[phi] = true
 		o.evalPhi(phi)
-		iter.Next()
+		iter.MoveNext()
 	}
 	return iter.Cur
 }

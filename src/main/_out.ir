@@ -4,28 +4,15 @@ func _global():
 _B0_Start:
 	return 
 
-func test3(_s1_a: i64, _s1_x: i64, _s1_y: i64, _env: *void): 
+func test1(_env: *void): 
 _B1_Start:
-	add $_s1_a.0: i64, 1: i64 => $_s1_z.1: i64
-	gt $_s1_x.0: i64, 3: i64 => $_t2.1: i1
-	branch $_t2.1: i1 ? _B2_IfThen : _B4_IfFalse
-_B2_IfThen:
-	mul $_s1_x.0: i64, $_s1_y.0: i64 => $_s5_b.1: i64
-	lt $_s1_y.0: i64, 5: i64 => $_t5.1: i1
-	branch $_t5.1: i1 ? _B5_IfThen : _B6_IfNext
-_B4_IfFalse:
-	lt $_s1_z.1: i64, 7: i64 => $_t9.1: i1
-	branch $_t9.1: i1 ? _B7_IfThen : _B8_IfNext
+	jump _B2_ForBody
+_B2_ForBody:
+	jump _B5_IfThen
 _B5_IfThen:
-	add $_s5_b.1: i64, $_s5_b.1: i64 => $_t8.1: i64
-	return $_t8.1: i64
+	jump _B6_IfNext
 _B6_IfNext:
-	jump _B3_IfNext
-_B7_IfThen:
-	return $_s1_z.1: i64
-_B8_IfNext:
-	jump _B3_IfNext
-_B3_IfNext:
-	mul $_s1_x.0: i64, $_s1_y.0: i64 => $_s5_b.1: i64
-	return $_s5_b.1: i64
+	jump _B3_ForPost
+_B3_ForPost:
+	jump _B2_ForBody
 

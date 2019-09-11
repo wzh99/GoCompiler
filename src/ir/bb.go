@@ -26,7 +26,6 @@ func NewBasicBlock(label string, fun *Func) *BasicBlock {
 		Tail:     nil,
 		Pred:     make(map[*BasicBlock]bool),
 		Succ:     make(map[*BasicBlock]bool),
-		Children: make(map[*BasicBlock]bool),
 	}
 }
 

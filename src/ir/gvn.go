@@ -10,13 +10,12 @@ import (
 // Partition vertices in value graph so that each vertex in a set shares one value number.
 // See Fig. 12.21 and 12.22 in The Whale Book.
 type GVNOpt struct {
-	opt   *SSAOpt
 	graph *SSAGraph
 }
 
-func (o *GVNOpt) optimize(fun *Func) {
+func (o *GVNOpt) Optimize(fun *Func) {
 	// Build value graph out of SSA
-	o.graph = newSSAGraph(fun)
+	o.graph = NewSSAGraph(fun)
 
 	// Initialize vertex partition and work list
 	part := make([]map[*SSAVert]bool, 0) // partition result: array of sets
@@ -33,7 +32,7 @@ TraverseVertSet:
 		}
 		// Test whether there is congruence
 		for i := 0; i < len(part); i++ {
-			if v.hasSameLabel(o.pickOneSSAVert(part[i])) { // may be congruent
+			if v.hasSameLabel(pickOneSSAVert(part[i])) { // may be congruent
 				part[i][v] = true
 				valNum[v] = i
 				if len(v.opd) > 0 && len(part[i]) > 1 { // depends on operands
@@ -55,7 +54,7 @@ TraverseVertSet:
 		delete(workList, wi)
 		set := part[wi]
 		// Pick up one vertex and test it against others in the set
-		v := o.pickOneSSAVert(set)
+		v := pickOneSSAVert(set)
 		newSet := make(map[*SSAVert]bool)
 		for v2 := range set {
 			if v == v2 {
@@ -112,7 +111,7 @@ TraversePartition:
 		}
 	}
 
-	// Build defined symbol set of each block
+	// Simplify instructions according to numbering result
 	defOut := make(map[*BasicBlock]map[*Symbol]bool)
 	copySet := func(set map[*Symbol]bool) map[*Symbol]bool {
 		cp := make(map[*Symbol]bool)
@@ -127,17 +126,18 @@ TraversePartition:
 		} else {
 			defOut[block] = copySet(defOut[block.ImmDom])
 		}
+		// simplification and set construction are executed simultaneously
 		for iter := NewIterFromBlock(block); iter.Valid(); {
 			remove := o.simplify(iter.Cur, repSym, defOut[block])
 			if remove {
 				iter.Remove() // directly point to next instruction
 			} else {
-				iter.Next()
+				iter.MoveNext()
 			}
 		}
 	}, func(*BasicBlock) {})
 
-	o.opt.eliminateDeadCode(fun)
+	eliminateDeadCode(fun)
 }
 
 func (o *GVNOpt) simplify(instr IInstr, repSym map[*Symbol]*Symbol,
@@ -173,11 +173,11 @@ func (o *GVNOpt) simplify(instr IInstr, repSym map[*Symbol]*Symbol,
 	if !strings.HasPrefix(vert.label, "phi") || len(vert.use) != 1 {
 		return false
 	}
-	phi1 := o.pickOneSSAVert(vert.use)
+	phi1 := pickOneSSAVert(vert.use)
 	if !strings.HasPrefix(phi1.label, "phi") || len(phi1.use) != 1 {
 		return false
 	}
-	phi2 := o.pickOneSSAVert(phi1.use)
+	phi2 := pickOneSSAVert(phi1.use)
 	if phi2 == vert {
 		return true
 	}
@@ -192,7 +192,7 @@ func (o *GVNOpt) pickOneIndex(set map[int]bool) int {
 	return -1
 }
 
-func (o *GVNOpt) pickOneSSAVert(set map[*SSAVert]bool) *SSAVert {
+func pickOneSSAVert(set map[*SSAVert]bool) *SSAVert {
 	for v := range set {
 		return v
 	}

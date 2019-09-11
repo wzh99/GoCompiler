@@ -37,9 +37,9 @@ func NewIterFromInstr(instr IInstr) *InstrIter {
 
 func (i *InstrIter) Valid() bool { return i.Cur != nil }
 
-func (i *InstrIter) Next() { i.Cur = i.Cur.GetNext() }
+func (i *InstrIter) MoveNext() { i.Cur = i.Cur.GetNext() }
 
-func (i *InstrIter) Prev() { i.Cur = i.Cur.GetPrev() }
+func (i *InstrIter) MovePrev() { i.Cur = i.Cur.GetPrev() }
 
 func (i *InstrIter) HasNext() bool { return i.Cur.GetNext() != nil }
 
