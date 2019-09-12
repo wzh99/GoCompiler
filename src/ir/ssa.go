@@ -477,6 +477,41 @@ func eliminateDeadCode(fun *Func) {
 			}
 		}
 	}
+
+	// Break phi-phi cycle
+	// For some vertices a, b, x, y in graph, a = phi(b, x), b = phi(a, y)
+	// Vertices of temporary variables may create a phi-phi cycle in SSA graph.
+	// The two phi instructions are useless, so they should be eliminated.
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		for iter := NewIterFromBlock(block); iter.Valid(); {
+			switch iter.Cur.(type) {
+			case *Phi:
+				phi := iter.Cur.(*Phi)
+				sym := phi.Result.(*Variable).Symbol
+				if len(defUse[sym].useSet) != 1 {
+					iter.MoveNext()
+					continue
+				}
+				useInstr := pickOneInstr(defUse[sym].useSet)
+				switch useInstr.(type) {
+				case *Phi:
+					sym2 := useInstr.(*Phi).Result.(*Variable).Symbol
+					if defUse[sym2].useSet[iter.Cur] {
+						iter.Remove()
+						continue
+					}
+				}
+			}
+			iter.MoveNext()
+		}
+	}, DepthFirst)
+}
+
+func pickOneInstr(set map[IInstr]bool) IInstr {
+	for i := range set {
+		return i
+	}
+	return nil
 }
 
 func pickOneSymbol(set map[*Symbol]bool) *Symbol {

@@ -15,7 +15,6 @@ func test1() {
 		d = 2
 	}
 }*/
-
 /*
 func test2() int {
 	i, j := 1, 1

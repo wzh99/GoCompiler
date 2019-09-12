@@ -68,7 +68,7 @@ func (v *SSAVert) appendInfo(instr IInstr, label string, imm interface{}, opd ..
 	}
 }
 
-func (v *SSAVert) print(writer io.Writer, valNum map[*SSAVert]int) {
+func (v *SSAVert) print(writer io.Writer) {
 	str := fmt.Sprintf("{ label: %s, symbols: {", v.label)
 	i := 0
 	for s := range v.symbols {
@@ -83,7 +83,16 @@ func (v *SSAVert) print(writer io.Writer, valNum map[*SSAVert]int) {
 		if i != 0 {
 			str += ", "
 		}
-		str += fmt.Sprintf("%d", valNum[opd])
+		str += opd.label
+	}
+	str += "}, use: {"
+	i = 0
+	for s := range v.use {
+		if i != 0 {
+			str += ", "
+		}
+		str += s.label
+		i++
 	}
 	_, _ = fmt.Fprintln(writer, str+"} }")
 }
@@ -148,11 +157,29 @@ func NewSSAGraph(fun *Func) *SSAGraph {
 			g.processInstr(iter.Cur)
 		}
 	}, DepthFirst)
-	/*fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
-			g.fixPhi(iter.Cur)
+			instr := iter.Cur
+			switch instr.(type) {
+			case *Move:
+				continue
+			case *Unary, *Binary, *Phi:
+				def := instr.GetDef()
+				if def == nil {
+					continue
+				}
+				vert := g.symToVert[(*def).(*Variable).Symbol]
+				for i, opd := range instr.GetOpd() {
+					switch (*opd).(type) {
+					case *Variable:
+						sym := (*opd).(*Variable).Symbol
+						vert.opd[i] = g.symToVert[sym]
+						g.symToVert[sym].use[vert] = true
+					}
+				}
+			}
 		}
-	}, func(*BasicBlock) {})*/
+	}, DepthFirst)
 
 	// Mark unlabelled vertices
 	for v := range g.vertSet {
@@ -164,9 +191,9 @@ func NewSSAGraph(fun *Func) *SSAGraph {
 	return g
 }
 
-func (g *SSAGraph) print(writer io.Writer, valNum map[*SSAVert]int) {
+func (g *SSAGraph) print(writer io.Writer) {
 	for vert := range g.vertSet {
-		vert.print(writer, valNum)
+		vert.print(writer)
 	}
 	_, _ = fmt.Fprintln(writer)
 }
@@ -189,6 +216,10 @@ func (g *SSAGraph) addSymbolToVert(sym *Symbol, vert *SSAVert) {
 func (g *SSAGraph) mergeVert(target, prey *Symbol) {
 	targVert := g.symToVert[target]
 	preyVert := g.symToVert[prey]
+	for _, opd := range preyVert.opd {
+		delete(opd.use, preyVert)
+		opd.use[targVert] = true
+	}
 	g.addSymbolToVert(prey, targVert)
 	delete(g.vertSet, preyVert)
 }

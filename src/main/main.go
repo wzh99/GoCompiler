@@ -22,7 +22,7 @@ func main() {
 	sema.VisitProgram(asTree)
 	irBuilder := ir.NewBuilder()
 	irPrg := irBuilder.VisitProgram(asTree).(*ir.Program)
-	ssa := ir.NewSSAOpt(&ir.GVNOpt{}, /*&ir.SCCPOpt{}, */ &ir.PREOpt{})
+	ssa := ir.NewSSAOpt(&ir.GVNOpt{}, &ir.SCCPOpt{}, &ir.PREOpt{})
 	ssa.Optimize(irPrg)
 	irFile, _ := os.Create("_out.ir")
 	printer := ir.NewPrinter(irFile)

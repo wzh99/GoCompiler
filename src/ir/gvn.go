@@ -1,8 +1,6 @@
 package ir
 
 import (
-	"fmt"
-	"os"
 	"strings"
 )
 
@@ -10,7 +8,8 @@ import (
 // Partition vertices in value graph so that each vertex in a set shares one value number.
 // See Fig. 12.21 and 12.22 in The Whale Book.
 type GVNOpt struct {
-	graph *SSAGraph
+	graph  *SSAGraph
+	valNum map[*SSAVert]int
 }
 
 func (o *GVNOpt) Optimize(fun *Func) {
@@ -19,7 +18,7 @@ func (o *GVNOpt) Optimize(fun *Func) {
 
 	// Initialize vertex partition and work list
 	part := make([]map[*SSAVert]bool, 0) // partition result: array of sets
-	valNum := make(map[*SSAVert]int)     // map vertices to value number
+	o.valNum = make(map[*SSAVert]int)    // map vertices to value number
 	workList := make(map[int]bool, 0)    // sets to be further partitioned in B
 
 TraverseVertSet:
@@ -27,14 +26,14 @@ TraverseVertSet:
 		// Create the first set
 		if len(part) == 0 {
 			part = append(part, map[*SSAVert]bool{v: true})
-			valNum[v] = 0
+			o.valNum[v] = 0
 			continue
 		}
 		// Test whether there is congruence
 		for i := 0; i < len(part); i++ {
 			if v.hasSameLabel(pickOneSSAVert(part[i])) { // may be congruent
 				part[i][v] = true
-				valNum[v] = i
+				o.valNum[v] = i
 				if len(v.opd) > 0 && len(part[i]) > 1 { // depends on operands
 					workList[i] = true
 				}
@@ -43,7 +42,7 @@ TraverseVertSet:
 		}
 		// No congruence is found, add to new set
 		n := len(part)
-		valNum[v] = n
+		o.valNum[v] = n
 		part = append(part, map[*SSAVert]bool{v: true})
 	}
 
@@ -60,20 +59,21 @@ TraverseVertSet:
 			if v == v2 {
 				continue // one vertex must be congruent to itself
 			}
-			for i := range v.opd {
-				if valNum[v.opd[i]] != valNum[v2.opd[i]] {
-					// Not congruent, move to new one.
-					delete(set, v2)
-					newSet[v2] = true
-					break // no need to test more
-				}
+			if !o.opdEq(v, v2) {
+				delete(set, v2)
+				newSet[v2] = true
 			}
 		}
 		if len(newSet) > 0 { // another cut made in current set
 			// Update the partition list and value number
 			n := len(part)
 			for v2 := range newSet {
-				valNum[v2] = n
+				o.valNum[v2] = n
+				for u := range v2.use { // add uses to work list
+					// the value number of operands have changed, so the number of their
+					// uses may also change
+					workList[o.valNum[u]] = true
+				}
 			}
 			part = append(part, newSet)
 			part[wi] = set
@@ -140,15 +140,39 @@ TraversePartition:
 	eliminateDeadCode(fun)
 }
 
+func (o *GVNOpt) opdEq(v1, v2 *SSAVert) bool {
+	if strings.HasPrefix(v1.label, "phi") {
+		for _, o1 := range v1.opd {
+			found := false
+			for _, o2 := range v2.opd {
+				if o.valNum[o1] == o.valNum[o2] {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+		return true
+	}
+	for i := range v1.opd {
+		if o.valNum[v1.opd[i]] != o.valNum[v2.opd[i]] {
+			return false
+		}
+	}
+	return true
+}
+
 func (o *GVNOpt) simplify(instr IInstr, repSym map[*Symbol]*Symbol,
 	defined map[*Symbol]bool) bool {
 	// Replace operands with representative symbols
-	for _, use := range instr.GetOpd() {
-		switch (*use).(type) {
+	for _, opd := range instr.GetOpd() {
+		switch (*opd).(type) {
 		case *Variable:
-			sym := (*use).(*Variable).Symbol
+			sym := (*opd).(*Variable).Symbol
 			if repSym[sym] != nil {
-				*use = NewVariable(repSym[sym])
+				*opd = NewVariable(repSym[sym])
 			}
 		}
 	}
@@ -165,35 +189,13 @@ func (o *GVNOpt) simplify(instr IInstr, repSym map[*Symbol]*Symbol,
 	*def = NewVariable(rep)
 	defined[rep] = true
 
-	// Break phi-phi cycle
-	// For some vertices a, b, x, y in graph, a = phi(b, x), b = phi(a, y)
-	// Vertices of temporary variables may create a phi-phi cycle in SSA graph.
-	// The two phi instructions are redundant, so they should be eliminated.
-	vert := o.graph.symToVert[rep]
-	if !strings.HasPrefix(vert.label, "phi") {
-		return false
-	}
-	if len(vert.use) == 0 { // this phi has no use
-		return true
-	}
-	allPhi := true
-	for u1 := range vert.use {
-		allPhi = allPhi && strings.HasPrefix(u1.label, "phi")
-	}
-	if !allPhi { // not all use are phi instructions, cannot remove
-		return false
-	}
-	hasCycle := false
-	for u1 := range vert.use {
-		for u2 := range u1.use {
-			if u2 == vert { // one cycle found
-				hasCycle = true // at least there is one cycle
-				delete(u1.use, vert)
-			}
-		}
-	}
+	return false
+}
 
-	return hasCycle
+func (o *GVNOpt) repVert(vert *SSAVert, repSym map[*Symbol]*Symbol) *SSAVert {
+	sym := pickOneSymbol(vert.symbols)
+	rep := repSym[sym]
+	return o.graph.symToVert[rep]
 }
 
 func (o *GVNOpt) pickOneIndex(set map[int]bool) int {
@@ -208,14 +210,4 @@ func pickOneSSAVert(set map[*SSAVert]bool) *SSAVert {
 		return v
 	}
 	return nil
-}
-
-func (o *GVNOpt) printPartition(part []map[*SSAVert]bool, valNum map[*SSAVert]int) {
-	for _, set := range part {
-		for s := range set {
-			s.print(os.Stdout, valNum)
-		}
-		fmt.Println()
-	}
-	fmt.Println()
 }

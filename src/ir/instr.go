@@ -615,23 +615,8 @@ func NewPhi(operands []PhiOpd, result IValue) *Phi {
 		BBToVal: make(map[*BasicBlock]*IValue),
 		Result:  result,
 	}
-	// Selection sort operands
-	for i := 0; i < len(operands)-1; i++ {
-		min := operands[i].pred.Name
-		minIdx := 0
-		for j := i + 1; j < len(operands); j++ {
-			if cur := operands[j].pred.Name; cur < min {
-				min = cur
-				minIdx = j
-			}
-		}
-		if minIdx != i {
-			operands[i], operands[minIdx] = operands[minIdx], operands[i]
-		}
-	}
 	// Build phi instruction
-	i := 0
-	for _, entry := range operands {
+	for i, entry := range operands {
 		bb := entry.pred
 		val := entry.val
 		if !val.GetType().IsIdentical(result.GetType()) {
@@ -642,7 +627,6 @@ func NewPhi(operands []PhiOpd, result IValue) *Phi {
 		}
 		p.ValList[i] = val
 		p.BBToVal[bb] = &p.ValList[i]
-		i++
 	}
 	return p
 }
