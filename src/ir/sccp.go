@@ -217,14 +217,6 @@ func (o *SCCPOpt) evalAssign(instr IInstr) {
 	case *Load, *Malloc, *GetPtr, *PtrOffset:
 		// values defined by these instructions are considered variables
 		o.value[vert] = BOTTOM
-	case *Clear:
-		enum := sym.Type.GetTypeEnum()
-		switch enum {
-		case I1, I64, F64:
-			o.value[vert], vert.imm = CONST, o.getZeroValue(sym.Type.GetTypeEnum())
-		default:
-			o.value[vert] = BOTTOM
-		}
 	case *Unary:
 		unary := instr.(*Unary)
 		o.value[vert], vert.imm = o.evalUnary(unary.Op, vert.opd[0])
@@ -249,7 +241,7 @@ func (o *SCCPOpt) evalUnary(op UnaryOp, opd *SSAVert) (lat LatValue, result inte
 	}
 	lat = CONST
 	imm := opd.imm
-	tp := pickOneSymbol(opd.symbols).Type.GetTypeEnum()
+	tp := opd.tp.GetTypeEnum()
 	switch op {
 	case NOT:
 		result = !imm.(bool)
@@ -269,7 +261,7 @@ func (o *SCCPOpt) evalBinary(op BinaryOp, left, right *SSAVert) (lat LatValue,
 	lat, result = BOTTOM, nil // default value
 
 	// Consider six cases of value combination
-	tp := pickOneSymbol(left.symbols).Type.GetTypeEnum()
+	tp := left.tp.GetTypeEnum()
 	lVal, rVal := o.value[left], o.value[right]
 	isComb := func(c1, c2 LatValue) bool {
 		return (lVal == c1 && rVal == c2) || (lVal == c2 && rVal == c1)
@@ -419,19 +411,6 @@ func (o *SCCPOpt) evalBinary(op BinaryOp, left, right *SSAVert) (lat LatValue,
 		}
 	}
 	return
-}
-
-func (o *SCCPOpt) getZeroValue(enum TypeEnum) interface{} {
-	switch enum {
-	case I1:
-		return false
-	case I64:
-		return 0
-	case F64:
-		return 0.
-	default:
-		return nil
-	}
 }
 
 func (o *SCCPOpt) evalBranch(branch *Branch) {

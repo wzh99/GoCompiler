@@ -170,19 +170,30 @@ func (o *GVNOpt) simplify(instr IInstr, repSym map[*Symbol]*Symbol,
 	// Vertices of temporary variables may create a phi-phi cycle in SSA graph.
 	// The two phi instructions are redundant, so they should be eliminated.
 	vert := o.graph.symToVert[rep]
-	if !strings.HasPrefix(vert.label, "phi") || len(vert.use) != 1 {
+	if !strings.HasPrefix(vert.label, "phi") {
 		return false
 	}
-	phi1 := pickOneSSAVert(vert.use)
-	if !strings.HasPrefix(phi1.label, "phi") || len(phi1.use) != 1 {
-		return false
-	}
-	phi2 := pickOneSSAVert(phi1.use)
-	if phi2 == vert {
+	if len(vert.use) == 0 { // this phi has no use
 		return true
 	}
+	allPhi := true
+	for u1 := range vert.use {
+		allPhi = allPhi && strings.HasPrefix(u1.label, "phi")
+	}
+	if !allPhi { // not all use are phi instructions, cannot remove
+		return false
+	}
+	hasCycle := false
+	for u1 := range vert.use {
+		for u2 := range u1.use {
+			if u2 == vert { // one cycle found
+				hasCycle = true // at least there is one cycle
+				delete(u1.use, vert)
+			}
+		}
+	}
 
-	return false
+	return hasCycle
 }
 
 func (o *GVNOpt) pickOneIndex(set map[int]bool) int {

@@ -18,6 +18,8 @@ type SSAVert struct {
 	instr IInstr
 	// String label to distinguish different kind of vertices
 	label string
+	// Data type of this vertex
+	tp IType
 	// Set of symbols this vertex maps to
 	symbols map[*Symbol]bool
 	// Common place where immediate is stored
@@ -43,12 +45,14 @@ func newSSAVert(instr IInstr, label string, sym *Symbol, imm interface{},
 	}
 	if sym != nil {
 		vert.symbols[sym] = true
+		vert.tp = sym.Type
 	}
 	return vert
 }
 
 func newTempVert(sym *Symbol) *SSAVert {
 	return &SSAVert{
+		tp:      sym.Type,
 		symbols: map[*Symbol]bool{sym: true},
 		use:     make(map[*SSAVert]bool),
 	}
@@ -199,6 +203,7 @@ func (g *SSAGraph) valToVert(val IValue) *SSAVert {
 	switch val.(type) {
 	case *ImmValue:
 		vert = newSSAVert(nil, "imm", nil, val.(*ImmValue).Value)
+		vert.tp = val.GetType()
 		g.addVert(vert)
 	case *Variable:
 		sym := val.(*Variable).Symbol
@@ -252,7 +257,7 @@ func (g *SSAGraph) processInstr(instr IInstr) {
 	case *Clear:
 		clear := instr.(*Clear)
 		val := clear.Value.(*Variable)
-		g.appendInfoToVert(instr, val.Symbol, "clear", nil)
+		g.appendInfoToVert(instr, val.Symbol, "clear", getZeroValue(val.Type.GetTypeEnum()))
 
 	case *Unary:
 		unary := instr.(*Unary)
@@ -278,20 +283,16 @@ func (g *SSAGraph) processInstr(instr IInstr) {
 	}
 }
 
-// Update operands in phi instructions with latest vertices
-func (g *SSAGraph) fixPhi(instr IInstr) {
-	switch instr.(type) {
-	case *Phi:
-		phi := instr.(*Phi)
-		result := phi.Result.(*Variable)
-		vert := g.symToVert[result.Symbol]
-		for i, opd := range vert.opd {
-			if len(opd.label) == 0 {
-				opd := g.valToVert(phi.ValList[i])
-				vert.opd[i] = opd
-				opd.use[vert] = true
-			}
-		}
+func getZeroValue(enum TypeEnum) interface{} {
+	switch enum {
+	case I1:
+		return false
+	case I64:
+		return 0
+	case F64:
+		return 0.
+	default:
+		return nil
 	}
 }
 

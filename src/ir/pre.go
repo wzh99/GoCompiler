@@ -62,6 +62,10 @@ func (o *PREOpt) Optimize(fun *Func) {
 		fmt.Println(expr)
 	}
 
-	// Build transparency set
+	// Build local transparency set
+	// An expression's value is locally transparent in a block if there are no assignments in
+	// the block to variables that occur in the expression.
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 
+	}, DepthFirst)
 }
