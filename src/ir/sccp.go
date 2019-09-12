@@ -1,5 +1,7 @@
 package ir
 
+import "fmt"
+
 // Sparse Conditional Constant Propagation
 // See Figure 10.9 of EAC and Figure 12.31 of The Whale Book.
 type SCCPOpt struct {
@@ -76,10 +78,10 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 			case *Branch:
 				o.evalBranch(instr.(*Branch))
 			default:
+				o.evalAssign(instr)
 				if next := instr.GetNext(); next != nil {
 					o.cfgWL[CFGEdge{from: instr, to: next}] = true
 				}
-				o.evalAssign(instr)
 			} // end instruction iteration
 		}
 
@@ -106,13 +108,13 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 	}
 
 	// Print result
-	/*for vert, val := range o.value {
+	for vert, val := range o.value {
 		if len(vert.symbols) == 0 {
 			continue
 		}
 		fmt.Printf("%s: %d, %s\n", pickOneSymbol(vert.symbols).ToString(), val,
 			vert.imm)
-	}*/
+	}
 
 	// Transform original instructions, if possible.
 	blockWL := map[*BasicBlock]bool{fun.Enter: true}
@@ -174,6 +176,7 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 
 	eliminateDeadCode(fun)
 	computeDominators(fun) // override dominators, since control flow may be changed
+
 }
 
 func (o *SCCPOpt) removeOneCFGEdge() CFGEdge {
@@ -425,8 +428,6 @@ func (o *SCCPOpt) evalBranch(branch *Branch) {
 		vert := o.ssaGraph.symToVert[sym]
 		val := o.value[vert]
 		switch val {
-		case TOP:
-			return // skip this branch, since we cannot tell whether its constant
 		case CONST:
 			imm = vert.imm
 		}

@@ -157,13 +157,13 @@ func NewSSAGraph(fun *Func) *SSAGraph {
 			g.processInstr(iter.Cur)
 		}
 	}, DepthFirst)
-	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+	/*fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			instr := iter.Cur
 			switch instr.(type) {
 			case *Move:
 				continue
-			case *Unary, *Binary, *Phi:
+			case *Unary, *Binary, *Phi, *Branch:
 				def := instr.GetDef()
 				if def == nil {
 					continue
@@ -179,7 +179,7 @@ func NewSSAGraph(fun *Func) *SSAGraph {
 				}
 			}
 		}
-	}, DepthFirst)
+	}, DepthFirst)*/
 
 	// Mark unlabelled vertices
 	for v := range g.vertSet {
@@ -311,6 +311,11 @@ func (g *SSAGraph) processInstr(instr IInstr) {
 		}
 		g.appendInfoToVert(instr, result.Symbol, fmt.Sprintf("phi@%s", phi.BB.Name),
 			nil, opd...)
+
+	case *Branch:
+		branch := instr.(*Branch)
+		cond := branch.Cond
+		g.addVert(newSSAVert(branch, "branch", nil, nil, g.valToVert(cond)))
 	}
 }
 

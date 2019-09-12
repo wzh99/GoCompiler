@@ -498,6 +498,9 @@ func eliminateDeadCode(fun *Func) {
 					sym2 := useInstr.(*Phi).Result.(*Variable).Symbol
 					if defUse[sym2].useSet[iter.Cur] {
 						iter.Remove()
+						NewIterFromInstr(useInstr).Remove()
+						delete(fun.Scope.Symbols, sym)
+						delete(fun.Scope.Symbols, sym2)
 						continue
 					}
 				}
