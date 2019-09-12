@@ -157,7 +157,9 @@ func NewSSAGraph(fun *Func) *SSAGraph {
 			g.processInstr(iter.Cur)
 		}
 	}, DepthFirst)
-	/*fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+
+	// Update operands in vertices
+	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			instr := iter.Cur
 			switch instr.(type) {
@@ -179,7 +181,7 @@ func NewSSAGraph(fun *Func) *SSAGraph {
 				}
 			}
 		}
-	}, DepthFirst)*/
+	}, func(*BasicBlock) {})
 
 	// Mark unlabelled vertices
 	for v := range g.vertSet {

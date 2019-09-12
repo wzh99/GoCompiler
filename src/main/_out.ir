@@ -20,10 +20,10 @@ func test4(_env: *void):
 _B10_Start:
 	jump _B14_ForCond
 _B14_ForCond:
-	phi (_B12_ForPost -> $_s8_f.5: i64, _B10_Start -> 0: i64) => $_s8_f.2: i64
-	phi (_B12_ForPost -> $_s8_e.4: i64, _B10_Start -> 0: i64) => $_s8_e.2: i64
-	phi (_B10_Start -> 0: i64, _B12_ForPost -> $_s8_d.5: i64) => $_s8_d.2: i64
-	phi (_B12_ForPost -> $_s9_i.4: i64, _B10_Start -> 1: i64) => $_s9_i.2: i64
+	phi (_B10_Start -> 0: i64, _B12_ForPost -> $_s8_f.5: i64) => $_s8_f.2: i64
+	phi (_B10_Start -> 0: i64, _B12_ForPost -> $_s8_e.5: i64) => $_s8_e.2: i64
+	phi (_B10_Start -> 1: i64, _B12_ForPost -> $_s9_i.4: i64) => $_s9_i.2: i64
+	phi (_B10_Start -> 0: i64, _B12_ForPost -> $_s8_d.6: i64) => $_s8_d.2: i64
 	le $_s9_i.2: i64, 100: i64 => $_t14.2: i1
 	branch $_t14.2: i1 ? _B11_ForBody : _B21_EdgeSplit
 _B11_ForBody:
@@ -33,22 +33,22 @@ _B11_ForBody:
 _B21_EdgeSplit:
 	jump _B13_ForNext
 _B15_IfThen:
-	add 3: i64, $_s8_d.2: i64 => $_s8_d.6: i64
-	add 1: i64, $_s8_d.6: i64 => $_s8_e.5: i64
+	add 3: i64, $_s8_d.2: i64 => $_s8_d.4: i64
+	add 1: i64, $_s8_d.4: i64 => $_s8_e.4: i64
 	jump _B16_IfNext
 _B17_IfFalse:
 	jump _B16_IfNext
 _B13_ForNext:
-	phi (_B18_IfThen -> $_s8_f.5: i64, _B21_EdgeSplit -> $_s8_f.2: i64) => $_s8_f.3: i64
-	phi (_B21_EdgeSplit -> $_s8_e.2: i64, _B18_IfThen -> $_s8_e.4: i64) => $_s8_e.3: i64
-	phi (_B21_EdgeSplit -> $_s8_d.2: i64, _B18_IfThen -> $_s8_d.5: i64) => $_s8_d.3: i64
+	phi (_B21_EdgeSplit -> $_s8_f.2: i64, _B18_IfThen -> $_s8_f.5: i64) => $_s8_f.3: i64
+	phi (_B21_EdgeSplit -> $_s8_e.2: i64, _B18_IfThen -> $_s8_e.5: i64) => $_s8_e.3: i64
+	phi (_B18_IfThen -> $_s8_d.6: i64, _B21_EdgeSplit -> $_s8_d.2: i64) => $_s8_d.3: i64
 	add $_s8_d.3: i64, $_s8_e.3: i64 => $_t29.1: i64
 	add $_t29.1: i64, $_s8_f.3: i64 => $_t30.1: i64
 	return $_t30.1: i64
 _B16_IfNext:
-	phi (_B17_IfFalse -> 4: i64, _B15_IfThen -> $_s8_f.2: i64) => $_s8_f.5: i64
-	phi (_B15_IfThen -> $_s8_e.5: i64, _B17_IfFalse -> $_s8_e.2: i64) => $_s8_e.4: i64
-	phi (_B15_IfThen -> $_s8_d.6: i64, _B17_IfFalse -> -2: i64) => $_s8_d.5: i64
+	phi (_B15_IfThen -> $_s8_f.2: i64, _B17_IfFalse -> 4: i64) => $_s8_f.5: i64
+	phi (_B15_IfThen -> $_s8_e.4: i64, _B17_IfFalse -> $_s8_e.2: i64) => $_s8_e.5: i64
+	phi (_B17_IfFalse -> -2: i64, _B15_IfThen -> $_s8_d.4: i64) => $_s8_d.6: i64
 	add $_s9_i.2: i64, 1: i64 => $_s9_i.4: i64
 	jump _B22_EdgeSplit
 _B22_EdgeSplit:

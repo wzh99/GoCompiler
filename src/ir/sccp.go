@@ -1,7 +1,5 @@
 package ir
 
-import "fmt"
-
 // Sparse Conditional Constant Propagation
 // See Figure 10.9 of EAC and Figure 12.31 of The Whale Book.
 type SCCPOpt struct {
@@ -108,13 +106,13 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 	}
 
 	// Print result
-	for vert, val := range o.value {
+	/*for vert, val := range o.value {
 		if len(vert.symbols) == 0 {
 			continue
 		}
 		fmt.Printf("%s: %d, %s\n", pickOneSymbol(vert.symbols).ToString(), val,
 			vert.imm)
-	}
+	}*/
 
 	// Transform original instructions, if possible.
 	blockWL := map[*BasicBlock]bool{fun.Enter: true}
