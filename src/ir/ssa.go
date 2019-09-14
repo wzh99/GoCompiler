@@ -116,7 +116,7 @@ func computeDominators(fun *Func) {
 		}
 		return node.best
 	}
-	removeDeadBlocks(fun) // unreachable predecessors will cause error
+	removeDeadBlocks(fun)                 // unreachable predecessors will cause error
 	for i := len(nodes) - 1; i > 0; i-- { // back to forth, ignore root node
 		node := nodes[i]
 		parent := node.parent
@@ -142,7 +142,7 @@ func computeDominators(fun *Func) {
 		node.best = node
 		for v := range parent.bucket {
 			anc := ancestorWithLowestSemi(v) // link into spanning forest
-			if anc.semi == v.semi { // use dominator theorem
+			if anc.semi == v.semi {          // use dominator theorem
 				v.bb.SetImmDom(parent.bb)
 			} else { // defer until dominator is known
 				v.sameDom = anc
@@ -191,11 +191,12 @@ func removeOneBlock(set map[*BasicBlock]bool) *BasicBlock {
 	return block
 }
 
-func (o *SSAOpt) insertPhi(fun *Func) {
+// Returns a lookup table: basic block -> dominance frontiers of that basic block
+func computeDF(fun *Func) map[*BasicBlock]map[*BasicBlock]bool {
 	// Compute dominate frontiers of basic blocks
 	DF := make(map[*BasicBlock]map[*BasicBlock]bool)
-	var computeDF func(*BasicBlock)
-	computeDF = func(node *BasicBlock) {
+	var visit func(*BasicBlock)
+	visit = func(node *BasicBlock) {
 		dfSet := make(map[*BasicBlock]bool)
 		for succ := range node.Succ { // DF_local
 			if succ.ImmDom != node {
@@ -203,7 +204,7 @@ func (o *SSAOpt) insertPhi(fun *Func) {
 			}
 		}
 		for child := range node.Children {
-			computeDF(child)
+			visit(child)
 			childDF := DF[child]
 			for w := range childDF {
 				if !node.Dominates(w) || node == w { // DF_up
@@ -213,7 +214,13 @@ func (o *SSAOpt) insertPhi(fun *Func) {
 		}
 		DF[node] = dfSet
 	}
-	computeDF(fun.Enter)
+	visit(fun.Enter)
+	return DF
+}
+
+func (o *SSAOpt) insertPhi(fun *Func) {
+	// Compute dominate frontiers of basic blocks
+	DF := computeDF(fun)
 
 	// Compute set A_orig of symbols defined in each block
 	// the set of variables the phi instructions of whom are inserted
@@ -255,14 +262,14 @@ func (o *SSAOpt) insertPhi(fun *Func) {
 					continue
 				}
 				// Insert phi instruction at top of block y
-				bbToSym := make([]PhiOpd, 0)
+				opdList := make([]PhiOpd, 0)
 				for pred := range y.Pred {
-					bbToSym = append(bbToSym, PhiOpd{
+					opdList = append(opdList, PhiOpd{
 						pred: pred,
 						val:  NewVariable(a),
 					})
 				}
-				y.PushFront(NewPhi(bbToSym, NewVariable(a)))
+				y.PushFront(NewPhi(opdList, NewVariable(a)))
 				APhi[y][a] = true
 				// Add to work list if variable a is defined in a block that it previously
 				// was not

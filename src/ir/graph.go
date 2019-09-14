@@ -145,7 +145,7 @@ func NewSSAGraph(fun *Func) *SSAGraph {
 	// Add symbols as temporary vertices
 	for sym := range fun.Scope.Symbols {
 		if sym.Param {
-			g.addVert(newSSAVert(nil, "param", sym, nil))
+			g.addVert(newSSAVert(nil, "param_"+sym.Name, sym, nil))
 		} else {
 			g.addVert(newTempVert(sym))
 		}
@@ -234,8 +234,8 @@ func (g *SSAGraph) appendInfoToVert(instr IInstr, sym *Symbol, label string, imm
 func (g *SSAGraph) valToVert(val IValue) *SSAVert {
 	var vert *SSAVert
 	switch val.(type) {
-	case *ImmValue:
-		vert = newSSAVert(nil, "imm", nil, val.(*ImmValue).Value)
+	case *Immediate:
+		vert = newSSAVert(nil, "imm", nil, val.(*Immediate).Value)
 		vert.tp = val.GetType()
 		g.addVert(vert)
 	case *Variable:
@@ -255,8 +255,8 @@ func (g *SSAGraph) processInstr(instr IInstr) {
 		move := instr.(*Move)
 		dst := move.Dst.(*Variable)
 		switch move.Src.(type) {
-		case *ImmValue:
-			imm := move.Src.(*ImmValue).Value
+		case *Immediate:
+			imm := move.Src.(*Immediate).Value
 			g.appendInfoToVert(instr, dst.Symbol, "imm", imm)
 		case *Variable:
 			src := move.Src.(*Variable)
@@ -362,7 +362,7 @@ func (g *SSAGraph) mergeTwoImm(v1, v2 *SSAVert) {
 		g.symToVert[s] = v1  // map to the the first vertex
 	}
 	for use := range v2.use {
-		v1.use[use] = true // union of two use set
+		v1.use[use] = true            // union of two use set
 		for i, opd := range use.opd { // change operands in use to merged vertex
 			if opd == v2 {
 				use.opd[i] = v1

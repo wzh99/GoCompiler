@@ -11,6 +11,10 @@ type SCCPOpt struct {
 	instrExec map[IInstr]bool
 }
 
+func NewSCCPOpt() *SCCPOpt {
+	return &SCCPOpt{}
+}
+
 // In SCCP, it's assumed that one basic block only contain one assignment along with
 // several phi instructions.
 type CFGEdge struct {
@@ -154,8 +158,8 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 		case *Branch:
 			branch := iter.Cur.(*Branch)
 			switch branch.Cond.(type) {
-			case *ImmValue:
-				imm := branch.Cond.(*ImmValue)
+			case *Immediate:
+				imm := branch.Cond.(*Immediate)
 				target, removed := branch.True, branch.False
 				if !imm.Value.(bool) {
 					target, removed = branch.False, branch.True
@@ -419,8 +423,8 @@ func (o *SCCPOpt) evalBranch(branch *Branch) {
 	var imm interface{}
 	cond := branch.Cond
 	switch cond.(type) {
-	case *ImmValue:
-		imm = cond.(*ImmValue).Value
+	case *Immediate:
+		imm = cond.(*Immediate).Value
 	case *Variable:
 		sym := cond.(*Variable).Symbol
 		vert := o.ssaGraph.symToVert[sym]

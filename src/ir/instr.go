@@ -166,7 +166,7 @@ type Move struct {
 }
 
 func NewMove(src, dst IValue) *Move {
-	if _, ok := dst.(*ImmValue); ok {
+	if _, ok := dst.(*Immediate); ok {
 		panic(NewIRError("destination operand cannot be an immediate"))
 	}
 	if !src.GetType().IsIdentical(dst.GetType()) {
@@ -281,7 +281,7 @@ func NewGetPtr(base, result IValue, indices []IValue) *GetPtr {
 		switch curType.GetTypeEnum() {
 		case Struct:
 			structType := curType.(*StructType)
-			immIdx, ok := indices[dim].(*ImmValue)
+			immIdx, ok := indices[dim].(*Immediate)
 			if !ok {
 				panic(NewIRError("struct index is not an immediate"))
 			}
@@ -437,6 +437,10 @@ const (
 var binaryOpStr = map[BinaryOp]string{
 	ADD: "add", SUB: "sub", MUL: "mul", DIV: "div", MOD: "mod", AND: "and", OR: "or", XOR: "xor",
 	SHL: "shl", SHR: "shr", EQ: "eq", NE: "ne", LT: "lt", LE: "le", GT: "gt", GE: "ge",
+}
+
+var commutative = map[BinaryOp]bool{
+	ADD: true, MUL: true, AND: true, OR: true, XOR: true, EQ: true, NE: true,
 }
 
 type Binary struct {

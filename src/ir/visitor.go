@@ -24,7 +24,7 @@ type IVisitor interface {
 
 	VisitValue(val IValue) interface{}
 	VisitVariable(val *Variable) interface{}
-	VisitImmValue(val *ImmValue) interface{}
+	VisitImmValue(val *Immediate) interface{}
 
 	VisitType(tp IType) interface{}
 	VisitBaseType(tp *BaseType) interface{}

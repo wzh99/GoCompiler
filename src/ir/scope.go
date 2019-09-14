@@ -20,7 +20,7 @@ func (s *Symbol) Rename() *Symbol {
 		Ver:   s.Ver + 1,
 		Type:  s.Type,
 		Scope: s.Scope,
-		Param: false,
+		Param: false, // renamed version is no longer a parameter
 	}
 	s.Scope.Symbols[sym] = true
 	return sym

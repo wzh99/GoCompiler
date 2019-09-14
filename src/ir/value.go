@@ -39,40 +39,40 @@ func (v *Variable) ToString() string {
 }
 
 // Immediate values, refer to constants in AST
-type ImmValue struct {
+type Immediate struct {
 	BaseValue
 	Value interface{}
 }
 
-func NewI1Imm(value bool) *ImmValue {
-	return &ImmValue{
+func NewI1Imm(value bool) *Immediate {
+	return &Immediate{
 		BaseValue: *NewBaseValue(NewBaseType(I1)),
 		Value:     value,
 	}
 }
 
-func NewI64Imm(value int) *ImmValue {
-	return &ImmValue{
+func NewI64Imm(value int) *Immediate {
+	return &Immediate{
 		BaseValue: *NewBaseValue(NewBaseType(I64)),
 		Value:     value,
 	}
 }
 
-func NewF64Imm(value float64) *ImmValue {
-	return &ImmValue{
+func NewF64Imm(value float64) *Immediate {
+	return &Immediate{
 		BaseValue: *NewBaseValue(NewBaseType(F64)),
 		Value:     value,
 	}
 }
 
-func NewNullPtr() *ImmValue {
-	return &ImmValue{
+func NewNullPtr() *Immediate {
+	return &Immediate{
 		BaseValue: *NewBaseValue(NewPtrType(NewBaseType(Void))),
 		Value:     nil,
 	}
 }
 
-func (v *ImmValue) ToString() string {
+func (v *Immediate) ToString() string {
 	switch v.Type.GetTypeEnum() {
 	case I1:
 		val := v.Value.(bool)
@@ -101,6 +101,8 @@ type Func struct {
 	Exit  map[*BasicBlock]bool
 	// Base scope of current function, may have nested scopes
 	Scope *Scope
+	// Temporary variables count
+	nTmp int
 }
 
 func NewFunc(tp *FuncType, name string, scope *Scope) *Func {
@@ -110,6 +112,7 @@ func NewFunc(tp *FuncType, name string, scope *Scope) *Func {
 		Enter:     nil,                        // to be assigned later
 		Exit:      make(map[*BasicBlock]bool), // to be assigned later
 		Scope:     scope,
+		nTmp:      0,
 	}
 }
 

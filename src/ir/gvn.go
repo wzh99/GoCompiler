@@ -12,6 +12,10 @@ type GVNOpt struct {
 	valNum map[*SSAVert]int
 }
 
+func NewGVNOpt() *GVNOpt {
+	return &GVNOpt{}
+}
+
 func (o *GVNOpt) Optimize(fun *Func) {
 	// Build value graph out of SSA
 	o.graph = NewSSAGraph(fun)

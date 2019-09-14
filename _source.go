@@ -1,6 +1,6 @@
-package main
+package GoCompiler
 
-
+/*
 func test1() {
 	a, d := 3, 2
 	for {
@@ -14,7 +14,7 @@ func test1() {
 		}
 		d = 2
 	}
-}
+}*/
 /*
 func test2() int {
 	i, j := 1, 1

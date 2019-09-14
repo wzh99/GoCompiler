@@ -16,8 +16,6 @@ type Program struct {
 	Funcs []*Func
 	// Basic block counter (to distinguish labels)
 	nBlock int
-	// Temporary operand counter (to distinguish temporaries)
-	nTmp int
 }
 
 type ClosureEnv struct {
@@ -62,7 +60,6 @@ func (b *Builder) VisitProgram(node *ast.ProgramNode) interface{} {
 		Name:   node.PkgName,
 		Funcs:  []*Func{b.genSignature(node.Global)},
 		nBlock: 0,
-		nTmp:   0,
 	}
 	for _, decl := range node.Funcs {
 		sig := b.genSignature(decl)
@@ -332,8 +329,8 @@ func (b *Builder) moveToDst(dstNode ast.IExprNode, inter IValue) {
 }
 
 func (b *Builder) newTempSymbol(tp IType) *Variable {
-	name := fmt.Sprintf("_t%d", b.prg.nTmp)
-	b.prg.nTmp++
+	name := fmt.Sprintf("_t%d", b.fun.nTmp)
+	b.fun.nTmp++
 	sym := b.fun.Scope.AddTemp(name, tp)
 	return NewVariable(sym)
 }
