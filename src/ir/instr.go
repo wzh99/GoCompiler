@@ -16,43 +16,45 @@ type IInstr interface {
 
 // Instruction iterator
 type InstrIter struct {
-	Cur IInstr
-	BB  *BasicBlock
+	cur IInstr
+	bb  *BasicBlock
 }
 
 // Iterate from the first instruction of basic block
 func NewIterFromBlock(bb *BasicBlock) *InstrIter {
 	return &InstrIter{
-		Cur: bb.Head,
-		BB:  bb,
+		cur: bb.Head,
+		bb:  bb,
 	}
 }
 
 func NewIterFromInstr(instr IInstr) *InstrIter {
 	return &InstrIter{
-		Cur: instr,
-		BB:  instr.GetBasicBlock(),
+		cur: instr,
+		bb:  instr.GetBasicBlock(),
 	}
 }
 
-func (i *InstrIter) Valid() bool { return i.Cur != nil }
+func (i *InstrIter) Get() IInstr { return i.cur }
 
-func (i *InstrIter) MoveNext() { i.Cur = i.Cur.GetNext() }
+func (i *InstrIter) Valid() bool { return i.cur != nil }
 
-func (i *InstrIter) MovePrev() { i.Cur = i.Cur.GetPrev() }
+func (i *InstrIter) MoveNext() { i.cur = i.cur.GetNext() }
 
-func (i *InstrIter) HasNext() bool { return i.Cur.GetNext() != nil }
+func (i *InstrIter) MovePrev() { i.cur = i.cur.GetPrev() }
 
-func (i *InstrIter) HasPrev() bool { return i.Cur.GetPrev() != nil }
+func (i *InstrIter) HasNext() bool { return i.cur.GetNext() != nil }
+
+func (i *InstrIter) HasPrev() bool { return i.cur.GetPrev() != nil }
 
 // Insert instruction before current instruction, and point to that one.
 func (i *InstrIter) InsertBefore(instr IInstr) {
-	prev := i.Cur.GetPrev()
-	cur := i.Cur
+	prev := i.cur.GetPrev()
+	cur := i.cur
 	if cur == nil { // empty block
-		i.Cur = instr
-		i.BB.Head = instr
-		i.BB.Tail = instr
+		i.cur = instr
+		i.bb.Head = instr
+		i.bb.Tail = instr
 		return
 	}
 	if prev != nil { // cur is not the first node
@@ -60,7 +62,7 @@ func (i *InstrIter) InsertBefore(instr IInstr) {
 		prev.SetNext(instr)
 	} else {
 		// head -> instr
-		i.BB.Head = instr
+		i.bb.Head = instr
 	}
 	// prev <-> instr - cur
 	instr.SetPrev(prev)
@@ -72,12 +74,12 @@ func (i *InstrIter) InsertBefore(instr IInstr) {
 
 // // Insert instruction after current instruction, and point to that one.
 func (i *InstrIter) InsertAfter(instr IInstr) {
-	next := i.Cur.GetNext()
-	cur := i.Cur
+	next := i.cur.GetNext()
+	cur := i.cur
 	if cur == nil { // empty block
-		i.Cur = instr
-		i.BB.Head = instr
-		i.BB.Tail = instr
+		i.cur = instr
+		i.bb.Head = instr
+		i.bb.Tail = instr
 		return
 	}
 	if next != nil { // cur is not the last node
@@ -85,7 +87,7 @@ func (i *InstrIter) InsertAfter(instr IInstr) {
 		next.SetPrev(instr)
 	} else {
 		// instr <- tail
-		i.BB.Tail = instr
+		i.bb.Tail = instr
 	}
 	// cur - instr <-> next
 	instr.SetNext(next)
@@ -96,43 +98,43 @@ func (i *InstrIter) InsertAfter(instr IInstr) {
 }
 
 func (i *InstrIter) Remove() {
-	if i.Cur == nil {
+	if i.cur == nil {
 		return // no instruction to remove
 	}
-	prev, next := i.Cur.GetPrev(), i.Cur.GetNext()
+	prev, next := i.cur.GetPrev(), i.cur.GetNext()
 	if prev != nil { // not the first node
 		prev.SetNext(next)
 	} else {
-		i.BB.Head = next
+		i.bb.Head = next
 	}
 	if next != nil { // not the last node
 		next.SetPrev(prev)
 	} else {
-		i.BB.Tail = prev
+		i.bb.Tail = prev
 	}
-	i.Cur.SetPrev(nil)
-	i.Cur.SetNext(nil)
-	i.Cur = next
+	i.cur.SetPrev(nil)
+	i.cur.SetNext(nil)
+	i.cur = next
 }
 
 func (i *InstrIter) Replace(instr IInstr) {
-	if i.Cur == nil {
+	if i.cur == nil {
 		return // no instruction to remove
 	}
-	prev, next := i.Cur.GetPrev(), i.Cur.GetNext()
+	prev, next := i.cur.GetPrev(), i.cur.GetNext()
 	if prev != nil { // not the first node
 		prev.SetNext(instr)
 	} else {
-		i.BB.Head = instr
+		i.bb.Head = instr
 	}
 	if next != nil { // not the last node
 		next.SetPrev(instr)
 	} else {
-		i.BB.Tail = instr
+		i.bb.Tail = instr
 	}
 	instr.SetPrev(prev)
 	instr.SetNext(next)
-	i.Cur = instr
+	i.cur = instr
 }
 
 type BaseInstr struct {

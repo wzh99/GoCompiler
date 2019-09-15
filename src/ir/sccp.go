@@ -130,7 +130,7 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 
 		// Replace use with constants
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
-			instr := iter.Cur
+			instr := iter.Get()
 			for _, opd := range instr.GetOpd() {
 				switch (*opd).(type) {
 				case *Variable:
@@ -154,9 +154,9 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 
 		// Remove unreachable branch
 		iter := NewIterFromInstr(block.Tail)
-		switch iter.Cur.(type) {
+		switch iter.Get().(type) {
 		case *Branch:
-			branch := iter.Cur.(*Branch)
+			branch := iter.Get().(*Branch)
 			switch branch.Cond.(type) {
 			case *Immediate:
 				imm := branch.Cond.(*Immediate)
@@ -474,7 +474,7 @@ func (o *SCCPOpt) evalPhi(phi *Phi) {
 func (o *SCCPOpt) evalAllPhis(instr IInstr) IInstr {
 	iter := NewIterFromInstr(instr)
 	for { // visit result of all phi instructions
-		phi, ok := iter.Cur.(*Phi)
+		phi, ok := iter.Get().(*Phi)
 		if !ok {
 			break
 		}
@@ -482,7 +482,7 @@ func (o *SCCPOpt) evalAllPhis(instr IInstr) IInstr {
 		o.evalPhi(phi)
 		iter.MoveNext()
 	}
-	return iter.Cur
+	return iter.Get()
 }
 
 func (o *SCCPOpt) meet(v1 LatValue, i1 interface{}, v2 LatValue, i2 interface{}) (

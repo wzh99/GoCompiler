@@ -154,14 +154,14 @@ func NewSSAGraph(fun *Func) *SSAGraph {
 	// Visit instructions of SSA form
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
-			g.processInstr(iter.Cur)
+			g.processInstr(iter.Get())
 		}
 	}, DepthFirst)
 
 	// Update operands in vertices
 	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
-			instr := iter.Cur
+			instr := iter.Get()
 			switch instr.(type) {
 			case *Move:
 				continue

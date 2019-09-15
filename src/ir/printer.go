@@ -78,7 +78,7 @@ func (p *Printer) VisitBasicBlock(bb *BasicBlock) interface{} {
 	p.write("%s:\n", bb.Name)
 	iter := NewIterFromBlock(bb)
 	for iter.Valid() {
-		p.VisitInstr(iter.Cur)
+		p.VisitInstr(iter.Get())
 		iter.MoveNext()
 	}
 	return nil

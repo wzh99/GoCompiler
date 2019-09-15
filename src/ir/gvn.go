@@ -132,7 +132,7 @@ TraversePartition:
 		}
 		// simplification and set construction are executed simultaneously
 		for iter := NewIterFromBlock(block); iter.Valid(); {
-			remove := o.simplify(iter.Cur, repSym, defOut[block])
+			remove := o.simplify(iter.Get(), repSym, defOut[block])
 			if remove {
 				iter.Remove() // directly point to next instruction
 			} else {

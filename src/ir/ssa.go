@@ -247,12 +247,7 @@ func (o *SSAOpt) insertPhi(fun *Func) {
 		// Use work list algorithm to iteratively insert phi instructions
 		for len(workList) > 0 { // for each involved node in work list
 			// Arbitrarily remove an element from list
-			var node *BasicBlock
-			for n := range workList {
-				node = n
-				break
-			}
-			delete(workList, node)
+			node := removeOneBlock(workList)
 			// Possibly insert phi instructions for each node in dominance frontiers
 			for y := range DF[node] { // for each dominance frontier node
 				if APhi[y] == nil {
@@ -284,7 +279,7 @@ func (o *SSAOpt) insertPhi(fun *Func) {
 func (o *SSAOpt) getDefSymbolSet(block *BasicBlock) map[*Symbol]bool {
 	defSymSet := make(map[*Symbol]bool)
 	for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
-		def := iter.Cur.GetDef()
+		def := iter.Get().GetDef()
 		if def == nil {
 			continue
 		}
@@ -333,7 +328,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 	rename = func(block *BasicBlock) {
 		// Replace use and definitions in current block
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
-			instr := iter.Cur
+			instr := iter.Get()
 			// Replace use in instructions
 			if _, isPhi := instr.(*Phi); !isPhi { // not a phi instruction
 				for _, use := range o.getVarUse(instr) {
@@ -355,7 +350,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 		// Replace use in phi instructions in successors
 		for succ := range block.Succ {
 			for iter := NewIterFromBlock(succ); iter.Valid(); iter.MoveNext() {
-				phi, isPhi := iter.Cur.(*Phi)
+				phi, isPhi := iter.Get().(*Phi)
 				if !isPhi {
 					continue
 				}
@@ -375,7 +370,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 
 		// Remove symbol renamed in this frame
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
-			def := o.getVarDef(iter.Cur)
+			def := o.getVarDef(iter.Get())
 			if def != nil {
 				sym := (*def).(*Variable).Symbol
 				ver[sym.Name].pop()
@@ -431,7 +426,7 @@ func getDefUseInfo(fun *Func) map[*Symbol]*DefUseInfo {
 	// Visit instructions and fill in the table
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
-			instr := iter.Cur
+			instr := iter.Get()
 			def := instr.GetDef()
 			if def != nil {
 				defUse[(*def).(*Variable).Symbol].def = instr
@@ -491,9 +486,9 @@ func eliminateDeadCode(fun *Func) {
 	// The two phi instructions are useless, so they should be eliminated.
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); {
-			switch iter.Cur.(type) {
+			switch iter.Get().(type) {
 			case *Phi:
-				phi := iter.Cur.(*Phi)
+				phi := iter.Get().(*Phi)
 				sym := phi.Result.(*Variable).Symbol
 				if len(defUse[sym].useSet) != 1 {
 					iter.MoveNext()
@@ -503,7 +498,7 @@ func eliminateDeadCode(fun *Func) {
 				switch useInstr.(type) {
 				case *Phi:
 					sym2 := useInstr.(*Phi).Result.(*Variable).Symbol
-					if defUse[sym2].useSet[iter.Cur] {
+					if defUse[sym2].useSet[iter.Get()] {
 						iter.Remove()
 						NewIterFromInstr(useInstr).Remove()
 						delete(fun.Scope.Symbols, sym)
