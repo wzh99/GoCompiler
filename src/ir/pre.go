@@ -53,65 +53,116 @@ func newLexIdentExpr(instr IInstr) *LexIdentExpr {
 		}
 	case *Binary:
 		binary := instr.(*Binary)
-		expr := &LexIdentExpr{
+		return &LexIdentExpr{
 			op:  binaryOpStr[binary.Op],
 			opd: [2]string{opdToStr(binary.Left), opdToStr(binary.Right)},
 		}
-		// enforce an order for commutative binary operators
-		if commutative[binary.Op] && expr.opd[0] > expr.opd[1] {
-			expr.opd = [2]string{expr.opd[1], expr.opd[0]}
-		}
-		return expr
 	default:
 		return nil // other instructions not considered
 	}
 }
 
+func (e *LexIdentExpr) hasOpd(name string) bool {
+	return name == e.opd[0] || name == e.opd[1]
+}
+
+func (e *LexIdentExpr) opdIndex(name string) int {
+	if name == e.opd[0] {
+		return 0
+	}
+	if name == e.opd[1] {
+		return 1
+	}
+	return -1
+}
+
+// Common interface of all evaluations of expression (Section 3.1)
+// 1. a real occurrence of expression
+// 2. a Phi occurrence
+// 3. an assignment to an operand of expression
+type IEval interface {
+	getPrev() IEval
+	setPrev(eval IEval)
+	getNext() IEval
+	setNext(eval IEval)
+}
+
+type BaseEval struct {
+	prev, next IEval // as linked list node
+}
+
+func (o *BaseEval) getPrev() IEval { return o.prev }
+
+func (o *BaseEval) setPrev(occur IEval) { o.prev = occur }
+
+func (o *BaseEval) getNext() IEval { return o.next }
+
+func (o *BaseEval) setNext(occur IEval) { o.next = occur }
+
+// Common interface for all occurrences of expressions (Section 3.2)
+// 1. an real occurrence
+// 2. inserted Phi operation
+// 3. Phi operands
 type IOccur interface {
-	getPrev() IOccur
-	setPrev(occur IOccur)
-	getNext() IOccur
-	setNext(occur IOccur)
 	getVersion() int
 	setVersion(ver int)
+	getDef() IOccur
+	setDef(occur IOccur)
 	isIdentical(o2 IOccur) bool
 }
 
+// Shared fields of all occurrences
 type BaseOccur struct {
-	prev, next IOccur // as linked list node
-	version    int
+	def     IOccur // reference to the representative occurrence
+	version int
 }
-
-func (o *BaseOccur) getPrev() IOccur { return o.prev }
-
-func (o *BaseOccur) setPrev(occur IOccur) { o.prev = occur }
-
-func (o *BaseOccur) getNext() IOccur { return o.next }
-
-func (o *BaseOccur) setNext(occur IOccur) { o.next = occur }
 
 func (o *BaseOccur) getVersion() int { return o.version }
 
 func (o *BaseOccur) setVersion(ver int) { o.version = ver }
 
+func (o *BaseOccur) getDef() IOccur { return o.def }
+
+func (o *BaseOccur) setDef(occur IOccur) { o.def = occur }
+
 func (o *BaseOccur) isIdentical(o2 IOccur) bool { return o.version == o2.getVersion() }
 
+// Real occurrence, computation in the original program
+// Both evaluation and occurrence of an expression
 type RealOccur struct {
+	BaseEval
 	BaseOccur
 	instr IInstr
 }
 
 func newRealOccur(instr IInstr) *RealOccur {
 	return &RealOccur{
+		BaseEval: BaseEval{},
 		BaseOccur: BaseOccur{
-			prev:    nil,
-			next:    nil,
 			version: 0,
 		},
 		instr: instr,
 	}
 }
 
+// Assignment to an operand of expression
+// Just an evaluation of expression, not an occurrence
+type OpdAssign struct {
+	BaseEval
+	opd   string // which operand is assigned
+	instr IInstr // related instruction in CFG
+}
+
+func newOpdAssign(opd string, instr IInstr) *OpdAssign {
+	return &OpdAssign{
+		BaseEval: BaseEval{},
+		opd:      opd,
+		instr:    instr,
+	}
+}
+
+// Operands in redundancy factoring operation
+// Just an occurrence of expression, not an evaluation
 type BigPhiOpd struct {
 	BaseOccur
 }
@@ -119,69 +170,68 @@ type BigPhiOpd struct {
 func newBigPhiOpd() *BigPhiOpd {
 	return &BigPhiOpd{
 		BaseOccur: BaseOccur{
-			prev:    nil,
-			next:    nil,
 			version: 0,
 		},
 	}
 }
 
 // Redundancy factoring operator
+// Both occurrence and evaluation of expression
 type BigPhi struct {
+	BaseEval
 	BaseOccur
-	bbToOccur map[*BasicBlock]IOccur
+	bbToOccur map[*BasicBlock]*BigPhiOpd
 }
 
-func newBigPhi(bbToOccur map[*BasicBlock]IOccur) *BigPhi {
+func newBigPhi(bbToOccur map[*BasicBlock]*BigPhiOpd) *BigPhi {
 	return &BigPhi{
+		BaseEval: BaseEval{},
 		BaseOccur: BaseOccur{
-			prev:    nil,
-			next:    nil,
 			version: 0,
 		},
 		bbToOccur: bbToOccur,
 	}
 }
 
-type BlockOccur struct {
-	head, tail IOccur
+// A linked list of all occurrences of
+type BlockEvalList struct {
+	head, tail IEval
 }
 
-func (b *BlockOccur) pushFront(occur IOccur) {
+func (b *BlockEvalList) pushFront(eval IEval) {
 	if b.head == nil {
-		b.head, b.tail = occur, occur
+		b.head, b.tail = eval, eval
 		return
 	}
-	occur.setNext(b.head)
-	b.head.setPrev(occur)
-	b.head = occur
+	eval.setNext(b.head)
+	b.head.setPrev(eval)
+	b.head = eval
 }
 
-func (b *BlockOccur) pushBack(occur IOccur) {
+func (b *BlockEvalList) pushBack(eval IEval) {
 	if b.tail == nil {
-		b.head, b.tail = occur, occur
+		b.head, b.tail = eval, eval
 		return
 	}
-	occur.setPrev(b.tail)
-	b.tail.setNext(occur)
-	b.tail = occur
+	eval.setPrev(b.tail)
+	b.tail.setNext(eval)
+	b.tail = eval
 }
 
-type OccurTable map[*BasicBlock]*BlockOccur
+type EvalListTable map[*BasicBlock]*BlockEvalList
 
-// Worklist driven PRE, see Section 5.1 of paper
+// Work-list driven PRE, see Section 5.1 of paper
 func (o *PREOpt) Optimize(fun *Func) {
-	// Initialize worklist
+	// Initialize work-list
 	o.fun = fun
-	workList := make(map[LexIdentExpr]OccurTable)
-	removeOnePair := func() (LexIdentExpr, OccurTable) {
+	workList := make(map[LexIdentExpr]bool)
+	removeOneExpr := func() LexIdentExpr {
 		var expr LexIdentExpr
-		var occurTable map[*BasicBlock]*BlockOccur
-		for e, oc := range workList {
-			expr, occurTable = e, oc
+		for e := range workList {
+			expr = e
 		}
 		delete(workList, expr)
-		return expr, occurTable
+		return expr
 	}
 
 	// Collect occurrences of expressions
@@ -191,14 +241,7 @@ func (o *PREOpt) Optimize(fun *Func) {
 			if expr == nil {
 				continue
 			}
-			if workList[*expr] == nil {
-				workList[*expr] = make(OccurTable)
-			}
-			occurTable := workList[*expr]
-			if occurTable[block] == nil {
-				occurTable[block] = &BlockOccur{}
-			}
-			occurTable[block].pushBack(newRealOccur(iter.Get()))
+			workList[*expr] = true
 		}
 	}, DepthFirst)
 
@@ -207,9 +250,8 @@ func (o *PREOpt) Optimize(fun *Func) {
 	for len(workList) > 0 {
 		// Pick one expression and build FRG for that
 		expr := new(LexIdentExpr)
-		var table OccurTable
-		*expr, table = removeOnePair()
-		o.buildFRG(fun, expr, table)
+		*expr = removeOneExpr()
+		o.buildFRG(fun, expr)
 
 		// Perform backward and forward data flow propagation
 		// Pinpoint locations for computations to be inserted
@@ -225,14 +267,35 @@ func copyBlockSet(set map[*BasicBlock]bool) map[*BasicBlock]bool {
 	return cp
 }
 
-func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr, table OccurTable) {
-	// Build occurrence set of expression
-	occurred := make(map[*BasicBlock]bool)
+func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
+	// Build evaluation
+	table := make(EvalListTable)           // table of evaluation list
+	occurred := make(map[*BasicBlock]bool) // set of blocks where there are real occurrences
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
-		if table[block] == nil { // fill in missing entries with empty records
-			table[block] = &BlockOccur{}
-		} else { // add to definition set
-			occurred[block] = true
+		table[block] = &BlockEvalList{}
+		evalList := table[block]
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
+			instr := iter.Get()
+			def := instr.GetDef()
+			// Try to build as an assignment to operands
+			if def == nil {
+				continue // no symbol defined in this instruction. don't care
+			}
+			sym := (*def).(*Variable).Symbol
+			if expr.hasOpd(sym.Name) {
+				evalList.pushBack(newOpdAssign(expr.opd[expr.opdIndex(sym.Name)], instr))
+				continue // cannot also be an real occurrence
+			}
+			// Try to build as real occurrence
+			instrExpr := newLexIdentExpr(instr)
+			if instrExpr == nil {
+				continue // this type of instruction is not in consideration
+			}
+			if *instrExpr != *expr {
+				continue // not the expression we build FRG fors
+			}
+			evalList.pushBack(newRealOccur(instr))
+			occurred[block] = true // add to real occurrence set
 		}
 	}, DepthFirst)
 
@@ -244,7 +307,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr, table OccurTable) {
 		if inserted[block] {
 			return
 		}
-		bbToOpd := make(map[*BasicBlock]IOccur)
+		bbToOpd := make(map[*BasicBlock]*BigPhiOpd)
 		for pred := range block.Pred {
 			bbToOpd[pred] = newBigPhiOpd()
 		}
@@ -273,7 +336,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr, table OccurTable) {
 				switch (*def).(type) {
 				case *Variable:
 					sym := (*def).(*Variable).Symbol
-					if sym.Name == expr.opd[0] || sym.Name == expr.opd[1] {
+					if expr.hasOpd(sym.Name) {
 						insertPhi(block)
 					}
 				}
@@ -288,11 +351,15 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr, table OccurTable) {
 		for cur := table[block].head; cur != nil; cur = cur.getNext() {
 			switch cur.(type) {
 			case *BigPhi:
-				fmt.Println("\tBigPhi", cur.getVersion())
+				fmt.Println("\tBigPhi", cur.(*BigPhi).version)
 			case *RealOccur:
-				fmt.Println("\tRealOccur", cur.getVersion())
+				fmt.Println("\tRealOccur", cur.(*RealOccur).version)
+			case *OpdAssign:
+				fmt.Println("\tOpdAssign", cur.(*OpdAssign).opd)
 			}
 		}
 	}, DepthFirst)
 	fmt.Println()
+
+	return table
 }

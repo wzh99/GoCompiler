@@ -42,23 +42,18 @@ func test3(a, x, y int) int {
 	return c
 }*/
 
-func test4() int {
-	var d, e, f int
-	b := 2
-	for i := 1; i <= 100; {
-		a := b + 1
-		c := 2
-		if i%2 == 0 {
-			d = a + d
-			e = 1 + d
-		} else {
-			d = -c
-			f = 1 + a
+func test4(a, b, e int) int {
+	var c int
+	a = 3
+	for {
+		if b > 3 {
+			c = a + b
+			a = 5
 		}
-		i++
-		if a < 2 {
+		c = a + b
+		if c > 7 {
 			break
 		}
 	}
-	return d + e + f
+	return c
 }
