@@ -291,16 +291,7 @@ type ExprStack struct {
 func newExprStack() *ExprStack {
 	return &ExprStack{
 		latest: 0,
-		stack: []*ExprStackElem{
-			// Each expression is available at the beginning, with two operands their first
-			// versions respectively. We can simply add one real occurrence to the beginning of
-			// the entrance block if needed.
-			{
-				exprVer: 0,
-				opdVer:  [2]int{0, 0},
-				rep:     nil,
-			},
-		},
+		stack:  make([]*ExprStackElem, 0),
 	}
 }
 
@@ -313,6 +304,8 @@ func (s *ExprStack) push(v *ExprStackElem) {
 func (s *ExprStack) pop() { s.stack = s.stack[:len(s.stack)-1] }
 
 func (s *ExprStack) top() *ExprStackElem { return s.stack[len(s.stack)-1] }
+
+func (s *ExprStack) empty() bool { return len(s.stack) == 0 }
 
 type OpdStack struct {
 	stack []int
@@ -437,7 +430,9 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
 				case *Phi:
 					opdStacks[assign.index].push(ver) // push operand version
 					// update operand in currently available expression
-					exprStack.top().opdVer[assign.index] = ver
+					if !exprStack.empty() {
+						exprStack.top().opdVer[assign.index] = ver
+					}
 				default: // only push operand version
 					opdStacks[assign.index].push(ver)
 				}
@@ -446,7 +441,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
 			case *RealOccur:
 				occur := cur.(*RealOccur)
 				// compare operands in occurrence with ones in available expression
-				if o.getRealOccurVer(occur) == exprStack.top().opdVer {
+				if !exprStack.empty() && o.getRealOccurVer(occur) == exprStack.top().opdVer {
 					occur.version = exprStack.top().exprVer // assign same class number
 					occur.def = exprStack.top().rep         // refer to representative occurrence
 				} else {
@@ -467,7 +462,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
 			case *BigPhi: // there is at most one occurrence in each block
 				bigPhi := head.(*BigPhi)
 				opd := bigPhi.bbToOpd[block]
-				if exprStack.top().opdVer == getOpdVer() {
+				if !exprStack.empty() && exprStack.top().opdVer == getOpdVer() {
 					opd.version = exprStack.top().exprVer
 					opd.def = exprStack.top().rep
 				} else {
