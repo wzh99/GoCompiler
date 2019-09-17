@@ -368,7 +368,7 @@ func (o *SSAOpt) renameVar(fun *Func) {
 			rename(child)
 		}
 
-		// Remove symbol renamed in this frame
+		// Remove symbol renamed in this block
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			def := o.getVarDef(iter.Get())
 			if def != nil {

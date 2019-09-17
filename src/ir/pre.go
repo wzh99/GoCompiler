@@ -149,16 +149,20 @@ func newRealOccur(instr IInstr) *RealOccur {
 // Just an evaluation of expression, not an occurrence
 type OpdAssign struct {
 	BaseEval
-	opd   string // which operand is assigned
+	index int    // which operand is assigned
 	instr IInstr // related instruction in CFG
 }
 
-func newOpdAssign(opd string, instr IInstr) *OpdAssign {
+func newOpdAssign(index int, instr IInstr) *OpdAssign {
 	return &OpdAssign{
 		BaseEval: BaseEval{},
-		opd:      opd,
+		index:    index,
 		instr:    instr,
 	}
+}
+
+func (a *OpdAssign) getSymbolVersion() int {
+	return (*a.instr.GetDef()).(*Variable).Symbol.Ver
 }
 
 // Operands in redundancy factoring operation
@@ -170,17 +174,19 @@ type BigPhiOpd struct {
 func newBigPhiOpd() *BigPhiOpd {
 	return &BigPhiOpd{
 		BaseOccur: BaseOccur{
-			version: 0,
+			version: 0, // negative value indicates unavailability
 		},
 	}
 }
+
+func (o *BigPhiOpd) isAvailable() bool { return o.version < 0 }
 
 // Redundancy factoring operator
 // Both occurrence and evaluation of expression
 type BigPhi struct {
 	BaseEval
 	BaseOccur
-	bbToOccur map[*BasicBlock]*BigPhiOpd
+	bbToOpd map[*BasicBlock]*BigPhiOpd
 }
 
 func newBigPhi(bbToOccur map[*BasicBlock]*BigPhiOpd) *BigPhi {
@@ -189,7 +195,7 @@ func newBigPhi(bbToOccur map[*BasicBlock]*BigPhiOpd) *BigPhi {
 		BaseOccur: BaseOccur{
 			version: 0,
 		},
-		bbToOccur: bbToOccur,
+		bbToOpd: bbToOccur,
 	}
 }
 
@@ -267,6 +273,63 @@ func copyBlockSet(set map[*BasicBlock]bool) map[*BasicBlock]bool {
 	return cp
 }
 
+type ExprStackElem struct {
+	exprVer int
+	opdVer  [2]int
+	rep     IOccur
+}
+
+func (e *ExprStackElem) matchOpdVersion(opdStack [2]*OpdStack) bool {
+	return e.opdVer[0] == opdStack[0].top() && e.opdVer[1] == opdStack[1].top()
+}
+
+type ExprStack struct {
+	latest int
+	stack  []*ExprStackElem
+}
+
+func newExprStack() *ExprStack {
+	return &ExprStack{
+		latest: 0,
+		stack: []*ExprStackElem{
+			// Each expression is available at the beginning, with two operands their first
+			// versions respectively. We can simply add one real occurrence to the beginning of
+			// the entrance block if needed.
+			{
+				exprVer: 0,
+				opdVer:  [2]int{0, 0},
+				rep:     nil,
+			},
+		},
+	}
+}
+
+func (s *ExprStack) push(v *ExprStackElem) {
+	s.latest++
+	v.exprVer = s.latest
+	s.stack = append(s.stack, v)
+}
+
+func (s *ExprStack) pop() { s.stack = s.stack[:len(s.stack)-1] }
+
+func (s *ExprStack) top() *ExprStackElem { return s.stack[len(s.stack)-1] }
+
+type OpdStack struct {
+	stack []int
+}
+
+func newVarStack() *OpdStack {
+	return &OpdStack{
+		stack: []int{0},
+	}
+}
+
+func (s *OpdStack) push(v int) { s.stack = append(s.stack, v) }
+
+func (s *OpdStack) pop() { s.stack = s.stack[:len(s.stack)-1] }
+
+func (s *OpdStack) top() int { return s.stack[len(s.stack)-1] }
+
 func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
 	// Build evaluation
 	table := make(EvalListTable)           // table of evaluation list
@@ -283,7 +346,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
 			}
 			sym := (*def).(*Variable).Symbol
 			if expr.hasOpd(sym.Name) {
-				evalList.pushBack(newOpdAssign(expr.opd[expr.opdIndex(sym.Name)], instr))
+				evalList.pushBack(newOpdAssign(expr.opdIndex(sym.Name), instr))
 				continue // cannot also be an real occurrence
 			}
 			// Try to build as real occurrence
@@ -344,22 +407,143 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
 		}
 	}, DepthFirst)
 
+	// Rename occurrences in blocks, see Section 3.2
+	exprStack := newExprStack()
+	opdStacks := [2]*OpdStack{newVarStack(), newVarStack()}
+	getOpdVer := func() [2]int {
+		return [2]int{opdStacks[0].top(), opdStacks[1].top()}
+	}
+	var visit func(block *BasicBlock)
+	visit = func(block *BasicBlock) {
+		// Traverse evaluation list in the basic block
+		exprPush := 0 // record expression push times to restore stack after visiting children
+		opdPush := [2]int{0, 0}
+		evalList := table[block]
+		for cur := evalList.head; cur != nil; cur = cur.getNext() {
+			switch cur.(type) {
+			case *BigPhi: // assign a new expression version (redundancy class number)
+				occur := cur.(*BigPhi)
+				exprStack.push(&ExprStackElem{
+					opdVer: getOpdVer(),
+					rep:    occur,
+				})
+				exprPush++
+				occur.version = exprStack.top().exprVer
+
+			case *OpdAssign:
+				assign := cur.(*OpdAssign)
+				ver := assign.getSymbolVersion()
+				switch assign.instr.(type) {
+				case *Phi:
+					opdStacks[assign.index].push(ver) // push operand version
+					// update operand in currently available expression
+					exprStack.top().opdVer[assign.index] = ver
+				default: // only push operand version
+					opdStacks[assign.index].push(ver)
+				}
+				opdPush[assign.index]++
+
+			case *RealOccur:
+				occur := cur.(*RealOccur)
+				// compare operands in occurrence with ones in available expression
+				if o.getRealOccurVer(occur) == exprStack.top().opdVer {
+					occur.version = exprStack.top().exprVer // assign same class number
+					occur.def = exprStack.top().rep         // refer to representative occurrence
+				} else {
+					exprStack.push(&ExprStackElem{ // assign a new class number
+						opdVer: o.getRealOccurVer(occur),
+						rep:    occur,
+					})
+					occur.version = exprStack.top().exprVer
+					exprPush++
+				}
+			} // end evaluation switch
+		} // end evaluation list iteration
+
+		// Visit Phi occurrence in successors
+		for succ := range block.Succ {
+			head := table[succ].head
+			switch head.(type) {
+			case *BigPhi: // there is at most one occurrence in each block
+				bigPhi := head.(*BigPhi)
+				opd := bigPhi.bbToOpd[block]
+				if exprStack.top().opdVer == getOpdVer() {
+					opd.version = exprStack.top().exprVer
+					opd.def = exprStack.top().rep
+				} else {
+					opd.version = -1 // value of expression is unavailable
+				}
+			}
+		}
+
+		// Visit all children in dominance tree
+		for child := range block.Children {
+			visit(child)
+		}
+
+		// Restore stack before exit
+		for i := 0; i < exprPush; i++ {
+			exprStack.pop()
+		}
+		for i, s := range opdPush {
+			for j := 0; j < s; j++ {
+				opdStacks[i].pop()
+			}
+		}
+	}
+	visit(fun.Enter)
+
 	// Print inserted Phis
+	o.printEval(fun, expr, table)
+
+	return table
+}
+
+func (o *PREOpt) getRealOccurVer(occur *RealOccur) [2]int {
+	instr := occur.instr
+	switch instr.(type) {
+	case *Unary:
+		unary := instr.(*Unary)
+		return [2]int{o.getOpdVer(unary.Operand)}
+	case *Binary:
+		binary := instr.(*Binary)
+		return [2]int{o.getOpdVer(binary.Left), o.getOpdVer(binary.Right)}
+	default:
+		return [2]int{}
+	}
+}
+
+func (o *PREOpt) getOpdVer(val IValue) int {
+	switch val.(type) {
+	case *Immediate:
+		return 0 // immediate has only one version
+	case *Variable:
+		sym := val.(*Variable).Symbol
+		return sym.Ver
+	default:
+		return 0
+	}
+}
+
+func (o *PREOpt) printEval(fun *Func, expr *LexIdentExpr, table EvalListTable) {
 	fmt.Println(expr)
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		fmt.Println(block.Name)
 		for cur := table[block].head; cur != nil; cur = cur.getNext() {
 			switch cur.(type) {
 			case *BigPhi:
-				fmt.Println("\tBigPhi", cur.(*BigPhi).version)
+				bigPhi := cur.(*BigPhi)
+				fmt.Printf("\tBigPhi %d", bigPhi.version)
+				for bb, opd := range bigPhi.bbToOpd {
+					fmt.Printf(" %s: %d", bb.Name, opd.version)
+				}
+				fmt.Println()
 			case *RealOccur:
-				fmt.Println("\tRealOccur", cur.(*RealOccur).version)
+				fmt.Printf("\tRealOccur %d\n", cur.(*RealOccur).version)
 			case *OpdAssign:
-				fmt.Println("\tOpdAssign", cur.(*OpdAssign).opd)
+				fmt.Printf("\tOpdAssign %s\n", expr.opd[cur.(*OpdAssign).index])
 			}
 		}
 	}, DepthFirst)
 	fmt.Println()
-
-	return table
 }
