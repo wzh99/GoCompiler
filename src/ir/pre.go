@@ -1,6 +1,9 @@
 package ir
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // Partial Redundancy Elimination in SSA Form by Chow et al. [1999].
 type PREOpt struct {
@@ -169,6 +172,7 @@ func (a *OpdAssign) getSymbolVersion() int {
 // Just an occurrence of expression, not an evaluation
 type BigPhiOpd struct {
 	BaseOccur
+	hasRealUse bool // whether there is real occurrence before this operand
 }
 
 func newBigPhiOpd() *BigPhiOpd {
@@ -176,6 +180,7 @@ func newBigPhiOpd() *BigPhiOpd {
 		BaseOccur: BaseOccur{
 			version: 0, // negative value indicates unavailability
 		},
+		hasRealUse: false, // keep false until we find a real use
 	}
 }
 
@@ -186,7 +191,8 @@ func (o *BigPhiOpd) isAvailable() bool { return o.version < 0 }
 type BigPhi struct {
 	BaseEval
 	BaseOccur
-	bbToOpd map[*BasicBlock]*BigPhiOpd
+	bbToOpd  map[*BasicBlock]*BigPhiOpd
+	downSafe bool // evaluated before program exit or altered by operand redefinition
 }
 
 func newBigPhi(bbToOccur map[*BasicBlock]*BigPhiOpd) *BigPhi {
@@ -195,7 +201,8 @@ func newBigPhi(bbToOccur map[*BasicBlock]*BigPhiOpd) *BigPhi {
 		BaseOccur: BaseOccur{
 			version: 0,
 		},
-		bbToOpd: bbToOccur,
+		bbToOpd:  bbToOccur,
+		downSafe: true, // keep true until propagated to be false
 	}
 }
 
@@ -257,9 +264,10 @@ func (o *PREOpt) Optimize(fun *Func) {
 		// Pick one expression and build FRG for that
 		expr := new(LexIdentExpr)
 		*expr = removeOneExpr()
-		o.buildFRG(fun, expr)
+		table := o.buildFRG(fun, expr)
 
 		// Perform backward and forward data flow propagation
+		o.downSafety(fun, table)
 		// Pinpoint locations for computations to be inserted
 		// Transform code to form optimized program
 	}
@@ -274,9 +282,9 @@ func copyBlockSet(set map[*BasicBlock]bool) map[*BasicBlock]bool {
 }
 
 type ExprStackElem struct {
-	exprVer int
-	opdVer  [2]int
-	rep     IOccur
+	exprVer    int
+	opdVer     [2]int
+	occur, rep IOccur
 }
 
 func (e *ExprStackElem) matchOpdVersion(opdStack [2]*OpdStack) bool {
@@ -295,11 +303,13 @@ func newExprStack() *ExprStack {
 	}
 }
 
-func (s *ExprStack) push(v *ExprStackElem) {
+func (s *ExprStack) rename(elem *ExprStackElem) {
 	s.latest++
-	v.exprVer = s.latest
-	s.stack = append(s.stack, v)
+	elem.exprVer = s.latest
+	s.push(elem)
 }
+
+func (s *ExprStack) push(elem *ExprStackElem) { s.stack = append(s.stack, elem) }
 
 func (s *ExprStack) pop() { s.stack = s.stack[:len(s.stack)-1] }
 
@@ -401,11 +411,24 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
 	}, DepthFirst)
 
 	// Rename occurrences in blocks, see Section 3.2
+	// Also perform down safety initialization, see Section 3.3
 	exprStack := newExprStack()
 	opdStacks := [2]*OpdStack{newVarStack(), newVarStack()}
+
 	getOpdVer := func() [2]int {
 		return [2]int{opdStacks[0].top(), opdStacks[1].top()}
 	}
+	clearDownSafe := func() {
+		if exprStack.empty() {
+			return
+		}
+		topOccur := exprStack.top().occur
+		switch topOccur.(type) {
+		case *BigPhi: // no real occurrence of previous version to here
+			topOccur.(*BigPhi).downSafe = false
+		}
+	}
+
 	var visit func(block *BasicBlock)
 	visit = func(block *BasicBlock) {
 		// Traverse evaluation list in the basic block
@@ -416,12 +439,13 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
 			switch cur.(type) {
 			case *BigPhi: // assign a new expression version (redundancy class number)
 				occur := cur.(*BigPhi)
-				exprStack.push(&ExprStackElem{
+				exprStack.rename(&ExprStackElem{
 					opdVer: getOpdVer(),
+					occur:  occur,
 					rep:    occur,
 				})
 				exprPush++
-				occur.version = exprStack.top().exprVer
+				occur.version = exprStack.latest
 
 			case *OpdAssign:
 				assign := cur.(*OpdAssign)
@@ -429,8 +453,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
 				switch assign.instr.(type) {
 				case *Phi:
 					opdStacks[assign.index].push(ver) // push operand version
-					// update operand in currently available expression
-					if !exprStack.empty() {
+					if !exprStack.empty() { // update operand in top occurrence
 						exprStack.top().opdVer[assign.index] = ver
 					}
 				default: // only push operand version
@@ -440,18 +463,28 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
 
 			case *RealOccur:
 				occur := cur.(*RealOccur)
-				// compare operands in occurrence with ones in available expression
-				if !exprStack.empty() && o.getRealOccurVer(occur) == exprStack.top().opdVer {
-					occur.version = exprStack.top().exprVer // assign same class number
-					occur.def = exprStack.top().rep         // refer to representative occurrence
+				// Compare operands in occurrence with ones in available expression
+				top := exprStack.top()
+				if !exprStack.empty() && o.getRealOccurVer(occur) == top.opdVer {
+					occur.version = top.exprVer // assign same class number
+					occur.def = top.rep         // refer to representative occurrence
+					exprStack.push(&ExprStackElem{
+						exprVer: top.exprVer,
+						opdVer:  top.opdVer,
+						occur:   occur,
+						rep:     top.rep,
+					})
 				} else {
-					exprStack.push(&ExprStackElem{ // assign a new class number
+					clearDownSafe() // examine the top occurrence
+					exprStack.rename(&ExprStackElem{ // assign a new class number
 						opdVer: o.getRealOccurVer(occur),
+						occur:  occur,
 						rep:    occur,
 					})
-					occur.version = exprStack.top().exprVer
-					exprPush++
+					occur.version = exprStack.latest
+					occur.def = top.rep
 				}
+				exprPush++
 			} // end evaluation switch
 		} // end evaluation list iteration
 
@@ -463,9 +496,15 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
 				bigPhi := head.(*BigPhi)
 				opd := bigPhi.bbToOpd[block]
 				if !exprStack.empty() && exprStack.top().opdVer == getOpdVer() {
-					opd.version = exprStack.top().exprVer
-					opd.def = exprStack.top().rep
+					top := exprStack.top()
+					opd.version = top.exprVer
+					opd.def = top.rep
+					switch top.occur.(type) {
+					case *RealOccur: // a real occurrence found
+						opd.hasRealUse = true
+					}
 				} else {
+					clearDownSafe()  // examine the top occurrence
 					opd.version = -1 // value of expression is unavailable
 				}
 			}
@@ -476,7 +515,12 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) EvalListTable {
 			visit(child)
 		}
 
-		// Restore stack before exit
+		// Clear down safety flag if reaching exit blocks
+		if fun.Exit[block] {
+			clearDownSafe()
+		}
+
+		// Restore stack before exiting this block
 		for i := 0; i < exprPush; i++ {
 			exprStack.pop()
 		}
@@ -520,6 +564,38 @@ func (o *PREOpt) getOpdVer(val IValue) int {
 	}
 }
 
+func (o *PREOpt) downSafety(fun *Func, table EvalListTable) {
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		evalList := table[block]
+		switch evalList.head.(type) {
+		case *BigPhi:
+			bigPhi := evalList.head.(*BigPhi)
+			if !bigPhi.downSafe {
+				for _, opd := range bigPhi.bbToOpd {
+					o.resetDownSafety(opd)
+				}
+			}
+		}
+	}, PostOrder)
+}
+
+func (o *PREOpt) resetDownSafety(opd *BigPhiOpd) {
+	if opd.hasRealUse {
+		return
+	}
+	switch opd.def.(type) {
+	case *BigPhi:
+		def := opd.def.(*BigPhi)
+		if !def.downSafe {
+			return
+		}
+		def.downSafe = false
+		for _, opd := range def.bbToOpd {
+			o.resetDownSafety(opd)
+		}
+	}
+}
+
 func (o *PREOpt) printEval(fun *Func, expr *LexIdentExpr, table EvalListTable) {
 	fmt.Println(expr)
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
@@ -528,9 +604,11 @@ func (o *PREOpt) printEval(fun *Func, expr *LexIdentExpr, table EvalListTable) {
 			switch cur.(type) {
 			case *BigPhi:
 				bigPhi := cur.(*BigPhi)
-				fmt.Printf("\tBigPhi %d", bigPhi.version)
+				fmt.Printf("\tBigPhi %d %s", bigPhi.version,
+					strconv.FormatBool(bigPhi.downSafe))
 				for bb, opd := range bigPhi.bbToOpd {
-					fmt.Printf(" %s: %d", bb.Name, opd.version)
+					fmt.Printf(" [%s: %d %s]", bb.Name, opd.version,
+						strconv.FormatBool(opd.hasRealUse))
 				}
 				fmt.Println()
 			case *RealOccur:
@@ -539,6 +617,6 @@ func (o *PREOpt) printEval(fun *Func, expr *LexIdentExpr, table EvalListTable) {
 				fmt.Printf("\tOpdAssign %s\n", expr.opd[cur.(*OpdAssign).index])
 			}
 		}
-	}, DepthFirst)
+	}, ReversePostOrder)
 	fmt.Println()
 }

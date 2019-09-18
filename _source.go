@@ -1,4 +1,4 @@
-package GoCompiler
+package main
 
 /*
 func test1() {

@@ -1,4 +1,4 @@
-program GoCompiler
+program main
 
 func _global(): 
 _B0_Start:
@@ -9,14 +9,14 @@ _B1_Start:
 	move 3: i64 => $_s1_a.1: i64
 	jump _B2_ForBody
 _B2_ForBody:
-	phi (_B1_Start -> $_s1_a.1: i64, _B3_ForPost -> $_s1_a.3: i64) => $_s1_a.2: i64
+	phi (_B3_ForPost -> $_s1_a.3: i64, _B1_Start -> $_s1_a.1: i64) => $_s1_a.2: i64
 	gt $_s1_b.0: i64, 3: i64 => $_t1.2: i1
 	branch $_t1.2: i1 ? _B5_IfThen : _B10_EdgeSplit
-_B10_EdgeSplit:
-	jump _B6_IfNext
 _B5_IfThen:
 	add $_s1_a.2: i64, $_s1_b.0: i64 => $_s1_c.5: i64
 	move 5: i64 => $_s1_a.4: i64
+	jump _B6_IfNext
+_B10_EdgeSplit:
 	jump _B6_IfNext
 _B6_IfNext:
 	phi (_B10_EdgeSplit -> $_s1_a.2: i64, _B5_IfThen -> $_s1_a.4: i64) => $_s1_a.3: i64
