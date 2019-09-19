@@ -245,5 +245,5 @@ func (b *BasicBlock) NumberDomTree() {
 }
 
 func (b *BasicBlock) Dominates(b2 *BasicBlock) bool {
-	return b.serial[0] < b2.serial[0] && b.serial[1] > b2.serial[1]
+	return b.serial[0] <= b2.serial[0] && b.serial[1] >= b2.serial[1]
 }

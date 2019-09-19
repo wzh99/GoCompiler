@@ -7,9 +7,9 @@ import (
 
 // Partial Redundancy Elimination in SSA Form by Chow et al. [1999].
 type PREOpt struct {
-	prg *Program
-	fun *Func
-	DF  map[*BasicBlock]map[*BasicBlock]bool
+	prg    *Program
+	fun    *Func
+	dfPlus map[*BasicBlock]BlockSet
 }
 
 func NewPREOpt(prg *Program) *PREOpt {
@@ -88,10 +88,12 @@ type IEval interface {
 	setPrev(eval IEval)
 	getNext() IEval
 	setNext(eval IEval)
+	remove()
 }
 
 type BaseEval struct {
 	prev, next IEval // as linked list node
+	list       *BlockEvalList
 }
 
 func (o *BaseEval) getPrev() IEval { return o.prev }
@@ -101,6 +103,21 @@ func (o *BaseEval) setPrev(occur IEval) { o.prev = occur }
 func (o *BaseEval) getNext() IEval { return o.next }
 
 func (o *BaseEval) setNext(occur IEval) { o.next = occur }
+
+func (o *BaseEval) remove() {
+	if o.prev != nil {
+		o.prev.setNext(o.next)
+	} else {
+		o.list.head = o.next
+	}
+	if o.next != nil {
+		o.next.setPrev(o.prev)
+	} else {
+		o.list.tail = o.prev
+	}
+	o.prev = nil
+	o.next = nil
+}
 
 // Common interface for all occurrences of expressions (Section 3.2)
 // 1. an real occurrence
@@ -144,14 +161,17 @@ type RealOccur struct {
 	save   bool   // whether its value should be saved to temporary
 }
 
-func newRealOccur(instr IInstr) *RealOccur {
+func newRealOccur(list *BlockEvalList, instr IInstr) *RealOccur {
 	return &RealOccur{
-		BaseEval: BaseEval{},
+		BaseEval: BaseEval{
+			list: list,
+		},
 		BaseOccur: BaseOccur{
 			version: 0,
 			bb:      instr.GetBasicBlock(),
 		},
 		instr: instr,
+		save:  false,
 	}
 }
 
@@ -180,6 +200,12 @@ func getValVer(val IValue) int {
 	}
 }
 
+// Inserted occurrence during finalize step of algorithm
+type InsertedOccur struct {
+	BaseEval
+	BaseOccur
+}
+
 // Assignment to an operand of expression
 // Just an evaluation of expression, not an occurrence
 type OpdAssign struct {
@@ -188,11 +214,13 @@ type OpdAssign struct {
 	instr IInstr // related instruction in CFG
 }
 
-func newOpdAssign(index int, instr IInstr) *OpdAssign {
+func newOpdAssign(list *BlockEvalList, index int, instr IInstr) *OpdAssign {
 	return &OpdAssign{
-		BaseEval: BaseEval{},
-		index:    index,
-		instr:    instr,
+		BaseEval: BaseEval{
+			list: list,
+		},
+		index: index,
+		instr: instr,
 	}
 }
 
@@ -205,6 +233,7 @@ func (a *OpdAssign) getSymbolVersion() int {
 type BigPhiOpd struct {
 	BaseOccur
 	hasRealUse bool // whether there is real occurrence before this operand
+	processed  bool // whether this operand is processed during FRG minimization
 }
 
 func newBigPhiOpd() *BigPhiOpd {
@@ -214,6 +243,7 @@ func newBigPhiOpd() *BigPhiOpd {
 			bb:      nil, // assigned when Phi occurrence is inserted
 		},
 		hasRealUse: false, // keep false until we find a real use
+		processed:  false,
 	}
 }
 
@@ -229,9 +259,10 @@ type BigPhi struct {
 	canBeAvail  bool // expression value can be safely be made available
 	later       bool // whether expression value can be later provided
 	willBeAvail bool // the exact point where expression value will be available
+	extraneous  bool // whether this Phi occurrence should be removed
 }
 
-func newBigPhi(bb *BasicBlock, bbToOpd map[*BasicBlock]*BigPhiOpd) *BigPhi {
+func newBigPhi(list *BlockEvalList, bb *BasicBlock, bbToOpd map[*BasicBlock]*BigPhiOpd) *BigPhi {
 	for bb, opd := range bbToOpd { // assign basic block to operand
 		// Phi operands are considered as occurring at their corresponding predecessors
 		opd.bb = bb
@@ -275,13 +306,63 @@ func (b *BlockEvalList) pushBack(eval IEval) {
 	b.tail = eval
 }
 
+func (b *BlockEvalList) popFront() {
+	if b.head == nil {
+		return
+	}
+	head := b.head
+	next := b.head.getNext()
+	head.setPrev(nil)
+	head.setNext(nil)
+	if next != nil {
+		next.setPrev(nil)
+	} else {
+		b.tail = nil
+	}
+	b.head = next
+}
+
 type EvalListTable map[*BasicBlock]*BlockEvalList
+
+type BlockSet map[*BasicBlock]bool
+
+func copyBlockSet(set BlockSet) BlockSet {
+	cp := make(map[*BasicBlock]bool)
+	for b := range set {
+		cp[b] = true
+	}
+	return cp
+}
 
 // Factored Redundancy Graph
 type FRG struct {
-	table  EvalListTable // map basic block to its evaluation list
-	set    BigPhiSet     // set of all Phi occurrence
-	nClass int           // number of redundancy class
+	table     EvalListTable // map basic block to its evaluation list
+	bigPhi    BigPhiSet     // set of all Phi occurrences
+	realOccur []*RealOccur  // list of all real occurrences
+	nClass    int           // number of redundancy class
+}
+
+// Compute iterated dominance frontier set (DF+)
+func computeDFPlus(fun *Func) map[*BasicBlock]BlockSet {
+	dfTable := computeDF(fun)
+	dfPlus := make(map[*BasicBlock]BlockSet)
+	for bb, df := range dfTable {
+		dfp := copyBlockSet(df)
+		for {
+			prevLen := len(dfp)
+			for f := range dfp { // traverse all existing elements
+				for d := range dfTable[f] { // no occurrence before
+					dfp[d] = true
+				}
+			}
+			curLen := len(dfp)
+			if prevLen == curLen { // fixed point reached
+				break
+			}
+		}
+		dfPlus[bb] = dfp
+	}
+	return dfPlus
 }
 
 // Work-list driven PRE, see Section 5.1 of paper
@@ -310,7 +391,7 @@ func (o *PREOpt) Optimize(fun *Func) {
 	}, DepthFirst)
 
 	// Eliminate redundancies iteratively
-	o.DF = computeDF(fun)
+	o.dfPlus = computeDFPlus(fun)
 	for len(workList) > 0 {
 		// Pick one expression and build FRG for that
 		expr := new(LexIdentExpr)
@@ -318,8 +399,8 @@ func (o *PREOpt) Optimize(fun *Func) {
 		frg := o.buildFRG(fun, expr)
 
 		// Perform backward and forward data flow propagation
-		o.downSafety(fun, frg.set)
-		o.willBeAvail(frg.set)
+		o.downSafety(fun, frg.bigPhi)
+		o.willBeAvail(frg.bigPhi)
 
 		// Pinpoint locations for computations to be inserted
 		o.finalize(frg, fun)
@@ -328,14 +409,6 @@ func (o *PREOpt) Optimize(fun *Func) {
 
 		o.printEval(fun, expr, frg.table)
 	}
-}
-
-func copyBlockSet(set map[*BasicBlock]bool) map[*BasicBlock]bool {
-	cp := make(map[*BasicBlock]bool)
-	for b := range set {
-		cp[b] = true
-	}
-	return cp
 }
 
 type ExprStackElem struct {
@@ -393,7 +466,8 @@ func (s *OpdStack) top() int { return s.stack[len(s.stack)-1] }
 func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 	// Build evaluation
 	table := make(EvalListTable)           // table of evaluation list
-	set := make(BigPhiSet)                 // set of all Phi occurrences
+	bigPhi := make(BigPhiSet)              // set of all Phi occurrences
+	realOccur := make([]*RealOccur, 0)     // list of all real occurrences
 	occurred := make(map[*BasicBlock]bool) // set of blocks where there are real occurrences
 	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		table[block] = &BlockEvalList{}
@@ -407,7 +481,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 			}
 			sym := (*def).(*Variable).Symbol
 			if expr.hasOpd(sym.Name) {
-				evalList.pushBack(newOpdAssign(expr.opdIndex(sym.Name), instr))
+				evalList.pushBack(newOpdAssign(evalList, expr.opdIndex(sym.Name), instr))
 				continue // cannot also be an real occurrence
 			}
 			// Try to build as real occurrence
@@ -416,9 +490,11 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 				continue // this type of instruction is not in consideration
 			}
 			if *instrExpr != *expr {
-				continue // not the expression we build FRG fors
+				continue // not the expression we build FRG for
 			}
-			evalList.pushBack(newRealOccur(instr))
+			occur := newRealOccur(evalList, instr)
+			evalList.pushBack(occur)
+			realOccur = append(realOccur, occur)
 			occurred[block] = true // add to real occurrence set
 		}
 	}, DepthFirst)
@@ -426,7 +502,6 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 	// Insert Phi functions
 	// Insert in iterated dominance frontiers of expression
 	inserted := make(map[*BasicBlock]bool)
-	workList := copyBlockSet(occurred)
 	insertPhi := func(block *BasicBlock) {
 		if inserted[block] {
 			return
@@ -435,18 +510,14 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 		for pred := range block.Pred {
 			bbToOpd[pred] = newBigPhiOpd()
 		}
-		bigPhi := newBigPhi(block, bbToOpd)
-		table[block].pushFront(bigPhi)
-		set[bigPhi] = true
+		f := newBigPhi(table[block], block, bbToOpd)
+		table[block].pushFront(f)
+		bigPhi[f] = true
 		inserted[block] = true
 	}
-	for len(workList) > 0 {
-		block := removeOneBlock(workList)
-		for df := range o.DF[block] {
-			insertPhi(df)
-			if !occurred[df] && !inserted[df] { // there was no occurrence before
-				workList[df] = true
-			}
+	for bb := range occurred {
+		for dfp := range o.dfPlus[bb] {
+			insertPhi(dfp)
 		}
 	}
 
@@ -506,6 +577,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 				})
 				exprPush++
 				occur.version = exprStack.latest
+				occur.def = occur
 
 			case *OpdAssign:
 				assign := cur.(*OpdAssign)
@@ -524,8 +596,8 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 			case *RealOccur:
 				occur := cur.(*RealOccur)
 				// Compare operands in occurrence with ones in available expression
-				top := exprStack.top()
-				if !exprStack.empty() && occur.getOpdVer() == top.opdVer {
+				if !exprStack.empty() && occur.getOpdVer() == exprStack.top().opdVer {
+					top := exprStack.top()
 					occur.version = top.exprVer // assign same class number
 					occur.def = top.rep         // refer to representative occurrence
 					exprStack.push(&ExprStackElem{
@@ -542,7 +614,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 						rep:    occur,
 					})
 					occur.version = exprStack.latest
-					occur.def = top.rep
+					occur.def = exprStack.top().rep
 				}
 				exprPush++
 			} // end evaluation switch
@@ -566,7 +638,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 				} else {
 					clearDownSafe()  // examine the top occurrence
 					opd.version = -1 // value of expression is unavailable
-					opd.def = nil
+					opd.def = nil    // definition not found
 				}
 			}
 		}
@@ -594,9 +666,10 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 	visit(fun.Enter)
 
 	return &FRG{
-		table:  table,
-		set:    set,
-		nClass: exprStack.latest,
+		table:     table,
+		bigPhi:    bigPhi,
+		realOccur: realOccur,
+		nClass:    exprStack.latest,
 	}
 }
 
@@ -700,7 +773,7 @@ func (o *PREOpt) resetLater(g *BigPhi, set BigPhiSet) {
 func (o *PREOpt) finalize(frg *FRG, fun *Func) {
 	// Traverse FRG and insert occurrence if needed
 	availDef := make([]IOccur, frg.nClass+1) // class number is 1-indexed
-	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
 		list := frg.table[block]
 		for cur := list.head; cur != nil; cur = cur.getNext() {
 			switch cur.(type) {
@@ -709,6 +782,7 @@ func (o *PREOpt) finalize(frg *FRG, fun *Func) {
 				if occur.willBeAvail {
 					availDef[occur.version] = occur
 				}
+
 			case *RealOccur:
 				occur := cur.(*RealOccur)
 				ver := occur.version
@@ -722,6 +796,7 @@ func (o *PREOpt) finalize(frg *FRG, fun *Func) {
 				}
 			}
 		}
+
 		for succ := range block.Succ {
 			head := frg.table[succ].head
 			switch head.(type) {
@@ -733,12 +808,14 @@ func (o *PREOpt) finalize(frg *FRG, fun *Func) {
 				opd := f.bbToOpd[block]
 				if opd.def == nil {
 					frg.nClass++ // assign a new class to inserted expression
-					inserted := &RealOccur{
+					inserted := &InsertedOccur{
+						BaseEval: BaseEval{
+							list: list,
+						},
 						BaseOccur: BaseOccur{
 							version: frg.nClass,
 							bb:      block,
 						},
-						instr: nil, // inserted real occurrence has no related instruction
 					}
 					inserted.def = inserted
 					list.pushBack(inserted)
@@ -749,7 +826,101 @@ func (o *PREOpt) finalize(frg *FRG, fun *Func) {
 				}
 			}
 		}
-	}, DepthFirst)
+	}, func(*BasicBlock) {})
+
+	// Remove extraneous Phi occurrence (FRG minimization)
+	for f := range frg.bigPhi {
+		f.extraneous = f.willBeAvail
+	}
+	for _, occur := range frg.realOccur {
+		if occur.reload {
+			o.setSave(occur.def, frg)
+		}
+	}
+	for f := range frg.bigPhi {
+		for _, opd := range f.bbToOpd {
+			opd.processed = false
+		}
+	}
+	for f := range frg.bigPhi {
+		if !f.willBeAvail {
+			o.removeBigPhi(f, frg)
+			continue
+		}
+		if !f.extraneous {
+			continue
+		}
+		for _, opd := range f.bbToOpd {
+			def := opd.def
+			switch def.(type) {
+			case *RealOccur, *InsertedOccur:
+				o.setReplacement(f, def, frg)
+			case *BigPhi:
+				if !def.(*BigPhi).extraneous {
+					o.setReplacement(f, def, frg)
+				}
+			}
+		}
+	}
+}
+
+func (o *PREOpt) setSave(occur IOccur, frg *FRG) {
+	switch occur.(type) {
+	case *RealOccur:
+		occur.(*RealOccur).save = true
+	case *BigPhi:
+		for _, opd := range occur.(*BigPhi).bbToOpd {
+			if !opd.processed {
+				opd.processed = true
+				o.setSave(opd.def, frg)
+			}
+		}
+	}
+	switch occur.(type) {
+	case *RealOccur, *InsertedOccur:
+		for f := range frg.bigPhi {
+			if o.dfPlus[occur.getBasicBlock()][f.bb] && f.willBeAvail {
+				f.extraneous = false
+			}
+		}
+	}
+}
+
+func (o *PREOpt) setReplacement(g *BigPhi, replace IOccur, frg *FRG) {
+	for f := range frg.bigPhi {
+		if !f.willBeAvail {
+			continue
+		}
+		for bb, opd := range f.bbToOpd {
+			if opd.def != g || opd.processed {
+				continue
+			}
+			opd.processed = true
+			if f.extraneous {
+				o.setReplacement(f, replace, frg)
+			} else {
+				f.bbToOpd[bb].def = replace
+			}
+		}
+	}
+	for _, occur := range frg.realOccur {
+		if !occur.reload || occur.def != g {
+			continue
+		}
+		occur.def = replace
+	}
+	o.removeBigPhi(g, frg)
+}
+
+func (o *PREOpt) removeBigPhi(g *BigPhi, frg *FRG) {
+	for _, opd := range g.bbToOpd {
+		switch opd.def.(type) {
+		case *InsertedOccur: // remove inserted occurrence that define this operand
+			opd.def.(*InsertedOccur).remove()
+		}
+	}
+	frg.table[g.bb].popFront()
+	delete(frg.bigPhi, g)
 }
 
 func (o *PREOpt) printEval(fun *Func, expr *LexIdentExpr, table EvalListTable) {
@@ -760,11 +931,12 @@ func (o *PREOpt) printEval(fun *Func, expr *LexIdentExpr, table EvalListTable) {
 			switch cur.(type) {
 			case *BigPhi:
 				bigPhi := cur.(*BigPhi)
-				fmt.Printf("\tBigPhi %d %s %s %s %s", bigPhi.version,
+				fmt.Printf("\tBigPhi %d %s %s %s %s %s", bigPhi.version,
 					strconv.FormatBool(bigPhi.downSafe),
 					strconv.FormatBool(bigPhi.canBeAvail),
 					strconv.FormatBool(bigPhi.later),
-					strconv.FormatBool(bigPhi.willBeAvail))
+					strconv.FormatBool(bigPhi.willBeAvail),
+					strconv.FormatBool(bigPhi.extraneous))
 				for bb, opd := range bigPhi.bbToOpd {
 					fmt.Printf(" [%s: %d %s]", bb.Name, opd.version,
 						strconv.FormatBool(opd.hasRealUse))
@@ -775,6 +947,9 @@ func (o *PREOpt) printEval(fun *Func, expr *LexIdentExpr, table EvalListTable) {
 				fmt.Printf("\tRealOccur %d %s %s\n", occur.version,
 					strconv.FormatBool(occur.reload),
 					strconv.FormatBool(occur.save))
+			case *InsertedOccur:
+				inserted := cur.(*InsertedOccur)
+				fmt.Printf("\tInsertedOccur %d\n", inserted.version)
 			case *OpdAssign:
 				fmt.Printf("\tOpdAssign %s\n", expr.opd[cur.(*OpdAssign).index])
 			}
