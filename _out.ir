@@ -9,7 +9,7 @@ _B1_Start:
 	move 3: i64 => $_s1_a.1: i64
 	jump _B2_ForBody
 _B2_ForBody:
-	phi (_B3_ForPost -> $_s1_a.3: i64, _B1_Start -> $_s1_a.1: i64) => $_s1_a.2: i64
+	phi (_B1_Start -> $_s1_a.1: i64, _B3_ForPost -> $_s1_a.3: i64) => $_s1_a.2: i64
 	gt $_s1_b.0: i64, 3: i64 => $_t1.2: i1
 	branch $_t1.2: i1 ? _B5_IfThen : _B10_EdgeSplit
 _B5_IfThen:
