@@ -382,6 +382,10 @@ var unaryOpStr = map[UnaryOp]string{
 	NEG: "neg", NOT: "not",
 }
 
+var unaryStrToOp = map[string]UnaryOp{
+	"neg": NEG, "not": NOT,
+}
+
 type Unary struct {
 	BaseInstr
 	Op              UnaryOp
@@ -439,6 +443,15 @@ const (
 var binaryOpStr = map[BinaryOp]string{
 	ADD: "add", SUB: "sub", MUL: "mul", DIV: "div", MOD: "mod", AND: "and", OR: "or", XOR: "xor",
 	SHL: "shl", SHR: "shr", EQ: "eq", NE: "ne", LT: "lt", LE: "le", GT: "gt", GE: "ge",
+}
+
+var binaryStrToOp map[string]BinaryOp
+
+func init() {
+	binaryStrToOp = make(map[string]BinaryOp)
+	for op, str := range binaryOpStr {
+		binaryStrToOp[str] = op
+	}
 }
 
 var commutative = map[BinaryOp]bool{

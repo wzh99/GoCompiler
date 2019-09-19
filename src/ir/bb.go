@@ -42,13 +42,12 @@ func (b *BasicBlock) PushFront(instr IInstr) {
 
 // Add instruction to the tail of linked list.
 func (b *BasicBlock) PushBack(instr IInstr) {
+	instr.SetBasicBlock(b)
 	switch b.Tail.(type) {
 	case *Branch, *Jump:
-		panic(NewIRError(fmt.Sprintf(
-			"cannot add to block %s ended with jump or branch instruction", b.Name),
-		))
+		NewIterFromInstr(b.Tail).InsertBefore(instr)
+		return
 	}
-	instr.SetBasicBlock(b)
 	if b.Head == nil {
 		b.Head, b.Tail = instr, instr
 		return

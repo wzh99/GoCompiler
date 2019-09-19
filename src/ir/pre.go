@@ -3,6 +3,7 @@ package ir
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // Partial Redundancy Elimination in SSA Form by Chow et al. [1999].
@@ -16,11 +17,13 @@ func NewPREOpt(prg *Program) *PREOpt {
 	return &PREOpt{prg: prg}
 }
 
-// SSAPRE operates on lexically identified expressions.
+// SSA-PRE operates on lexically identified expressions.
 type LexIdentExpr struct {
 	op  string
 	opd [2]string
 }
+
+var immPrefix = "imm_"
 
 func opdToStr(val IValue) string {
 	switch val.(type) {
@@ -30,14 +33,14 @@ func opdToStr(val IValue) string {
 		case I1:
 			val := imm.Value.(bool)
 			if val {
-				return "1"
+				return immPrefix + "1"
 			} else {
-				return "0"
+				return immPrefix + "0"
 			}
 		case I64:
-			return fmt.Sprintf("%d", imm.Value.(int))
+			return fmt.Sprintf("%s%d", immPrefix, imm.Value.(int))
 		case F64:
-			return fmt.Sprintf("%f", imm.Value.(float64))
+			return fmt.Sprintf("%s%f", immPrefix, imm.Value.(float64))
 		}
 	case *Variable:
 		sym := val.(*Variable).Symbol
@@ -74,6 +77,27 @@ func (e *LexIdentExpr) opdIndex(name string) int {
 		return 0
 	}
 	if name == e.opd[1] {
+		return 1
+	}
+	return -1
+}
+
+func (e *LexIdentExpr) isUnary() bool {
+	return len(e.opd[1]) == 0 // not have second operand
+}
+
+func (e *LexIdentExpr) hasImm() bool {
+	if e.isUnary() {
+		return false // unary instruction has no immediate
+	}
+	return strings.HasPrefix(e.opd[0], immPrefix) || strings.HasPrefix(e.opd[1], immPrefix)
+}
+
+func (e *LexIdentExpr) immIndex() int {
+	if strings.HasPrefix(e.opd[0], immPrefix) {
+		return 0
+	}
+	if strings.HasPrefix(e.opd[1], immPrefix) {
 		return 1
 	}
 	return -1
@@ -268,7 +292,9 @@ func newBigPhi(list *BlockEvalList, bb *BasicBlock, bbToOpd map[*BasicBlock]*Big
 		opd.bb = bb
 	}
 	return &BigPhi{
-		BaseEval: BaseEval{},
+		BaseEval: BaseEval{
+			list: list,
+		},
 		BaseOccur: BaseOccur{
 			version: 0,
 			bb:      bb,
@@ -396,18 +422,15 @@ func (o *PREOpt) Optimize(fun *Func) {
 		// Pick one expression and build FRG for that
 		expr := new(LexIdentExpr)
 		*expr = removeOneExpr()
-		frg := o.buildFRG(fun, expr)
-
+		frg := o.buildFRG(expr)
 		// Perform backward and forward data flow propagation
 		o.downSafety(fun, frg.bigPhi)
 		o.willBeAvail(frg.bigPhi)
-
 		// Pinpoint locations for computations to be inserted
-		o.finalize(frg, fun)
-
+		o.finalize(frg)
 		// Transform code to form optimized program
-
-		o.printEval(fun, expr, frg.table)
+		o.codeMotion(frg, expr)
+		//o.printEval(expr, frg.table)
 	}
 }
 
@@ -463,13 +486,13 @@ func (s *OpdStack) pop() { s.stack = s.stack[:len(s.stack)-1] }
 
 func (s *OpdStack) top() int { return s.stack[len(s.stack)-1] }
 
-func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
+func (o *PREOpt) buildFRG(expr *LexIdentExpr) *FRG {
 	// Build evaluation
 	table := make(EvalListTable)           // table of evaluation list
 	bigPhi := make(BigPhiSet)              // set of all Phi occurrences
 	realOccur := make([]*RealOccur, 0)     // list of all real occurrences
 	occurred := make(map[*BasicBlock]bool) // set of blocks where there are real occurrences
-	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+	o.fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		table[block] = &BlockEvalList{}
 		evalList := table[block]
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
@@ -522,7 +545,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 	}
 
 	// Insert in blocks where there is a phi instruction of operands of the expression
-	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+	o.fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			switch iter.Get().(type) {
 			case *Phi:
@@ -649,7 +672,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 		}
 
 		// Clear down safety flag if reaching exit blocks
-		if fun.Exit[block] {
+		if o.fun.Exit[block] {
 			clearDownSafe()
 		}
 
@@ -663,7 +686,7 @@ func (o *PREOpt) buildFRG(fun *Func, expr *LexIdentExpr) *FRG {
 			}
 		}
 	}
-	visit(fun.Enter)
+	visit(o.fun.Enter)
 
 	return &FRG{
 		table:     table,
@@ -770,10 +793,10 @@ func (o *PREOpt) resetLater(g *BigPhi, set BigPhiSet) {
 	}
 }
 
-func (o *PREOpt) finalize(frg *FRG, fun *Func) {
+func (o *PREOpt) finalize(frg *FRG) {
 	// Traverse FRG and insert occurrence if needed
 	availDef := make([]IOccur, frg.nClass+1) // class number is 1-indexed
-	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
+	o.fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
 		list := frg.table[block]
 		for cur := list.head; cur != nil; cur = cur.getNext() {
 			switch cur.(type) {
@@ -923,9 +946,9 @@ func (o *PREOpt) removeBigPhi(g *BigPhi, frg *FRG) {
 	delete(frg.bigPhi, g)
 }
 
-func (o *PREOpt) printEval(fun *Func, expr *LexIdentExpr, table EvalListTable) {
+func (o *PREOpt) printEval(expr *LexIdentExpr, table EvalListTable) {
 	fmt.Println(expr)
-	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+	o.fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		fmt.Println(block.Name)
 		for cur := table[block].head; cur != nil; cur = cur.getNext() {
 			switch cur.(type) {
@@ -956,4 +979,180 @@ func (o *PREOpt) printEval(fun *Func, expr *LexIdentExpr, table EvalListTable) {
 		}
 	}, ReversePostOrder)
 	fmt.Println()
+}
+
+type SymbolStack struct {
+	stack []*Symbol
+}
+
+func newSymbolStack() *SymbolStack {
+	return &SymbolStack{
+		stack: make([]*Symbol, 0),
+	}
+}
+
+func (s *SymbolStack) push(sym *Symbol) { s.stack = append(s.stack, sym) }
+
+func (s *SymbolStack) pop(num int) { s.stack = s.stack[:len(s.stack)-num] }
+
+func (s *SymbolStack) top() *Symbol { return s.stack[len(s.stack)-1] }
+
+func (o *PREOpt) codeMotion(frg *FRG, expr *LexIdentExpr) {
+	// Scan basic blocks and get instruction related information
+	var resType IType
+	hasImm := expr.hasImm()
+	var immVal *Immediate // expression with immediate share this value
+	immIdx := expr.immIndex()
+	o.fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
+			instr := iter.Get()
+			thisExpr := newLexIdentExpr(instr)
+			if thisExpr == nil {
+				continue
+			}
+			// Get result type
+			if resType == nil && *expr == *thisExpr {
+				resType = (*instr.GetDef()).(*Variable).Symbol.Type
+			}
+			// Extract immediate value if necessary
+			if hasImm && immVal == nil {
+				if *expr != *thisExpr { // not the expression considered
+					continue
+				}
+				immVal = (*instr.GetOpd()[immIdx]).(*Immediate)
+			}
+		}
+	}, DepthFirst)
+
+	// Initialize temporary list and symbol stacks
+	tmpList := make([]*Symbol, frg.nClass+1) // temporary for each redundancy class
+	symStack := [2]*SymbolStack{newSymbolStack(), newSymbolStack()}
+	for _, sym := range o.fun.Scope.Params {
+		if expr.hasOpd(sym.Name) {
+			symStack[expr.opdIndex(sym.Name)].push(sym)
+		}
+	}
+
+	// Insert incomplete phi instructions
+	phiInserted := make([]bool, frg.nClass+1) // whether phi for temporaries are inserted
+	o.fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		list := frg.table[block]
+		switch list.head.(type) {
+		case *BigPhi:
+			bigPhi := list.head.(*BigPhi)
+			ver := bigPhi.version
+			if !phiInserted[ver] { // insert a phi instruction for temporary
+				tmp := o.newTemp(resType)
+				tmpList[ver] = tmp
+				dummy := &Symbol{ // dummy symbol as placeholder
+					Name:  "_dummy",
+					Ver:   0,
+					Type:  resType,
+					Scope: nil,
+					Param: false,
+				}
+				phiOpd := make([]PhiOpd, 0)
+				for pred := range block.Pred {
+					phiOpd = append(phiOpd, PhiOpd{
+						pred: pred,
+						val:  NewVariable(dummy),
+					})
+				}
+				block.PushFront(NewPhi(phiOpd, NewVariable(tmp)))
+				phiInserted[ver] = true
+			}
+		}
+	}, DepthFirst)
+
+	// Visit basic blocks and perform code motion
+	var visit func(*BasicBlock)
+	visit = func(block *BasicBlock) {
+		// Visit CFG and update symbol stack
+		nPush := [2]int{0, 0}
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
+			instr := iter.Get()
+			def := instr.GetDef()
+			if def == nil {
+				continue
+			}
+			sym := (*def).(*Variable).Symbol
+			if expr.hasOpd(sym.Name) {
+				idx := expr.opdIndex(sym.Name)
+				symStack[idx].push(sym)
+				nPush[idx]++
+			}
+		}
+
+		// Visit evaluation list of current block
+		list := frg.table[block]
+		for cur := list.head; cur != nil; cur = cur.getNext() {
+			switch cur.(type) {
+			case *RealOccur:
+				occur := cur.(*RealOccur)
+				instr := occur.instr
+				def := instr.GetDef()
+				if occur.save { // generate a save of the result to a new temporary
+					tmp := o.newTemp(resType)
+					tmpList[occur.version] = tmp
+					*def = NewVariable(tmp)
+				}
+				if occur.reload { // replace computation by a use of temporary
+					iter := NewIterFromInstr(instr)
+					iter.Replace(NewMove(NewVariable(tmpList[occur.version]), *def))
+				}
+
+			case *InsertedOccur: // generate a save of the result to a new temporary
+				inserted := cur.(*InsertedOccur)
+				tmp := o.newTemp(resType)
+				tmpList[inserted.version] = tmp
+				if expr.isUnary() {
+					block.PushBack(NewUnary(unaryStrToOp[expr.op],
+						NewVariable(symStack[0].top()), NewVariable(tmp)))
+				} else {
+					opd := [2]IValue{nil, nil}
+					for i := range expr.opd {
+						if i == immIdx {
+							opd[i] = immVal
+						} else {
+							opd[i] = NewVariable(symStack[i].top())
+						}
+					}
+					block.PushBack(NewBinary(binaryStrToOp[expr.op], opd[0], opd[1],
+						NewVariable(tmp)))
+				}
+			} // end evaluation type switch
+		} // end evaluation iteration
+
+		// Update phi operand in successor blocks
+		for succ := range block.Succ {
+			head := frg.table[succ].head
+			switch head.(type) {
+			case *BigPhi:
+				// Replace value in phi for temporary according to version in Phi occurrence
+				// operand
+				bigPhi := head.(*BigPhi)
+				phi := succ.Head.(*Phi)
+				bigPhiOpd := bigPhi.bbToOpd[block]
+				*phi.BBToVal[block] = NewVariable(tmpList[bigPhiOpd.version])
+			} // end evaluation head type switch
+		} // end successor iteration
+
+		// Visit children in dominance tree
+		for child := range block.Children {
+			visit(child)
+		}
+
+		// Restore variable stack
+		for i, n := range nPush {
+			symStack[i].pop(n)
+		}
+	}
+	visit(o.fun.Enter)
+}
+
+func (o *PREOpt) newTemp(tp IType) *Symbol {
+	name := fmt.Sprintf("_t%d", o.fun.nTmp)
+	o.fun.nTmp++
+	sym := o.fun.Scope.AddTemp(name, tp)
+	return sym
 }
