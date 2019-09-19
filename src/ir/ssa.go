@@ -525,3 +525,44 @@ func pickOneSymbol(set map[*Symbol]bool) *Symbol {
 	}
 	return nil
 }
+
+func propagateCopy(fun *Func) {
+	// Build symbol mapping
+	symMap := make(map[*Symbol]*Symbol)
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		for iter := NewIterFromBlock(block); iter.Valid(); {
+			switch iter.Get().(type) {
+			case *Move:
+				move := iter.Get().(*Move)
+				dst := move.Dst.(*Variable).Symbol
+				switch move.Src.(type) {
+				case *Variable:
+					src := move.Src.(*Variable).Symbol
+					if symMap[src] == nil {
+						symMap[dst] = src
+					} else {
+						symMap[dst] = symMap[src]
+					}
+					iter.Remove() // this move instruction has no further use
+					continue
+				}
+			}
+			iter.MoveNext()
+		}
+	}, DepthFirst)
+
+	// Replace symbols in instructions
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
+			for _, def := range iter.Get().GetOpd() {
+				switch (*def).(type) {
+				case *Variable:
+					sym := (*def).(*Variable).Symbol
+					if symMap[sym] != nil {
+						*def = NewVariable(symMap[sym])
+					}
+				}
+			}
+		}
+	}, DepthFirst)
+}

@@ -432,6 +432,8 @@ func (o *PREOpt) Optimize(fun *Func) {
 		o.codeMotion(frg, expr)
 		//o.printEval(expr, frg.table)
 	}
+
+	propagateCopy(fun)
 }
 
 type ExprStackElem struct {
@@ -946,41 +948,6 @@ func (o *PREOpt) removeBigPhi(g *BigPhi, frg *FRG) {
 	delete(frg.bigPhi, g)
 }
 
-func (o *PREOpt) printEval(expr *LexIdentExpr, table EvalListTable) {
-	fmt.Println(expr)
-	o.fun.Enter.AcceptAsVert(func(block *BasicBlock) {
-		fmt.Println(block.Name)
-		for cur := table[block].head; cur != nil; cur = cur.getNext() {
-			switch cur.(type) {
-			case *BigPhi:
-				bigPhi := cur.(*BigPhi)
-				fmt.Printf("\tBigPhi %d %s %s %s %s %s", bigPhi.version,
-					strconv.FormatBool(bigPhi.downSafe),
-					strconv.FormatBool(bigPhi.canBeAvail),
-					strconv.FormatBool(bigPhi.later),
-					strconv.FormatBool(bigPhi.willBeAvail),
-					strconv.FormatBool(bigPhi.extraneous))
-				for bb, opd := range bigPhi.bbToOpd {
-					fmt.Printf(" [%s: %d %s]", bb.Name, opd.version,
-						strconv.FormatBool(opd.hasRealUse))
-				}
-				fmt.Println()
-			case *RealOccur:
-				occur := cur.(*RealOccur)
-				fmt.Printf("\tRealOccur %d %s %s\n", occur.version,
-					strconv.FormatBool(occur.reload),
-					strconv.FormatBool(occur.save))
-			case *InsertedOccur:
-				inserted := cur.(*InsertedOccur)
-				fmt.Printf("\tInsertedOccur %d\n", inserted.version)
-			case *OpdAssign:
-				fmt.Printf("\tOpdAssign %s\n", expr.opd[cur.(*OpdAssign).index])
-			}
-		}
-	}, ReversePostOrder)
-	fmt.Println()
-}
-
 type SymbolStack struct {
 	stack []*Symbol
 }
@@ -1155,4 +1122,39 @@ func (o *PREOpt) newTemp(tp IType) *Symbol {
 	o.fun.nTmp++
 	sym := o.fun.Scope.AddTemp(name, tp)
 	return sym
+}
+
+func (o *PREOpt) printEval(expr *LexIdentExpr, table EvalListTable) {
+	fmt.Println(expr)
+	o.fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		fmt.Println(block.Name)
+		for cur := table[block].head; cur != nil; cur = cur.getNext() {
+			switch cur.(type) {
+			case *BigPhi:
+				bigPhi := cur.(*BigPhi)
+				fmt.Printf("\tBigPhi %d %s %s %s %s %s", bigPhi.version,
+					strconv.FormatBool(bigPhi.downSafe),
+					strconv.FormatBool(bigPhi.canBeAvail),
+					strconv.FormatBool(bigPhi.later),
+					strconv.FormatBool(bigPhi.willBeAvail),
+					strconv.FormatBool(bigPhi.extraneous))
+				for bb, opd := range bigPhi.bbToOpd {
+					fmt.Printf(" [%s: %d %s]", bb.Name, opd.version,
+						strconv.FormatBool(opd.hasRealUse))
+				}
+				fmt.Println()
+			case *RealOccur:
+				occur := cur.(*RealOccur)
+				fmt.Printf("\tRealOccur %d %s %s\n", occur.version,
+					strconv.FormatBool(occur.reload),
+					strconv.FormatBool(occur.save))
+			case *InsertedOccur:
+				inserted := cur.(*InsertedOccur)
+				fmt.Printf("\tInsertedOccur %d\n", inserted.version)
+			case *OpdAssign:
+				fmt.Printf("\tOpdAssign %s\n", expr.opd[cur.(*OpdAssign).index])
+			}
+		}
+	}, ReversePostOrder)
+	fmt.Println()
 }
