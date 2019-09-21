@@ -79,6 +79,8 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 				o.cfgWL[CFGEdge{from: instr, to: jump.Target.Head}] = true
 			case *Branch:
 				o.evalBranch(instr.(*Branch))
+			case *Return:
+				goto AccessSSAList
 			default:
 				o.evalAssign(instr)
 				if next := instr.GetNext(); next != nil {
@@ -461,8 +463,12 @@ func (o *SCCPOpt) evalPhi(phi *Phi) {
 	for _, v := range rVert.opd {
 		lat, imm = o.meet(lat, imm, o.value[v], v.imm)
 	}
-	if lat == o.value[rVert] && immEq(imm, rVert.imm) {
-		return // lattice value not changed, nothing to do
+	if lat == o.value[rVert] {
+		if lat == TOP || lat == BOTTOM {
+			return // TOP and BOTTOM has only one case
+		} else if immEq(imm, rVert.imm) {
+			return // has equal constant value
+		}
 	}
 	o.value[rVert], rVert.imm = lat, imm
 	for u := range rVert.use {

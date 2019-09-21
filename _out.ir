@@ -6,26 +6,27 @@ _B0_Start:
 
 func test4(_s1_a: i64, _s1_b: i64, _s1_e: i64, _env: *void): 
 _B1_Start:
+	add 3: i64, $_s1_b.0: i64 => $_t10.0: i64
 	jump _B2_ForBody
 _B2_ForBody:
-	phi (_B1_Start -> 3: i64, _B3_ForPost -> $_s1_a.4: i64) => $_s1_a.2: i64
+	phi (_B3_ForPost -> $_t9.0: i64, _B1_Start -> $_t10.0: i64) => $_t8.0: i64
 	gt $_s1_b.0: i64, 3: i64 => $_t1.2: i1
 	branch $_t1.2: i1 ? _B5_IfThen : _B10_EdgeSplit
 _B5_IfThen:
+	add 5: i64, $_s1_b.0: i64 => $_t11.0: i64
 	jump _B6_IfNext
 _B10_EdgeSplit:
 	jump _B6_IfNext
 _B6_IfNext:
-	phi (_B5_IfThen -> 5: i64, _B10_EdgeSplit -> $_s1_a.2: i64) => $_s1_a.4: i64
-	add $_s1_a.4: i64, $_s1_b.0: i64 => $_t6.2: i64
-	gt $_t6.2: i64, 7: i64 => $_t7.2: i1
+	phi (_B10_EdgeSplit -> $_t8.0: i64, _B5_IfThen -> $_t11.0: i64) => $_t9.0: i64
+	gt $_t9.0: i64, 7: i64 => $_t7.2: i1
 	branch $_t7.2: i1 ? _B7_IfThen : _B11_EdgeSplit
 _B7_IfThen:
 	jump _B4_ForNext
 _B11_EdgeSplit:
 	jump _B8_IfNext
 _B4_ForNext:
-	return $_t6.2: i64
+	return $_t9.0: i64
 _B8_IfNext:
 	jump _B3_ForPost
 _B3_ForPost:

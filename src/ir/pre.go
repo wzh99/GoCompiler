@@ -285,7 +285,8 @@ type BigPhi struct {
 	extraneous  bool // whether this Phi occurrence should be removed
 }
 
-func newBigPhi(list *BlockEvalList, bb *BasicBlock, bbToOpd map[*BasicBlock]*BigPhiOpd) *BigPhi {
+func newBigPhi(list *BlockEvalList, bb *BasicBlock,
+	bbToOpd map[*BasicBlock]*BigPhiOpd) *BigPhi {
 	for bb, opd := range bbToOpd { // assign basic block to operand
 		// Phi operands are considered as occurring at their corresponding predecessors
 		opd.bb = bb
@@ -427,12 +428,13 @@ func (o *PREOpt) Optimize(fun *Func) {
 		o.willBeAvail(frg.bigPhi)
 		// Pinpoint locations for computations to be inserted
 		o.finalize(frg)
-		o.printEval(expr, frg.table)
+		//o.printEval(expr, frg.table)
 		// Transform code to form optimized program
 		o.codeMotion(frg, expr)
 	}
 
 	propagateCopy(fun)
+	eliminateDeadCode(fun)
 }
 
 type ExprStackElem struct {
@@ -587,7 +589,7 @@ func (o *PREOpt) buildFRG(expr *LexIdentExpr) *FRG {
 	var visit func(block *BasicBlock)
 	visit = func(block *BasicBlock) {
 		// Traverse evaluation list in the basic block
-		exprPush := 0 // record expression push times to restore stack after visiting children
+		exprPush := 0 // record push times to restore stack after visiting children
 		opdPush := [2]int{0, 0}
 		evalList := table[block]
 		for cur := evalList.head; cur != nil; cur = cur.getNext() {
@@ -1057,13 +1059,14 @@ func (o *PREOpt) codeMotion(frg *FRG, expr *LexIdentExpr) {
 				occur := cur.(*RealOccur)
 				instr := occur.instr
 				def := instr.GetDef()
+				iter := NewIterFromInstr(instr)
 				if occur.save { // generate a save of the result to a new temporary
+					sym := (*def).(*Variable).Symbol
 					tmp := o.newTemp(resType)
 					tmpList[occur.version] = tmp
-					*def = NewVariable(tmp)
+					iter.InsertAfter(NewMove(NewVariable(sym), NewVariable(tmp)))
 				}
 				if occur.reload { // replace computation by a use of temporary
-					iter := NewIterFromInstr(instr)
 					iter.Replace(NewMove(NewVariable(tmpList[occur.version]), *def))
 				}
 

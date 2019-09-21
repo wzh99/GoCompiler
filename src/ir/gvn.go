@@ -103,20 +103,18 @@ TraverseVertSet:
 
 	// Apply transformation to instructions
 	repSym := make([]*Symbol, len(part))
-	var visit func(*BasicBlock)
-	replaceOpd := func(instr IInstr) {
-		for _, opd := range instr.GetOpd() {
-			switch (*opd).(type) {
-			case *Variable:
-				sym := (*opd).(*Variable).Symbol
-				num := symNum[sym]
-				rep := repSym[num]
-				if rep != nil && rep != sym {
-					*opd = NewVariable(rep)
-				}
+	replaceOpd := func(opd *IValue) {
+		switch (*opd).(type) {
+		case *Variable:
+			sym := (*opd).(*Variable).Symbol
+			num := symNum[sym]
+			rep := repSym[num]
+			if rep != nil && rep != sym {
+				*opd = NewVariable(rep)
 			}
 		}
 	}
+	var visit func(*BasicBlock)
 	visit = func(block *BasicBlock) {
 		setSym := make([]bool, len(part)) // whether a representative symbol is set
 		for iter := NewIterFromBlock(block); iter.Valid(); {
@@ -141,7 +139,9 @@ TraverseVertSet:
 				iter.MoveNext()
 				continue // skip all phi operands
 			}
-			replaceOpd(instr)
+			for _, opd := range instr.GetOpd() {
+				replaceOpd(opd)
+			}
 			iter.MoveNext()
 		}
 
@@ -152,7 +152,9 @@ TraverseVertSet:
 				instr := iter.Get()
 				switch instr.(type) {
 				case *Phi:
-					replaceOpd(instr)
+					phi := instr.(*Phi)
+					opd := phi.BBToVal[block]
+					replaceOpd(opd)
 				default:
 					break InstrIter
 				}

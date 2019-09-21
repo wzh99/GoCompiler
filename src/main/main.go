@@ -23,9 +23,9 @@ func main() {
 	irBuilder := ir.NewBuilder()
 	irPrg := irBuilder.VisitProgram(asTree).(*ir.Program)
 	ssa := ir.NewSSAOpt(
+		ir.NewPREOpt(),
 		ir.NewGVNOpt(),
 		ir.NewSCCPOpt(),
-		//ir.NewPREOpt(),
 	)
 	ssa.Optimize(irPrg)
 	irFile, _ := os.Create("_out.ir")
