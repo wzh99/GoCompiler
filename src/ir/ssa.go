@@ -23,6 +23,7 @@ func (o *SSAOpt) Optimize(prg *Program) {
 		o.renameVar(fun)
 
 		// Apply optimizations to each function
+		eliminateDeadCode(fun)
 		for _, opt := range o.opt {
 			opt.Optimize(fun)
 		}
@@ -498,7 +499,8 @@ func eliminateDeadCode(fun *Func) {
 				switch useInstr.(type) {
 				case *Phi:
 					sym2 := useInstr.(*Phi).Result.(*Variable).Symbol
-					if defUse[sym2].useSet[iter.Get()] {
+					useSet := defUse[sym2].useSet
+					if len(useSet) == 1 && useSet[iter.Get()] {
 						iter.Remove()
 						NewIterFromInstr(useInstr).Remove()
 						delete(fun.Scope.Symbols, sym)

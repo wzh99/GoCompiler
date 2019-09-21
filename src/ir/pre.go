@@ -8,13 +8,12 @@ import (
 
 // Partial Redundancy Elimination in SSA Form by Chow et al. [1999].
 type PREOpt struct {
-	prg    *Program
 	fun    *Func
 	dfPlus map[*BasicBlock]BlockSet
 }
 
-func NewPREOpt(prg *Program) *PREOpt {
-	return &PREOpt{prg: prg}
+func NewPREOpt() *PREOpt {
+	return &PREOpt{}
 }
 
 // SSA-PRE operates on lexically identified expressions.
@@ -428,9 +427,9 @@ func (o *PREOpt) Optimize(fun *Func) {
 		o.willBeAvail(frg.bigPhi)
 		// Pinpoint locations for computations to be inserted
 		o.finalize(frg)
+		o.printEval(expr, frg.table)
 		// Transform code to form optimized program
 		o.codeMotion(frg, expr)
-		//o.printEval(expr, frg.table)
 	}
 
 	propagateCopy(fun)

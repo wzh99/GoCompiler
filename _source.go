@@ -26,7 +26,7 @@ func test2() int {
 	}
 	return i + j
 }*/
-/*
+
 func test3(a, x, y int) int {
 	z := -a
 	if x > 2 {
@@ -40,8 +40,9 @@ func test3(a, x, y int) int {
 	}
 	c := x * 2
 	return c
-}*/
+}
 
+/*
 func test4(a, b, e int) int {
 	var c int
 	a = 3
@@ -56,4 +57,4 @@ func test4(a, b, e int) int {
 		}
 	}
 	return c
-}
+}*/

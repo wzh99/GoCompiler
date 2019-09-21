@@ -91,57 +91,87 @@ TraverseVertSet:
 		}
 	}
 
-	// Build representative symbol lookup table
-	repSym := make(map[*Symbol]*Symbol)
-TraversePartition:
-	for _, set := range part {
-		var rep *Symbol
+	// Map symbols to index
+	symNum := make(map[*Symbol]int)
+	for i, set := range part {
 		for vert := range set {
-			if vert.label == "param" {
-				continue TraversePartition // parameters cannot be merged
-			}
-			for sym := range vert.symbols { // choose non-temporary symbol first for readability
-				if strings.HasPrefix(sym.Name, "_s") && rep == nil {
-					rep = sym
-					break
-				}
-			}
 			for sym := range vert.symbols {
-				if rep == nil { // only temporary symbols
-					rep = sym
+				symNum[sym] = i
+			}
+		}
+	}
+
+	// Apply transformation to instructions
+	repSym := make([]*Symbol, len(part))
+	var visit func(*BasicBlock)
+	replaceOpd := func(instr IInstr) {
+		for _, opd := range instr.GetOpd() {
+			switch (*opd).(type) {
+			case *Variable:
+				sym := (*opd).(*Variable).Symbol
+				num := symNum[sym]
+				rep := repSym[num]
+				if rep != nil && rep != sym {
+					*opd = NewVariable(rep)
 				}
-				repSym[sym] = rep // map this symbol to representative one
 			}
 		}
 	}
-
-	// Simplify instructions according to numbering result
-	defOut := make(map[*BasicBlock]map[*Symbol]bool)
-	copySet := func(set map[*Symbol]bool) map[*Symbol]bool {
-		cp := make(map[*Symbol]bool)
-		for s := range set {
-			cp[s] = true
-		}
-		return cp
-	}
-	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
-		if block.ImmDom == nil {
-			defOut[block] = make(map[*Symbol]bool)
-		} else {
-			defOut[block] = copySet(defOut[block.ImmDom])
-		}
-		// simplification and set construction are executed simultaneously
+	visit = func(block *BasicBlock) {
+		setSym := make([]bool, len(part)) // whether a representative symbol is set
 		for iter := NewIterFromBlock(block); iter.Valid(); {
-			remove := o.simplify(iter.Get(), repSym, defOut[block])
-			if remove {
-				iter.Remove() // directly point to next instruction
-			} else {
+			// Define new symbol or remove instruction
+			instr := iter.Get()
+			def := instr.GetDef()
+			if def != nil {
+				sym := (*def).(*Variable).Symbol
+				num := symNum[sym]
+				if repSym[num] == nil { // first definition of symbol in this class
+					repSym[num] = sym
+					setSym[num] = true
+				} else { // other symbols in this class defined before
+					iter.Remove() // eliminate this definition
+					continue
+				}
+			}
+
+			// Replace operands with representative symbols
+			switch instr.(type) {
+			case *Phi:
 				iter.MoveNext()
+				continue // skip all phi operands
+			}
+			replaceOpd(instr)
+			iter.MoveNext()
+		}
+
+		// Replace phi operands in successors
+		for succ := range block.Succ {
+		InstrIter:
+			for iter := NewIterFromBlock(succ); iter.Valid(); iter.MoveNext() {
+				instr := iter.Get()
+				switch instr.(type) {
+				case *Phi:
+					replaceOpd(instr)
+				default:
+					break InstrIter
+				}
 			}
 		}
-	}, func(*BasicBlock) {})
 
-	eliminateDeadCode(fun)
+		// Visit children in dominance tree
+		for child := range block.Children {
+			visit(child)
+		}
+
+		// Restore representative symbols
+		for i, set := range setSym {
+			if set {
+				repSym[i] = nil
+			}
+		}
+	}
+	visit(fun.Enter)
 }
 
 func (o *GVNOpt) opdEq(v1, v2 *SSAVert) bool {
@@ -166,40 +196,6 @@ func (o *GVNOpt) opdEq(v1, v2 *SSAVert) bool {
 		}
 	}
 	return true
-}
-
-func (o *GVNOpt) simplify(instr IInstr, repSym map[*Symbol]*Symbol,
-	defined map[*Symbol]bool) bool {
-	// Replace operands with representative symbols
-	for _, opd := range instr.GetOpd() {
-		switch (*opd).(type) {
-		case *Variable:
-			sym := (*opd).(*Variable).Symbol
-			if repSym[sym] != nil {
-				*opd = NewVariable(repSym[sym])
-			}
-		}
-	}
-
-	// Replace definitions with representative symbols and remove redefinitions
-	def := instr.GetDef()
-	if def == nil {
-		return false
-	}
-	rep := repSym[(*def).(*Variable).Symbol]
-	if defined[rep] {
-		return true
-	}
-	*def = NewVariable(rep)
-	defined[rep] = true
-
-	return false
-}
-
-func (o *GVNOpt) repVert(vert *SSAVert, repSym map[*Symbol]*Symbol) *SSAVert {
-	sym := pickOneSymbol(vert.symbols)
-	rep := repSym[sym]
-	return o.graph.symToVert[rep]
 }
 
 func (o *GVNOpt) pickOneIndex(set map[int]bool) int {

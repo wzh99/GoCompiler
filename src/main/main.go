@@ -25,7 +25,7 @@ func main() {
 	ssa := ir.NewSSAOpt(
 		ir.NewGVNOpt(),
 		//ir.NewSCCPOpt(),
-		ir.NewPREOpt(irPrg),
+		//ir.NewPREOpt(),
 	)
 	ssa.Optimize(irPrg)
 	irFile, _ := os.Create("_out.ir")
