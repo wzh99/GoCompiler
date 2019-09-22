@@ -22,24 +22,24 @@ type LexIdentExpr struct {
 	opd [2]string
 }
 
-var immPrefix = "imm_"
+const constPrefix = "const_"
 
 func opdToStr(val IValue) string {
 	switch val.(type) {
-	case *Immediate:
-		imm := val.(*Immediate)
-		switch imm.Type.GetTypeEnum() {
+	case *Constant:
+		cnst := val.(*Constant)
+		switch cnst.Type.GetTypeEnum() {
 		case I1:
-			val := imm.Value.(bool)
+			val := cnst.Value.(bool)
 			if val {
-				return immPrefix + "1"
+				return constPrefix + "1"
 			} else {
-				return immPrefix + "0"
+				return constPrefix + "0"
 			}
 		case I64:
-			return fmt.Sprintf("%s%d", immPrefix, imm.Value.(int))
+			return fmt.Sprintf("%s%d", constPrefix, cnst.Value.(int))
 		case F64:
-			return fmt.Sprintf("%s%f", immPrefix, imm.Value.(float64))
+			return fmt.Sprintf("%s%f", constPrefix, cnst.Value.(float64))
 		}
 	case *Variable:
 		sym := val.(*Variable).Symbol
@@ -85,18 +85,18 @@ func (e *LexIdentExpr) isUnary() bool {
 	return len(e.opd[1]) == 0 // not have second operand
 }
 
-func (e *LexIdentExpr) hasImm() bool {
+func (e *LexIdentExpr) hasConst() bool {
 	if e.isUnary() {
-		return false // unary instruction has no immediate
+		return false // unary instruction has no constediate
 	}
-	return strings.HasPrefix(e.opd[0], immPrefix) || strings.HasPrefix(e.opd[1], immPrefix)
+	return strings.HasPrefix(e.opd[0], constPrefix) || strings.HasPrefix(e.opd[1], constPrefix)
 }
 
-func (e *LexIdentExpr) immIndex() int {
-	if strings.HasPrefix(e.opd[0], immPrefix) {
+func (e *LexIdentExpr) constIndex() int {
+	if strings.HasPrefix(e.opd[0], constPrefix) {
 		return 0
 	}
-	if strings.HasPrefix(e.opd[1], immPrefix) {
+	if strings.HasPrefix(e.opd[1], constPrefix) {
 		return 1
 	}
 	return -1
@@ -213,8 +213,8 @@ func (o *RealOccur) getOpdVer() [2]int {
 
 func getValVer(val IValue) int {
 	switch val.(type) {
-	case *Immediate:
-		return 0 // immediate has only one version
+	case *Constant:
+		return 0 // constediate has only one version
 	case *Variable:
 		sym := val.(*Variable).Symbol
 		return sym.Ver
@@ -968,10 +968,13 @@ func (s *SymbolStack) top() *Symbol { return s.stack[len(s.stack)-1] }
 func (o *PREOpt) codeMotion(frg *FRG, expr *LexIdentExpr) {
 	// Scan basic blocks and get instruction related information
 	var resType IType
-	hasImm := expr.hasImm()
-	var immVal *Immediate // expression with immediate share this value
-	immIdx := expr.immIndex()
+	hasConst := expr.hasConst()
+	var constVal *Constant // expression with constediate share this value
+	constIdx := expr.constIndex()
 	o.fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+		if resType != nil && (!hasConst || constVal != nil) {
+			return // no more visit is necessary
+		}
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			instr := iter.Get()
 			thisExpr := newLexIdentExpr(instr)
@@ -982,12 +985,12 @@ func (o *PREOpt) codeMotion(frg *FRG, expr *LexIdentExpr) {
 			if resType == nil && *expr == *thisExpr {
 				resType = (*instr.GetDef()).(*Variable).Symbol.Type
 			}
-			// Extract immediate value if necessary
-			if hasImm && immVal == nil {
+			// Extract constediate value if necessary
+			if hasConst && constVal == nil {
 				if *expr != *thisExpr { // not the expression considered
 					continue
 				}
-				immVal = (*instr.GetOpd()[immIdx]).(*Immediate)
+				constVal = (*instr.GetOpd()[constIdx]).(*Constant)
 			}
 		}
 	}, DepthFirst)
@@ -1080,8 +1083,8 @@ func (o *PREOpt) codeMotion(frg *FRG, expr *LexIdentExpr) {
 				} else {
 					opd := [2]IValue{nil, nil}
 					for i := range expr.opd {
-						if i == immIdx {
-							opd[i] = immVal
+						if i == constIdx {
+							opd[i] = constVal
 						} else {
 							opd[i] = NewVariable(symStack[i].top())
 						}

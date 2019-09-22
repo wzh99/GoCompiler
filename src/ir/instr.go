@@ -168,7 +168,7 @@ type Move struct {
 }
 
 func NewMove(src, dst IValue) *Move {
-	if _, ok := dst.(*Immediate); ok {
+	if _, ok := dst.(*Constant); ok {
 		panic(NewIRError("destination operand cannot be an immediate"))
 	}
 	if !src.GetType().IsIdentical(dst.GetType()) {
@@ -283,7 +283,7 @@ func NewGetPtr(base, result IValue, indices []IValue) *GetPtr {
 		switch curType.GetTypeEnum() {
 		case Struct:
 			structType := curType.(*StructType)
-			immIdx, ok := indices[dim].(*Immediate)
+			immIdx, ok := indices[dim].(*Constant)
 			if !ok {
 				panic(NewIRError("struct index is not an immediate"))
 			}

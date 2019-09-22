@@ -346,14 +346,14 @@ func (b *Builder) VisitIncDecStmt(stmt *ast.IncDecStmt) interface{} {
 	switch exprRet.(type) {
 	case *Variable:
 		val := exprRet.(*Variable)
-		b.emit(NewBinary(op, val, NewI64Imm(1), val))
+		b.emit(NewBinary(op, val, NewI64Const(1), val))
 	case *GetPtr:
 		instr := exprRet.(*GetPtr)
 		b.emit(instr)
 		valType := instr.Result.GetType().(*PtrType).Base
 		val := b.newTempSymbol(valType)
 		b.emit(NewLoad(instr.Result, val))
-		b.emit(NewBinary(op, val, NewI64Imm(1), val))
+		b.emit(NewBinary(op, val, NewI64Const(1), val))
 		b.emit(NewStore(val, instr.Result))
 	}
 	return nil
@@ -546,7 +546,7 @@ func (b *Builder) VisitFuncLit(expr *ast.FuncLit) interface{} {
 	litVal := b.newTempSymbol(closureType)
 	// Store function as the first field of closure
 	funcPtr := b.newTempSymbol(NewPtrType(closureType.Field[0].Type))
-	b.emit(NewGetPtr(litVal, funcPtr, []IValue{NewI64Imm(0)}))
+	b.emit(NewGetPtr(litVal, funcPtr, []IValue{NewI64Const(0)}))
 	b.emit(NewStore(funcLit, funcPtr))
 	// Allocate heap space for capture list
 	mallocRet := b.newTempSymbol(NewPtrType(capList.tp)) // provide size to instruction
@@ -559,7 +559,7 @@ func (b *Builder) VisitFuncLit(expr *ast.FuncLit) interface{} {
 	}
 	// Store environment pointer as the second field of closure
 	envPtrPtr := b.newTempSymbol(NewPtrType(closureType.Field[1].Type))
-	b.emit(NewGetPtr(litVal, envPtrPtr, []IValue{NewI64Imm(1)}))
+	b.emit(NewGetPtr(litVal, envPtrPtr, []IValue{NewI64Const(1)}))
 	b.emit(NewStore(mallocRet, envPtrPtr))
 
 	return litVal
@@ -574,11 +574,11 @@ func (b *Builder) requestFuncLitName() string {
 func (b *Builder) VisitConstExpr(expr *ast.ConstExpr) interface{} {
 	switch expr.Type.GetTypeEnum() {
 	case ast.Bool:
-		return NewI1Imm(expr.Val.(bool))
+		return NewI1Const(expr.Val.(bool))
 	case ast.Int:
-		return NewI64Imm(expr.Val.(int))
+		return NewI64Const(expr.Val.(int))
 	case ast.Float64:
-		return NewF64Imm(expr.Val.(float64))
+		return NewF64Const(expr.Val.(float64))
 	}
 	return nil
 }
@@ -623,7 +623,7 @@ func (b *Builder) VisitFuncCallExpr(expr *ast.FuncCallExpr) interface{} {
 func (b *Builder) loadField(value IValue, index int) *Variable {
 	structType := value.GetType().(*StructType)
 	ptr := b.newTempSymbol(NewPtrType(structType.Field[index].Type))
-	b.emit(NewGetPtr(value, ptr, []IValue{NewI64Imm(index)}))
+	b.emit(NewGetPtr(value, ptr, []IValue{NewI64Const(index)}))
 	field := b.newTempSymbol(structType.Field[index].Type)
 	b.emit(NewLoad(ptr, field))
 	return field
@@ -645,9 +645,9 @@ func (b *Builder) VisitSelectExpr(expr *ast.SelectExpr) interface{} {
 	switch retVal.(type) {
 	case IValue:
 		return NewGetPtr(retVal.(IValue), b.newTempSymbol(NewPtrType(exprType)),
-			[]IValue{NewI64Imm(index)})
+			[]IValue{NewI64Const(index)})
 	case *GetPtr:
-		return b.appendIndex(retVal.(*GetPtr), NewI64Imm(index), exprType)
+		return b.appendIndex(retVal.(*GetPtr), NewI64Const(index), exprType)
 	}
 
 	return nil
@@ -715,10 +715,10 @@ func (b *Builder) shortCircuitEval(expr ast.IExprNode) interface{} {
 	result := b.newTempSymbol(NewBaseType(I1))
 	nextBB := b.newBasicBlock("ShortCircuitNext")
 	setTrue := b.newBasicBlock("SetTrue")
-	setTrue.PushBack(NewMove(NewI1Imm(true), result))
+	setTrue.PushBack(NewMove(NewI1Const(true), result))
 	setTrue.JumpTo(nextBB)
 	setFalse := b.newBasicBlock("SetFalse")
-	setFalse.PushBack(NewMove(NewI1Imm(false), result))
+	setFalse.PushBack(NewMove(NewI1Const(false), result))
 	setFalse.JumpTo(nextBB)
 
 	// Main recursion

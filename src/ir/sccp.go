@@ -46,7 +46,7 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 	o.edgeExec = make(map[CFGEdge]bool)
 	o.instrExec = make(map[IInstr]bool)
 	for vert := range o.ssaGraph.vertSet {
-		if vert.imm != nil {
+		if vert.cnst != nil {
 			o.value[vert] = CONST // mark constant vertices in value table
 		}
 	}
@@ -117,7 +117,7 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 			continue
 		}
 		fmt.Printf("%s: %d, %s\n", pickOneSymbol(vert.symbols).ToString(), val,
-			vert.imm)
+			vert.cnst)
 	}*/
 
 	// Transform original instructions, if possible.
@@ -141,14 +141,14 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 					if o.value[vert] != CONST {
 						continue
 					}
-					imm := vert.imm
-					switch imm.(type) {
+					cnst := vert.cnst
+					switch cnst.(type) {
 					case bool:
-						*opd = NewI1Imm(imm.(bool))
+						*opd = NewI1Const(cnst.(bool))
 					case int:
-						*opd = NewI64Imm(imm.(int))
+						*opd = NewI64Const(cnst.(int))
 					case float64:
-						*opd = NewF64Imm(imm.(float64))
+						*opd = NewF64Const(cnst.(float64))
 					}
 				}
 			}
@@ -160,10 +160,10 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 		case *Branch:
 			branch := iter.Get().(*Branch)
 			switch branch.Cond.(type) {
-			case *Immediate:
-				imm := branch.Cond.(*Immediate)
+			case *Constant:
+				cnst := branch.Cond.(*Constant)
 				target, removed := branch.True, branch.False
-				if !imm.Value.(bool) {
+				if !cnst.Value.(bool) {
 					target, removed = branch.False, branch.True
 				}
 				iter.Remove()
@@ -179,8 +179,7 @@ func (o *SCCPOpt) Optimize(fun *Func) {
 	}
 
 	eliminateDeadCode(fun)
-	computeDominators(fun) // override dominators, since control flow may be changed
-
+	computeDominators(fun) // control flow may be changed
 }
 
 func (o *SCCPOpt) removeOneCFGEdge() CFGEdge {
@@ -219,21 +218,21 @@ func (o *SCCPOpt) evalAssign(instr IInstr) {
 	// Computed values are stored in vertices, and they will later be reflected on instructions.
 	// Since there is injective mapping from instruction type to vertex type, using instruction
 	// type in switch clause is much safer.
-	prevVal, prevImm := o.value[vert], vert.imm
+	prevVal, prevConst := o.value[vert], vert.cnst
 	switch instr.(type) {
 	case *Load, *Malloc, *GetPtr, *PtrOffset:
 		// values defined by these instructions are considered variables
 		o.value[vert] = BOTTOM
 	case *Unary:
 		unary := instr.(*Unary)
-		o.value[vert], vert.imm = o.evalUnary(unary.Op, vert.opd[0])
+		o.value[vert], vert.cnst = o.evalUnary(unary.Op, vert.opd[0])
 	case *Binary:
 		binary := instr.(*Binary)
-		o.value[vert], vert.imm = o.evalBinary(binary.Op, vert.opd[0], vert.opd[1])
+		o.value[vert], vert.cnst = o.evalBinary(binary.Op, vert.opd[0], vert.opd[1])
 	}
 
 	// Add uses of value to work list
-	if prevVal == o.value[vert] && immEq(prevImm, vert.imm) { // value not changed
+	if prevVal == o.value[vert] && constEq(prevConst, vert.cnst) { // value not changed
 		return
 	}
 	for u := range vert.use {
@@ -247,17 +246,17 @@ func (o *SCCPOpt) evalUnary(op UnaryOp, opd *SSAVert) (lat LatValue, result inte
 		return opdVal, nil
 	}
 	lat = CONST
-	imm := opd.imm
+	cnst := opd.cnst
 	tp := opd.tp.GetTypeEnum()
 	switch op {
 	case NOT:
-		result = !imm.(bool)
+		result = !cnst.(bool)
 	case NEG:
 		switch tp {
 		case I64:
-			result = -imm.(int)
+			result = -cnst.(int)
 		case F64:
-			result = -imm.(float64)
+			result = -cnst.(float64)
 		}
 	}
 	return
@@ -307,13 +306,13 @@ func (o *SCCPOpt) evalBinary(op BinaryOp, left, right *SSAVert) (lat LatValue,
 		case MUL:
 			switch tp {
 			case I64:
-				if cVert.imm.(int) == 0 {
+				if cVert.cnst.(int) == 0 {
 					return CONST, 0
 				} else {
 					return
 				}
 			case F64:
-				if cVert.imm.(float64) == 0. {
+				if cVert.cnst.(float64) == 0. {
 					return CONST, 0.
 				} else {
 					return
@@ -322,7 +321,7 @@ func (o *SCCPOpt) evalBinary(op BinaryOp, left, right *SSAVert) (lat LatValue,
 		case AND:
 			switch tp {
 			case I1:
-				if cVert.imm.(bool) == false {
+				if cVert.cnst.(bool) == false {
 					return CONST, false
 				} else {
 					return
@@ -333,7 +332,7 @@ func (o *SCCPOpt) evalBinary(op BinaryOp, left, right *SSAVert) (lat LatValue,
 		case OR:
 			switch tp {
 			case I1:
-				if cVert.imm.(bool) == true {
+				if cVert.cnst.(bool) == true {
 					return CONST, true
 				} else {
 					return
@@ -349,7 +348,7 @@ func (o *SCCPOpt) evalBinary(op BinaryOp, left, right *SSAVert) (lat LatValue,
 	lat = CONST
 	switch tp {
 	case I1:
-		l, r := left.imm.(bool), right.imm.(bool)
+		l, r := left.cnst.(bool), right.cnst.(bool)
 		switch op {
 		case AND:
 			result = l && r
@@ -357,7 +356,7 @@ func (o *SCCPOpt) evalBinary(op BinaryOp, left, right *SSAVert) (lat LatValue,
 			result = l || r
 		}
 	case I64:
-		l, r := left.imm.(int), right.imm.(int)
+		l, r := left.cnst.(int), right.cnst.(int)
 		switch op {
 		case ADD:
 			result = l + r
@@ -393,7 +392,7 @@ func (o *SCCPOpt) evalBinary(op BinaryOp, left, right *SSAVert) (lat LatValue,
 			result = l >= r
 		}
 	case F64:
-		l, r := left.imm.(float64), right.imm.(float64)
+		l, r := left.cnst.(float64), right.cnst.(float64)
 		switch op {
 		case ADD:
 			result = l + r
@@ -422,26 +421,26 @@ func (o *SCCPOpt) evalBinary(op BinaryOp, left, right *SSAVert) (lat LatValue,
 
 func (o *SCCPOpt) evalBranch(branch *Branch) {
 	// Try to extract constant from condition vertex
-	var imm interface{}
+	var cnst interface{}
 	cond := branch.Cond
 	switch cond.(type) {
-	case *Immediate:
-		imm = cond.(*Immediate).Value
+	case *Constant:
+		cnst = cond.(*Constant).Value
 	case *Variable:
 		sym := cond.(*Variable).Symbol
 		vert := o.ssaGraph.symToVert[sym]
 		val := o.value[vert]
 		switch val {
 		case CONST:
-			imm = vert.imm
+			cnst = vert.cnst
 		}
 	}
 
 	trueEdge := CFGEdge{from: branch, to: branch.True.Head}
 	falseEdge := CFGEdge{from: branch, to: branch.False.Head}
-	if imm != nil {
+	if cnst != nil {
 		// Only choose the corresponding block if condition is constant
-		if imm.(bool) {
+		if cnst.(bool) {
 			o.cfgWL[trueEdge] = true
 		} else {
 			o.cfgWL[falseEdge] = true
@@ -459,18 +458,18 @@ func (o *SCCPOpt) evalPhi(phi *Phi) {
 	if o.value[rVert] == BOTTOM {
 		return // cannot propagate
 	}
-	lat, imm := TOP, interface{}(nil)
+	lat, cnst := TOP, interface{}(nil)
 	for _, v := range rVert.opd {
-		lat, imm = o.meet(lat, imm, o.value[v], v.imm)
+		lat, cnst = o.meet(lat, cnst, o.value[v], v.cnst)
 	}
 	if lat == o.value[rVert] {
 		if lat == TOP || lat == BOTTOM {
 			return // TOP and BOTTOM has only one case
-		} else if immEq(imm, rVert.imm) {
+		} else if constEq(cnst, rVert.cnst) {
 			return // has equal constant value
 		}
 	}
-	o.value[rVert], rVert.imm = lat, imm
+	o.value[rVert], rVert.cnst = lat, cnst
 	for u := range rVert.use {
 		o.ssaWL[SSAEdge{def: rVert, use: u}] = true
 	}
@@ -492,22 +491,22 @@ func (o *SCCPOpt) evalAllPhis(instr IInstr) IInstr {
 }
 
 func (o *SCCPOpt) meet(v1 LatValue, i1 interface{}, v2 LatValue, i2 interface{}) (
-	lat LatValue, imm interface{}) {
+	lat LatValue, cnst interface{}) {
 	hasOne := func(v LatValue) bool {
 		return v == v1 || v == v2
 	}
 	if hasOne(TOP) {
-		otherVal, otherImm := v2, i2
+		otherVal, otherConst := v2, i2
 		if otherVal == TOP { // try to find lower one
-			otherVal, otherImm = v1, i1
+			otherVal, otherConst = v1, i1
 		}
-		return otherVal, otherImm
+		return otherVal, otherConst
 	}
 	if hasOne(BOTTOM) {
 		return BOTTOM, nil
 	}
 	// Both constant
-	if immEq(i1, i2) {
+	if constEq(i1, i2) {
 		return CONST, i1
 	} else {
 		return BOTTOM, nil

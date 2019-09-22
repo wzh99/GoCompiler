@@ -21,14 +21,14 @@ _B6_IfNext:
 	phi (_B10_EdgeSplit -> $_t8.0: i64, _B5_IfThen -> $_t11.0: i64) => $_t9.0: i64
 	gt $_t9.0: i64, 7: i64 => $_t7.2: i1
 	branch $_t7.2: i1 ? _B7_IfThen : _B11_EdgeSplit
-_B7_IfThen:
-	jump _B4_ForNext
 _B11_EdgeSplit:
 	jump _B8_IfNext
-_B4_ForNext:
-	return $_t9.0: i64
+_B7_IfThen:
+	jump _B4_ForNext
 _B8_IfNext:
 	jump _B3_ForPost
+_B4_ForNext:
+	return $_t9.0: i64
 _B3_ForPost:
 	jump _B2_ForBody
 

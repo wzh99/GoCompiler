@@ -44,7 +44,7 @@ func (v *BaseVisitor) VisitValue(val IValue) interface{} { return nil }
 
 func (v *BaseVisitor) VisitVariable(val *Variable) interface{} { return nil }
 
-func (v *BaseVisitor) VisitImmValue(val *Immediate) interface{} { return nil }
+func (v *BaseVisitor) VisitImmValue(val *Constant) interface{} { return nil }
 
 func (v *BaseVisitor) VisitType(tp IType) interface{} { return nil }
 

@@ -145,7 +145,7 @@ func (p *Printer) VisitStore(instr *Store) interface{} {
 }
 
 func (p *Printer) VisitMalloc(instr *Malloc) interface{} {
-	p.writeInstr("malloc", instr.Result, NewI64Imm(instr.Result.GetType().GetSize()))
+	p.writeInstr("malloc", instr.Result, NewI64Const(instr.Result.GetType().GetSize()))
 	return nil
 }
 
@@ -156,7 +156,7 @@ func (p *Printer) VisitGetPtr(instr *GetPtr) interface{} {
 }
 
 func (p *Printer) VisitPtrOffset(instr *PtrOffset) interface{} {
-	p.writeInstr("ptroff", instr.Dst, instr.Src, NewI64Imm(instr.Offset))
+	p.writeInstr("ptroff", instr.Dst, instr.Src, NewI64Const(instr.Offset))
 	return nil
 }
 

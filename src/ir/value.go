@@ -38,41 +38,41 @@ func (v *Variable) ToString() string {
 	return fmt.Sprintf("%s: %s", v.Symbol.ToString(), v.Type.ToString())
 }
 
-// Immediate values, refer to constants in AST
-type Immediate struct {
+// Constant values, refer to constants in AST
+type Constant struct {
 	BaseValue
 	Value interface{}
 }
 
-func NewI1Imm(value bool) *Immediate {
-	return &Immediate{
+func NewI1Const(value bool) *Constant {
+	return &Constant{
 		BaseValue: *NewBaseValue(NewBaseType(I1)),
 		Value:     value,
 	}
 }
 
-func NewI64Imm(value int) *Immediate {
-	return &Immediate{
+func NewI64Const(value int) *Constant {
+	return &Constant{
 		BaseValue: *NewBaseValue(NewBaseType(I64)),
 		Value:     value,
 	}
 }
 
-func NewF64Imm(value float64) *Immediate {
-	return &Immediate{
+func NewF64Const(value float64) *Constant {
+	return &Constant{
 		BaseValue: *NewBaseValue(NewBaseType(F64)),
 		Value:     value,
 	}
 }
 
-func NewNullPtr() *Immediate {
-	return &Immediate{
+func NewNullPtr() *Constant {
+	return &Constant{
 		BaseValue: *NewBaseValue(NewPtrType(NewBaseType(Void))),
 		Value:     nil,
 	}
 }
 
-func (v *Immediate) ToString() string {
+func (v *Constant) ToString() string {
 	switch v.Type.GetTypeEnum() {
 	case I1:
 		val := v.Value.(bool)

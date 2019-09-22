@@ -7,7 +7,7 @@ import (
 
 // Format of labels:
 // Value vertices:
-// param, imm.
+// param, cnst.
 // Instruction vertices:
 // load, malloc, getptr, ptroff, clear;
 // neg, not, add, sub, mul, div, mod, and, or, xor, shl, shr, eq, ne, lt, le, gt, ge;
@@ -22,8 +22,8 @@ type SSAVert struct {
 	tp IType
 	// Set of symbols this vertex maps to
 	symbols map[*Symbol]bool
-	// Common place where immediate is stored
-	imm interface{}
+	// Common place where constant is stored
+	cnst interface{}
 	// Operands that this value uses (use -> def)
 	opd []*SSAVert
 	// Uses of this value (def -> use)
@@ -35,7 +35,7 @@ func newSSAVert(instr IInstr, label string, sym *Symbol, imm interface{},
 	vert := &SSAVert{
 		instr:   instr,
 		label:   label,
-		imm:     imm,
+		cnst:    imm,
 		symbols: make(map[*Symbol]bool),
 		opd:     opd,
 		use:     make(map[*SSAVert]bool),
@@ -61,7 +61,7 @@ func newTempVert(sym *Symbol) *SSAVert {
 func (v *SSAVert) appendInfo(instr IInstr, label string, imm interface{}, opd ...*SSAVert) {
 	v.instr = instr
 	v.label = label
-	v.imm = imm
+	v.cnst = imm
 	v.opd = opd
 	for _, v2 := range opd { // add use point to operands
 		v2.use[v] = true
@@ -97,18 +97,20 @@ func (v *SSAVert) print(writer io.Writer) {
 	_, _ = fmt.Fprintln(writer, str+"} }")
 }
 
+const constLabel = "const"
+
 func (v *SSAVert) hasSameLabel(v2 *SSAVert) bool {
 	if v.label != v2.label {
 		return false
 	}
 	switch v.label {
-	case "imm": // immediate value should be considered as part of label
-		return immEq(v.imm, v2.imm)
+	case constLabel: // immediate value should be considered as part of label
+		return constEq(v.cnst, v2.cnst)
 	}
 	return true
 }
 
-func immEq(i1, i2 interface{}) bool {
+func constEq(i1, i2 interface{}) bool {
 	switch i1.(type) { // immediate value should be considered as part of label
 	case bool:
 		switch i2.(type) {
@@ -234,8 +236,8 @@ func (g *SSAGraph) appendInfoToVert(instr IInstr, sym *Symbol, label string, imm
 func (g *SSAGraph) valToVert(val IValue) *SSAVert {
 	var vert *SSAVert
 	switch val.(type) {
-	case *Immediate:
-		vert = newSSAVert(nil, "imm", nil, val.(*Immediate).Value)
+	case *Constant:
+		vert = newSSAVert(nil, constLabel, nil, val.(*Constant).Value)
 		vert.tp = val.GetType()
 		g.addVert(vert)
 	case *Variable:
@@ -255,9 +257,9 @@ func (g *SSAGraph) processInstr(instr IInstr) {
 		move := instr.(*Move)
 		dst := move.Dst.(*Variable)
 		switch move.Src.(type) {
-		case *Immediate:
-			imm := move.Src.(*Immediate).Value
-			g.appendInfoToVert(instr, dst.Symbol, "imm", imm)
+		case *Constant:
+			imm := move.Src.(*Constant).Value
+			g.appendInfoToVert(instr, dst.Symbol, constLabel, imm)
 		case *Variable:
 			src := move.Src.(*Variable)
 			g.mergeVert(src.Symbol, dst.Symbol)
@@ -335,7 +337,7 @@ func getZeroValue(enum TypeEnum) interface{} {
 }
 
 // Merge vertices with equal immediate value
-func (g *SSAGraph) MergeImm() {
+func (g *SSAGraph) MergeConst() {
 	workList := make(map[*SSAVert]bool)
 	for v := range g.vertSet {
 		workList[v] = true
@@ -344,11 +346,11 @@ func (g *SSAGraph) MergeImm() {
 		v1 := pickOneSSAVert(workList)
 		delete(workList, v1)
 		for v2 := range g.vertSet {
-			if v1 == v2 || v1.label != "imm" || v2.label != "imm" {
+			if v1 == v2 || v1.label != constLabel || v2.label != constLabel {
 				continue
 			}
-			if immEq(v1.imm, v2.imm) {
-				g.mergeTwoImm(v1, v2)
+			if constEq(v1.cnst, v2.cnst) {
+				g.mergeTwoConst(v1, v2)
 				delete(workList, v2)
 				delete(g.vertSet, v2)
 			}
@@ -356,7 +358,7 @@ func (g *SSAGraph) MergeImm() {
 	}
 }
 
-func (g *SSAGraph) mergeTwoImm(v1, v2 *SSAVert) {
+func (g *SSAGraph) mergeTwoConst(v1, v2 *SSAVert) {
 	for s := range v2.symbols {
 		v1.symbols[s] = true // union of two symbol set
 		g.symToVert[s] = v1  // map to the the first vertex
