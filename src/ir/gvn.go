@@ -1,9 +1,5 @@
 package ir
 
-import (
-	"strings"
-)
-
 // Global Value Numbering
 // Partition vertices in value graph so that each vertex in a set shares one value number.
 // See Fig. 12.21 and 12.22 in The Whale Book.
@@ -153,7 +149,7 @@ TraverseVertSet:
 				switch instr.(type) {
 				case *Phi:
 					phi := instr.(*Phi)
-					opd := phi.BBToVal[block]
+					opd := phi.BBToOpd[block]
 					replaceOpd(opd)
 				default:
 					break InstrIter
@@ -177,7 +173,7 @@ TraverseVertSet:
 }
 
 func (o *GVNOpt) opdEq(v1, v2 *SSAVert) bool {
-	if strings.HasPrefix(v1.label, "phi") {
+	/*if strings.HasPrefix(v1.label, "phi") {
 		for _, o1 := range v1.opd {
 			found := false
 			for _, o2 := range v2.opd {
@@ -191,7 +187,7 @@ func (o *GVNOpt) opdEq(v1, v2 *SSAVert) bool {
 			}
 		}
 		return true
-	}
+	}*/
 	for i := range v1.opd {
 		if o.valNum[v1.opd[i]] != o.valNum[v2.opd[i]] {
 			return false

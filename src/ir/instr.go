@@ -623,16 +623,28 @@ type PhiOpd struct {
 
 type Phi struct {
 	BaseInstr
-	ValList []IValue
-	BBToVal map[*BasicBlock]*IValue
+	OpdList []IValue
+	BBToOpd map[*BasicBlock]*IValue
 	Result  IValue
 }
 
 func NewPhi(operands []PhiOpd, result IValue) *Phi {
 	p := &Phi{
-		ValList: make([]IValue, len(operands)),
-		BBToVal: make(map[*BasicBlock]*IValue),
+		OpdList: make([]IValue, len(operands)),
+		BBToOpd: make(map[*BasicBlock]*IValue),
 		Result:  result,
+	}
+	// Enforce an order of operands
+	for i := 0; i < len(operands)-1; i++ {
+		minStr, minIdx := operands[i].pred.Name, i
+		for j := i + 1; j < len(operands); j++ {
+			if operands[j].pred.Name < minStr {
+				minStr, minIdx = operands[j].pred.Name, j
+			}
+		}
+		if minIdx != i {
+			operands[i], operands[minIdx] = operands[minIdx], operands[i]
+		}
 	}
 	// Build phi instruction
 	for i, entry := range operands {
@@ -644,8 +656,8 @@ func NewPhi(operands []PhiOpd, result IValue) *Phi {
 					val.ToString(), result.ToString()),
 			))
 		}
-		p.ValList[i] = val
-		p.BBToVal[bb] = &p.ValList[i]
+		p.OpdList[i] = val
+		p.BBToOpd[bb] = &p.OpdList[i]
 	}
 	return p
 }
@@ -654,8 +666,8 @@ func (p *Phi) GetDef() *IValue { return &p.Result }
 
 func (p *Phi) GetOpd() []*IValue {
 	use := make([]*IValue, 0)
-	for _, ptr := range p.BBToVal {
-		use = append(use, ptr)
+	for i := range p.OpdList {
+		use = append(use, &p.OpdList[i])
 	}
 	return use
 }

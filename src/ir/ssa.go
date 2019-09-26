@@ -355,12 +355,12 @@ func (o *SSAOpt) renameVar(fun *Func) {
 				if !isPhi {
 					continue
 				}
-				sym := (*phi.BBToVal[block]).(*Variable).Symbol
+				sym := (*phi.BBToOpd[block]).(*Variable).Symbol
 				if sym.Scope.Global {
 					continue
 				}
 				top := ver[sym.Name].top()
-				*phi.BBToVal[block] = NewVariable(top)
+				*phi.BBToOpd[block] = NewVariable(top)
 			} // end instruction iteration loop
 		} // end successor loop
 

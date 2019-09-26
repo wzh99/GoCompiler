@@ -1105,7 +1105,7 @@ func (o *PREOpt) codeMotion(frg *FRG, expr *LexIdentExpr) {
 				bigPhi := head.(*BigPhi)
 				phi := succ.Head.(*Phi)
 				bigPhiOpd := bigPhi.bbToOpd[block]
-				*phi.BBToVal[block] = NewVariable(tmpList[bigPhiOpd.version])
+				*phi.BBToOpd[block] = NewVariable(tmpList[bigPhiOpd.version])
 			} // end evaluation head type switch
 		} // end successor iteration
 

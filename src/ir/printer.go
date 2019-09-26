@@ -198,15 +198,12 @@ func (p *Printer) VisitReturn(instr *Return) interface{} {
 }
 
 func (p *Printer) VisitPhi(instr *Phi) interface{} {
-	p.write("\tphi (")
+	p.write("\tphi")
 	i := 0
-	for bb, val := range instr.BBToVal {
-		if i != 0 {
-			p.write(", ")
-		}
-		p.write("%s -> %s", bb.Name, (*val).ToString())
+	for bb, val := range instr.BBToOpd {
+		p.write(" [%s, %s]", bb.Name, (*val).ToString())
 		i++
 	}
-	p.write(") => %s\n", instr.Result.ToString())
+	p.write(" => %s\n", instr.Result.ToString())
 	return nil
 }

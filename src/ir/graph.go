@@ -310,7 +310,7 @@ func (g *SSAGraph) processInstr(instr IInstr) {
 		phi := instr.(*Phi)
 		result := phi.Result.(*Variable)
 		opd := make([]*SSAVert, 0)
-		for _, val := range phi.ValList {
+		for _, val := range phi.OpdList {
 			opd = append(opd, g.valToVert(val))
 		}
 		g.appendInfoToVert(instr, result.Symbol, fmt.Sprintf("phi@%s", phi.BB.Name),

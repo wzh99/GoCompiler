@@ -1,5 +1,4 @@
 package main
-
 /*
 func test1() {
 	a, d := 3, 2
@@ -15,7 +14,7 @@ func test1() {
 		d = 2
 	}
 }*/
-/*
+
 func test2() int {
 	i, j := 1, 1
 	for i%2 != 0 {
@@ -25,7 +24,7 @@ func test2() int {
 		}
 	}
 	return i + j
-}*/
+}
 /*
 func test3(a, x, y int) int {
 	z := -a
@@ -40,7 +39,7 @@ func test3(a, x, y int) int {
 	}
 	c := x * 2
 	return c
-}*/
+}
 
 func test4(a, b, e int) int {
 	var c int
@@ -57,3 +56,13 @@ func test4(a, b, e int) int {
 	}
 	return c
 }
+
+func test5(w int) int {
+	var x, y int
+	if w < 0 {
+		x, y = 1, 2
+	} else {
+		x, y = 2, 1
+	}
+	return x + y
+}*/
