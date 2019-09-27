@@ -154,19 +154,17 @@ func NewSSAGraph(fun *Func) *SSAGraph {
 	}
 
 	// Visit instructions of SSA form
-	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
+	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			g.processInstr(iter.Get())
 		}
-	}, DepthFirst)
+	}, func(*BasicBlock) {})
 
 	// Update operands in vertices
-	fun.Enter.AcceptAsTreeNode(func(block *BasicBlock) {
+	fun.Enter.AcceptAsVert(func(block *BasicBlock) {
 		for iter := NewIterFromBlock(block); iter.Valid(); iter.MoveNext() {
 			instr := iter.Get()
 			switch instr.(type) {
-			case *Move:
-				continue
 			case *Unary, *Binary, *Phi, *Branch:
 				def := instr.GetDef()
 				if def == nil {
@@ -183,7 +181,7 @@ func NewSSAGraph(fun *Func) *SSAGraph {
 				}
 			}
 		}
-	}, func(*BasicBlock) {})
+	}, DepthFirst)
 
 	// Mark unlabelled vertices
 	for v := range g.vertSet {

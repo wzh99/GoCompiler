@@ -4,29 +4,110 @@ func _global():
 _B0_Start:
 	return 
 
-func test2(_env: *void): 
+func test1(_env: *void): 
 _B1_Start:
-	move 1: i64 => $_t0.1: i64
-	jump _B5_ForCond
-_B5_ForCond:
-	phi [_B1_Start, $_t0.1: i64] [_B3_ForPost, $_s1_j.4: i64] => $_s1_j.2: i64
-	mod $_s1_j.2: i64, 2: i64 => $_t2.2: i64
-	ne $_t2.2: i64, 0: i64 => $_t3.2: i1
-	branch $_t3.2: i1 ? _B2_ForBody : _B4_ForNext
-_B4_ForNext:
-	add $_s1_j.2: i64, $_s1_j.2: i64 => $_t5.1: i64
-	return $_t5.1: i64
+	jump _B2_ForBody
 _B2_ForBody:
-	lt $_s1_j.2: i64, 4: i64 => $_t4.2: i1
-	branch $_t4.2: i1 ? _B6_IfThen : _B8_EdgeSplit
-_B6_IfThen:
-	add $_s1_j.2: i64, 1: i64 => $_s1_i.3: i64
-	jump _B7_IfNext
-_B8_EdgeSplit:
-	jump _B7_IfNext
-_B7_IfNext:
-	phi [_B6_IfThen, $_s1_i.3: i64] [_B8_EdgeSplit, $_s1_j.2: i64] => $_s1_j.4: i64
+	jump _B5_IfThen
+_B5_IfThen:
+	jump _B6_IfNext
+_B6_IfNext:
 	jump _B3_ForPost
 _B3_ForPost:
-	jump _B5_ForCond
+	jump _B2_ForBody
+
+func test2(_env: *void): 
+_B10_Start:
+	jump _B14_ForCond
+_B14_ForCond:
+	phi [_B10_Start, 1: i64] [_B12_ForPost, $_t7.0: i64] => $_t6.0: i64
+	phi [_B10_Start, 1: i64] [_B12_ForPost, $_s8_j.3: i64] => $_s8_j.2: i64
+	ne $_t6.0: i64, 0: i64 => $_t3.2: i1
+	branch $_t3.2: i1 ? _B11_ForBody : _B13_ForNext
+_B11_ForBody:
+	lt $_s8_j.2: i64, 4: i64 => $_t4.2: i1
+	branch $_t4.2: i1 ? _B15_IfThen : _B38_EdgeSplit
+_B13_ForNext:
+	add $_s8_j.2: i64, $_s8_j.2: i64 => $_t5.1: i64
+	return $_t5.1: i64
+_B15_IfThen:
+	add $_s8_j.2: i64, 1: i64 => $_s8_i.4: i64
+	mod $_s8_i.4: i64, 2: i64 => $_t9.0: i64
+	jump _B16_IfNext
+_B38_EdgeSplit:
+	jump _B16_IfNext
+_B16_IfNext:
+	phi [_B15_IfThen, $_t9.0: i64] [_B38_EdgeSplit, $_t6.0: i64] => $_t7.0: i64
+	phi [_B15_IfThen, $_s8_i.4: i64] [_B38_EdgeSplit, $_s8_j.2: i64] => $_s8_j.3: i64
+	jump _B12_ForPost
+_B12_ForPost:
+	jump _B14_ForCond
+
+func test3(_s13_a: i64, _s13_x: i64, _s13_y: i64, _env: *void): 
+_B17_Start:
+	neg $_s13_a.0: i64 => $_t1.1: i64
+	gt $_s13_x.0: i64, 2: i64 => $_t2.1: i1
+	branch $_t2.1: i1 ? _B18_IfThen : _B20_IfFalse
+_B18_IfThen:
+	mul $_s13_x.0: i64, 2: i64 => $_t4.2: i64
+	lt $_s13_y.0: i64, 5: i64 => $_t5.2: i1
+	branch $_t5.2: i1 ? _B21_IfThen : _B22_IfNext
+_B20_IfFalse:
+	lt $_t1.1: i64, 7: i64 => $_t9.1: i1
+	branch $_t9.1: i1 ? _B23_IfThen : _B24_IfNext
+_B21_IfThen:
+	add $_t4.2: i64, $_t4.2: i64 => $_t8.1: i64
+	return $_t8.1: i64
+_B22_IfNext:
+	jump _B19_IfNext
+_B23_IfThen:
+	return $_t1.1: i64
+_B24_IfNext:
+	mul $_s13_x.0: i64, 2: i64 => $_t13.0: i64
+	jump _B19_IfNext
+_B19_IfNext:
+	phi [_B22_IfNext, $_t4.2: i64] [_B24_IfNext, $_t13.0: i64] => $_t12.0: i64
+	return $_t12.0: i64
+
+func test4(_s20_a: i64, _s20_b: i64, _s20_e: i64, _env: *void): 
+_B25_Start:
+	add 3: i64, $_s20_b.0: i64 => $_t10.0: i64
+	jump _B26_ForBody
+_B26_ForBody:
+	phi [_B25_Start, $_t10.0: i64] [_B27_ForPost, $_t9.0: i64] => $_t8.0: i64
+	gt $_s20_b.0: i64, 3: i64 => $_t1.2: i1
+	branch $_t1.2: i1 ? _B29_IfThen : _B39_EdgeSplit
+_B29_IfThen:
+	add 5: i64, $_s20_b.0: i64 => $_t11.0: i64
+	jump _B30_IfNext
+_B39_EdgeSplit:
+	jump _B30_IfNext
+_B30_IfNext:
+	phi [_B29_IfThen, $_t11.0: i64] [_B39_EdgeSplit, $_t8.0: i64] => $_t9.0: i64
+	gt $_t9.0: i64, 7: i64 => $_t7.2: i1
+	branch $_t7.2: i1 ? _B31_IfThen : _B40_EdgeSplit
+_B31_IfThen:
+	jump _B28_ForNext
+_B40_EdgeSplit:
+	jump _B32_IfNext
+_B28_ForNext:
+	return $_t9.0: i64
+_B32_IfNext:
+	jump _B27_ForPost
+_B27_ForPost:
+	jump _B26_ForBody
+
+func test5(_s27_w: i64, _env: *void): 
+_B34_Start:
+	lt $_s27_w.0: i64, 0: i64 => $_t0.1: i1
+	branch $_t0.1: i1 ? _B35_IfThen : _B37_IfFalse
+_B35_IfThen:
+	jump _B36_IfNext
+_B37_IfFalse:
+	jump _B36_IfNext
+_B36_IfNext:
+	phi [_B35_IfThen, 1: i64] [_B37_IfFalse, 2: i64] => $_s27_x.3: i64
+	phi [_B35_IfThen, 2: i64] [_B37_IfFalse, 1: i64] => $_s27_y.3: i64
+	add $_s27_x.3: i64, $_s27_y.3: i64 => $_t5.1: i64
+	return $_t5.1: i64
 

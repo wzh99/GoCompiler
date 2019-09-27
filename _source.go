@@ -1,5 +1,5 @@
 package main
-/*
+
 func test1() {
 	a, d := 3, 2
 	for {
@@ -13,7 +13,7 @@ func test1() {
 		}
 		d = 2
 	}
-}*/
+}
 
 func test2() int {
 	i, j := 1, 1
@@ -25,7 +25,7 @@ func test2() int {
 	}
 	return i + j
 }
-/*
+
 func test3(a, x, y int) int {
 	z := -a
 	if x > 2 {
@@ -65,4 +65,4 @@ func test5(w int) int {
 		x, y = 2, 1
 	}
 	return x + y
-}*/
+}
