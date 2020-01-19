@@ -10,7 +10,7 @@ To reduce complexity of implementation, it does not strictly satisfies [the lang
 
 This project uses [ANTLR](https://www.antlr.org) as the parser generator. The grammar is modified from the one in [antlr/grammars-v4](https://github.com/antlr/grammars-v4/blob/master/golang/GoParser.g4).
 
-##Semantics
+## Semantics
 
 The semantic analysis is divided into two passes. In the first pass, the compiler visits the parse tree and construct a immature version of AST. Scope tree and symbol tables are also constructed along with the AST. Some obvious semantic errors are reported. In the second pass, the compiler visited the AST, resolving symbols and check the remaining potential errors. 
 
