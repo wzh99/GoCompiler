@@ -2,7 +2,6 @@ package ir
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -424,7 +423,7 @@ func (o *PREOpt) Optimize(fun *Func) {
 		*expr = removeOneExpr()
 		frg := o.buildFRG(expr)
 		// Perform backward and forward data flow propagation
-		o.downSafety(fun, frg.bigPhi)
+		o.downSafety(frg.bigPhi)
 		o.willBeAvail(frg.bigPhi)
 		// Pinpoint locations for computations to be inserted
 		o.finalize(frg)
@@ -611,7 +610,7 @@ func (o *PREOpt) buildFRG(expr *LexIdentExpr) *FRG {
 				switch assign.instr.(type) {
 				case *Phi:
 					opdStacks[assign.index].push(ver) // push operand version
-					if !exprStack.empty() { // update operand in top occurrence
+					if !exprStack.empty() {           // update operand in top occurrence
 						exprStack.top().opdVer[assign.index] = ver
 					}
 				default: // only push operand version
@@ -633,7 +632,7 @@ func (o *PREOpt) buildFRG(expr *LexIdentExpr) *FRG {
 						rep:     top.rep,
 					})
 				} else {
-					clearDownSafe() // examine the top occurrence
+					clearDownSafe()                  // examine the top occurrence
 					exprStack.rename(&ExprStackElem{ // assign a new class number
 						opdVer: occur.getOpdVer(),
 						occur:  occur,
@@ -699,7 +698,7 @@ func (o *PREOpt) buildFRG(expr *LexIdentExpr) *FRG {
 	}
 }
 
-func (o *PREOpt) downSafety(fun *Func, set BigPhiSet) {
+func (o *PREOpt) downSafety(set BigPhiSet) {
 	for f := range set {
 		if !f.downSafe {
 			for _, opd := range f.bbToOpd {
@@ -1127,39 +1126,4 @@ func (o *PREOpt) newTemp(tp IType) *Symbol {
 	o.fun.nTmp++
 	sym := o.fun.Scope.AddTemp(name, tp)
 	return sym
-}
-
-func (o *PREOpt) printEval(expr *LexIdentExpr, table EvalListTable) {
-	fmt.Println(expr)
-	o.fun.Enter.AcceptAsVert(func(block *BasicBlock) {
-		fmt.Println(block.Name)
-		for cur := table[block].head; cur != nil; cur = cur.getNext() {
-			switch cur.(type) {
-			case *BigPhi:
-				bigPhi := cur.(*BigPhi)
-				fmt.Printf("\tBigPhi %d %s %s %s %s %s", bigPhi.version,
-					strconv.FormatBool(bigPhi.downSafe),
-					strconv.FormatBool(bigPhi.canBeAvail),
-					strconv.FormatBool(bigPhi.later),
-					strconv.FormatBool(bigPhi.willBeAvail),
-					strconv.FormatBool(bigPhi.extraneous))
-				for bb, opd := range bigPhi.bbToOpd {
-					fmt.Printf(" [%s: %d %s]", bb.Name, opd.version,
-						strconv.FormatBool(opd.hasRealUse))
-				}
-				fmt.Println()
-			case *RealOccur:
-				occur := cur.(*RealOccur)
-				fmt.Printf("\tRealOccur %d %s %s\n", occur.version,
-					strconv.FormatBool(occur.reload),
-					strconv.FormatBool(occur.save))
-			case *InsertedOccur:
-				inserted := cur.(*InsertedOccur)
-				fmt.Printf("\tInsertedOccur %d\n", inserted.version)
-			case *OpdAssign:
-				fmt.Printf("\tOpdAssign %s\n", expr.opd[cur.(*OpdAssign).index])
-			}
-		}
-	}, ReversePostOrder)
-	fmt.Println()
 }
